@@ -6,10 +6,12 @@ import {
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   ModalActionRowComponentBuilder,
+  TextChannel,
   TextInputBuilder,
   TextInputComponent,
   TextInputStyle,
   ThreadChannel,
+  VoiceBasedChannel,
 } from "discord.js";
 import { EventMonkeyEvent } from "./EventMonkey";
 
@@ -124,7 +126,6 @@ export function getEventNameAndStart(eventTitle: string) {
   return { name, scheduledStartTime };
 }
 
-
 export async function deseralizePreviewEmbed(
   thread: ThreadChannel,
   client: Client
@@ -144,7 +145,7 @@ export async function deseralizePreviewEmbed(
   const author = client.users.cache.get(userId);
   if (!author) throw new Error("Unable to resolve user ID from embed.");
 
-  const {scheduledStartTime, name } = getEventNameAndStart(thread.name);
+  const { scheduledStartTime, name } = getEventNameAndStart(thread.name);
 
   const image = embed.image?.url ?? "";
   const duration = Number(
@@ -158,7 +159,9 @@ export async function deseralizePreviewEmbed(
   const channelId = channelLink
     ? channelLink?.match(/(?<=https:\/\/discord.com\/channels\/\d+\/)\d+/i)?.[0]
     : undefined;
-  const channel = channelId ? client.channels.cache.get(channelId) : undefined;
+  const channel = channelId
+    ? (client.channels.cache.get(channelId) as TextChannel | VoiceBasedChannel)
+    : undefined;
   const entityType =
     channel == undefined
       ? GuildScheduledEventEntityType.External
@@ -186,7 +189,7 @@ export async function deseralizePreviewEmbed(
     privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
     duration: duration,
     forumChannelId: thread.parentId ?? "",
-    entityMetadata: { location: location ?? channel?.url ?? "" },
+    entityMetadata: { location: location ?? channel?.name ?? "" },
     entityType,
     threadChannel: thread,
     scheduledEvent,

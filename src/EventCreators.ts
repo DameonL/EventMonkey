@@ -1,4 +1,4 @@
-import { ButtonInteraction, ChannelType, Client, ForumChannel } from "discord.js";
+import { ButtonInteraction, ChannelType, Client, ForumChannel, GuildScheduledEventEntityType } from "discord.js";
 import { createAttendanceButtons, createAttendeesEmbed, createPreviewEmbed } from "./ContentCreators";
 import { EventMonkeyEvent, listenForButtonsInThread } from "./EventMonkey";
 import { getEventNameAndStart } from "./Serialization";
@@ -8,7 +8,7 @@ export async function createGuildScheduledEvent(
   submissionInteraction: ButtonInteraction,
   threadUrl: string
 ) {
-  const eventToSubmit = { ...event };
+  const eventToSubmit = { ...event } as any;
   const scheduledEndTime = new Date(eventToSubmit.scheduledStartTime);
   scheduledEndTime.setHours(
     scheduledEndTime.getHours() + eventToSubmit.duration
@@ -16,9 +16,14 @@ export async function createGuildScheduledEvent(
   eventToSubmit.scheduledEndTime = scheduledEndTime;
   eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${threadUrl}\nHosted by: ${eventToSubmit.author.toString()}`;
   eventToSubmit.name = `${eventToSubmit.name} hosted by ${eventToSubmit.author.username}`;
+  if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
+    eventToSubmit.channelId = eventToSubmit.entityMetadata.location;
+    delete eventToSubmit.entityMetadata;
+  }
+  
   const scheduledEvent = await (event.scheduledEvent
     ? submissionInteraction.guild?.scheduledEvents.edit(
-        event.scheduledEvent,
+        event.scheduledEvent.id,
         eventToSubmit
       )
     : submissionInteraction.guild?.scheduledEvents.create(eventToSubmit));
