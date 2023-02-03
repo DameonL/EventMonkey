@@ -70,14 +70,14 @@ type EventTypeInformation = {
 
 let configuration: EventConfiguration;
 
-const eventsInProgress: UserEventMap = {};
+const eventsUnderConstruction: UserEventMap = {};
 
 export function saveEvent(event: EventMonkeyEvent) {
-  eventsInProgress[event.author.id] = [new Date(), event];
+  eventsUnderConstruction[event.author.id] = [new Date(), event];
 }
 
 export function deleteEvent(userId: string) {
-  delete eventsInProgress[userId];
+  delete eventsUnderConstruction[userId];
 }
 
 export function configure(newConfiguration: EventConfiguration) {
@@ -117,14 +117,18 @@ export function configure(newConfiguration: EventConfiguration) {
       }
     });
 
-    for (const eventChannel of configuration.eventTypes) {
-      const channel = configuration.discordClient?.channels.cache.get(
-        eventChannel.channelId
-      );
+    sortAllEventThreads();
+  }
+}
 
-      if (channel?.type === ChannelType.GuildForum) {
-        sortEventThreads(channel);
-      }
+async function sortAllEventThreads() {
+  for (const eventChannel of configuration.eventTypes) {
+    const channel = configuration.discordClient?.channels.cache.get(
+      eventChannel.channelId
+    );
+
+    if (channel?.type === ChannelType.GuildForum) {
+      await sortEventThreads(channel);
     }
   }
 }
@@ -200,23 +204,24 @@ export async function closeEventThread(thread: ThreadChannel, reason: string) {
 
   await thread.setLocked(true);
   await thread.setArchived(true);
+  await sortAllEventThreads();
 }
 
-setInterval(clearEventsInProgress, hours(1));
+setInterval(clearEventsUnderConstruction, hours(1));
 
-function clearEventsInProgress() {
+function clearEventsUnderConstruction() {
   const clearList: string[] = [];
   const now = new Date().valueOf();
 
-  for (const userId in eventsInProgress) {
-    const eventTimestamp = eventsInProgress[userId][0];
+  for (const userId in eventsUnderConstruction) {
+    const eventTimestamp = eventsUnderConstruction[userId][0];
     if (Math.abs(now - eventTimestamp.valueOf()) >= hours(2)) {
       clearList.push(userId);
     }
   }
 
   for (const userId of clearList) {
-    delete eventsInProgress[userId];
+    delete eventsUnderConstruction[userId];
   }
 }
 
@@ -312,8 +317,8 @@ export const eventCommand = {
     const defaultDuration = 1;
 
     var newEvent: EventMonkeyEvent =
-      interaction.user.id in eventsInProgress
-        ? eventsInProgress[interaction.user.id][1]
+      interaction.user.id in eventsUnderConstruction
+        ? eventsUnderConstruction[interaction.user.id][1]
         : {
             name: "New Meetup",
             description: "Your meetup description",
@@ -334,7 +339,7 @@ export const eventCommand = {
           };
 
     newEvent.entityType = entityType;
-    eventsInProgress[interaction.user.id] = [new Date(), newEvent];
+    eventsUnderConstruction[interaction.user.id] = [new Date(), newEvent];
 
     await showEventModal(newEvent, interaction);
   },
@@ -444,7 +449,7 @@ export async function showEventModal(
       ephemeral: true,
     });
 
-    eventsInProgress[modalSubmission.user.id] = [new Date(), event];
+    eventsUnderConstruction[modalSubmission.user.id] = [new Date(), event];
     return;
   }
 
@@ -459,7 +464,7 @@ export async function showEventModal(
         ephemeral: true,
       });
 
-      eventsInProgress[modalSubmission.user.id] = [new Date(), event];
+      eventsUnderConstruction[modalSubmission.user.id] = [new Date(), event];
       return;
     }
     if (
@@ -471,7 +476,7 @@ export async function showEventModal(
         ephemeral: true,
       });
 
-      eventsInProgress[modalSubmission.user.id] = [new Date(), event];
+      eventsUnderConstruction[modalSubmission.user.id] = [new Date(), event];
       return;
     }
 
