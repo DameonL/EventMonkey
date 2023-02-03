@@ -143,8 +143,10 @@ const eventCreationButtonHandlers: {
         await updateScheduledEventUrl(guildScheduledEvent, forumThread);
       }
     } catch (error) {
+      console.error(error);
+      console.log(event);
       await modalSubmission.editReply({
-        content: "Sorry, something went wrong!",
+        content: `Sorry, something went wrong!`,
         embeds: [],
         components: [],
       });
