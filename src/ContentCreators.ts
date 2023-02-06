@@ -8,7 +8,7 @@ import {
   ModalBuilder,
   TextInputStyle,
 } from "discord.js";
-import { EventMonkeyEvent } from "./EventMonkey";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import {
   ModalSerializationConfig,
   serializeToModal,

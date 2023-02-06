@@ -13,7 +13,7 @@ import {
   ThreadChannel,
   VoiceBasedChannel,
 } from "discord.js";
-import { EventMonkeyEvent } from "./EventMonkey";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 
 export interface ModalSerializationConfig {
   labels?: {

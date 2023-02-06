@@ -19,13 +19,14 @@ import {
   SlashCommandBuilder,
   ThreadChannel,
   User,
-  VoiceBasedChannel,
 } from "discord.js";
 
 import { createSubmissionEmbed, eventEditModal } from "./ContentCreators";
 import buttonHandlers from "./EventButtonHandlers";
 import eventCreationButtonHandlers from "./EventCreationButtonHandlers";
 import { sortEventThreads } from "./EventCreators";
+import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import {
   deseralizePreviewEmbed,
   deserializeModalFields,
@@ -33,42 +34,11 @@ import {
 } from "./Serialization";
 import { hours, minutes } from "./TimeConversion";
 
-export interface EventMonkeyEvent {
-  author: User;
-  name: string;
-  description: string;
-  image: string;
-  entityMetadata: { location: string };
-  channel?: VoiceBasedChannel;
-  scheduledStartTime: Date;
-  scheduledEndTime?: Date;
-  duration: number;
-  privacyLevel: GuildScheduledEventPrivacyLevel;
-  id: string;
-  submissionCollector?: InteractionCollector<ButtonInteraction>;
-  forumChannelId: string;
-  entityType: GuildScheduledEventEntityType;
-  threadChannel?: ThreadChannel;
-  scheduledEvent?: GuildScheduledEvent;
-}
-
-export interface EventConfiguration {
-  commandName: string;
-  discordClient?: Client;
-  eventTypes: EventTypeInformation[];
-  editingTimeoutInMinutes: number;
-}
-
 interface UserEventMap {
   [userId: string]: [Date, EventMonkeyEvent];
 }
 
-type EventTypeInformation = {
-  name: string;
-  channelId: string;
-};
-
-let configuration: EventConfiguration;
+let configuration: EventMonkeyConfiguration;
 
 const eventsUnderConstruction: UserEventMap = {};
 
@@ -80,7 +50,7 @@ export function deleteEvent(userId: string) {
   delete eventsUnderConstruction[userId];
 }
 
-export function configure(newConfiguration: EventConfiguration) {
+export function configure(newConfiguration: EventMonkeyConfiguration) {
   const cachedClient = configuration?.discordClient;
   configuration = newConfiguration;
 
@@ -225,7 +195,7 @@ function clearEventsUnderConstruction() {
   }
 }
 
-export function getDefaultConfiguration(): EventConfiguration {
+export function getDefaultConfiguration(): EventMonkeyConfiguration {
   return {
     commandName: "event",
     eventTypes: [],

@@ -1,6 +1,7 @@
 import { ButtonInteraction, ChannelType, Client, ForumChannel, GuildScheduledEventEntityType } from "discord.js";
 import { createAttendanceButtons, createAttendeesEmbed, createPreviewEmbed } from "./ContentCreators";
-import { EventMonkeyEvent, listenForButtonsInThread } from "./EventMonkey";
+import { listenForButtonsInThread } from "./EventMonkey";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import { getEventNameAndStart } from "./Serialization";
 
 export async function createGuildScheduledEvent(

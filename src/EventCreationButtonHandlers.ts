@@ -14,11 +14,11 @@ import {
 import {
   closeEventThread,
   deleteEvent,
-  EventMonkeyEvent,
   getEmbedSubmissionCollector,
   saveEvent,
   showEventModal,
 } from "./EventMonkey";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import { hours, minutes } from "./TimeConversion";
 
 const eventCreationButtonHandlers: {
