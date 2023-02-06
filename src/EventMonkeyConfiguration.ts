@@ -1,4 +1,4 @@
-import { Client } from "discord.js";
+import { Client, GuildScheduledEventEntityType } from "discord.js";
 
 export interface EventMonkeyConfiguration {
   commandName: string;
@@ -8,5 +8,6 @@ export interface EventMonkeyConfiguration {
     channelId: string;
   }[];
   editingTimeoutInMinutes: number;
+  allowedEntityTypes?: GuildScheduledEventEntityType[];
 }
 

@@ -18,7 +18,7 @@ import {
   Routes,
   SlashCommandBuilder,
   ThreadChannel,
-  User,
+  User
 } from "discord.js";
 
 import { createSubmissionEmbed, eventEditModal } from "./ContentCreators";
@@ -27,12 +27,14 @@ import eventCreationButtonHandlers from "./EventCreationButtonHandlers";
 import { sortEventThreads } from "./EventCreators";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
+export { EventMonkeyConfiguration, EventMonkeyEvent };
 import {
   deseralizePreviewEmbed,
   deserializeModalFields,
-  ModalDeserializationConfig,
+  ModalDeserializationConfig
 } from "./Serialization";
 import { hours, minutes } from "./TimeConversion";
+
 
 interface UserEventMap {
   [userId: string]: [Date, EventMonkeyEvent];
@@ -259,18 +261,27 @@ export const eventCommand = {
           .setName("location")
           .setDescription("The type of location the event will be at");
         option.addChoices(
-          {
-            name: "External",
-            value: GuildScheduledEventEntityType.External.toString(),
-          },
-          {
-            name: "Voice",
-            value: GuildScheduledEventEntityType.Voice.toString(),
-          },
-          {
-            name: "Stage",
-            value: GuildScheduledEventEntityType.StageInstance.toString(),
-          }
+          ...[
+            {
+              name: "External",
+              value: GuildScheduledEventEntityType.External.toString(),
+              entityType: GuildScheduledEventEntityType.External,
+            },
+            {
+              name: "Voice",
+              value: GuildScheduledEventEntityType.Voice.toString(),
+              entityType: GuildScheduledEventEntityType.Voice,
+            },
+            {
+              name: "Stage",
+              value: GuildScheduledEventEntityType.StageInstance.toString(),
+              entityType: GuildScheduledEventEntityType.StageInstance,
+            },
+          ].filter(
+            (x) =>
+              !configuration.allowedEntityTypes ||
+              configuration.allowedEntityTypes.includes(x.entityType)
+          )
         );
         option.setRequired(true);
         return option;
