@@ -171,15 +171,15 @@ export async function deseralizePreviewEmbed(
       ? GuildScheduledEventEntityType.StageInstance
       : GuildScheduledEventEntityType.Voice;
 
+  const eventLink = embed.fields.find((x) => x.name === "Event Link");
+  const eventId = eventLink?.value.match(
+    /(?<=https:\/\/discord.com\/events\/.*\/).*/i
+  )?.[0];
+  if (!eventId) throw new Error("Unable to deserialize event ID.");
+
   let scheduledEvent: GuildScheduledEvent | undefined = undefined;
   for (const [guildId, guild] of client.guilds.cache.entries()) {
-    const foundEvent = guild.scheduledEvents.cache.find((x) =>
-      x.description?.includes(`Discussion: ${thread.url}`)
-    );
-    if (foundEvent) {
-      scheduledEvent = foundEvent;
-      break;
-    }
+    scheduledEvent = await guild.scheduledEvents.fetch(eventId);
   }
 
   const output = {
