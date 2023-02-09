@@ -3,7 +3,6 @@ import {
   ChannelType,
   ChatInputCommandInteraction,
   Client,
-  EmbedBuilder,
   Events,
   ForumChannel,
   GuildScheduledEvent,
@@ -24,7 +23,6 @@ import {
 import { createSubmissionEmbed, eventEditModal } from "./ContentCreators";
 import buttonHandlers from "./EventButtonHandlers";
 import eventCreationButtonHandlers from "./EventCreationButtonHandlers";
-import { sortEventThreads } from "./EventCreators";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import {
@@ -32,8 +30,14 @@ import {
   deserializeModalFields,
   ModalDeserializationConfig,
 } from "./Serialization";
+import {
+  closeAllOutdatedThreads,
+  closeEventThread,
+  sortAllEventThreads,
+} from "./ThreadUtilities";
 import { hours, minutes } from "./TimeConversion";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
+export { configuration };
 
 interface UserEventMap {
   [userId: string]: [Date, EventMonkeyEvent];
@@ -88,19 +92,8 @@ export function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     });
 
+    closeAllOutdatedThreads();
     sortAllEventThreads();
-  }
-}
-
-async function sortAllEventThreads() {
-  for (const eventChannel of configuration.eventTypes) {
-    const channel = configuration.discordClient?.channels.cache.get(
-      eventChannel.channelId
-    );
-
-    if (channel?.type === ChannelType.GuildForum) {
-      await sortEventThreads(channel);
-    }
   }
 }
 
@@ -152,30 +145,6 @@ function getThreadFromEventDescription(
   }
 
   return undefined;
-}
-
-export async function closeEventThread(thread: ThreadChannel, reason: string) {
-  if (thread.archived) return;
-
-  const pinnedMessage = (await thread.messages.fetchPinned()).at(0);
-  if (pinnedMessage) {
-    await pinnedMessage.edit({ components: [] });
-  }
-
-  await (
-    await thread.send({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(reason)
-          .setDescription("Thread has been locked and archived.")
-          .setColor("DarkRed"),
-      ],
-    })
-  ).pin();
-
-  await thread.setLocked(true);
-  await thread.setArchived(true);
-  await sortAllEventThreads();
 }
 
 setInterval(clearEventsUnderConstruction, hours(1));

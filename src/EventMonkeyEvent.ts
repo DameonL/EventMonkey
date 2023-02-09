@@ -1,4 +1,13 @@
-import { ButtonInteraction, GuildScheduledEvent, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, InteractionCollector, ThreadChannel, User, VoiceBasedChannel } from "discord.js";
+import {
+  ButtonInteraction,
+  GuildScheduledEvent,
+  GuildScheduledEventEntityType,
+  GuildScheduledEventPrivacyLevel,
+  InteractionCollector,
+  ThreadChannel,
+  User,
+  VoiceBasedChannel,
+} from "discord.js";
 
 export interface EventMonkeyEvent {
   author: User;
@@ -18,4 +27,3 @@ export interface EventMonkeyEvent {
   threadChannel?: ThreadChannel;
   scheduledEvent?: GuildScheduledEvent;
 }
-

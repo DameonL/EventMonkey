@@ -1,8 +1,18 @@
-import { ButtonInteraction, ChannelType, Client, ForumChannel, GuildScheduledEventEntityType } from "discord.js";
-import { createAttendanceButtons, createAttendeesEmbed, createPreviewEmbed } from "./ContentCreators";
+import {
+  ButtonInteraction,
+  ChannelType,
+  Client,
+  ForumChannel,
+  GuildScheduledEventEntityType,
+} from "discord.js";
+import {
+  createAttendanceButtons,
+  createAttendeesEmbed,
+  createPreviewEmbed,
+} from "./ContentCreators";
 import { listenForButtonsInThread } from "./EventMonkey";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { getEventNameAndStart } from "./Serialization";
+import { sortEventThreads } from "./ThreadUtilities";
 
 export async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
@@ -15,13 +25,15 @@ export async function createGuildScheduledEvent(
     scheduledEndTime.getHours() + eventToSubmit.duration
   );
   eventToSubmit.scheduledEndTime = scheduledEndTime;
-  eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${threadUrl}\nHosted by: ${eventToSubmit.author.toString()}`;
+  eventToSubmit.description = `${
+    eventToSubmit.description
+  }\nDiscussion: ${threadUrl}\nHosted by: ${eventToSubmit.author.toString()}`;
   eventToSubmit.name = `${eventToSubmit.name} hosted by ${eventToSubmit.author.username}`;
   if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
     eventToSubmit.channelId = eventToSubmit.entityMetadata.location;
     delete eventToSubmit.entityMetadata;
   }
-  
+
   const scheduledEvent = await (event.scheduledEvent
     ? submissionInteraction.guild?.scheduledEvents.edit(
         event.scheduledEvent.id,
@@ -60,12 +72,7 @@ export async function createForumChannelEvent(
   }`;
   const threadMessage = {
     embeds: [createPreviewEmbed(event), createAttendeesEmbed(event)],
-    components: [
-      createAttendanceButtons(
-        event,
-        client.user?.id ?? ""
-      ),
-    ],
+    components: [createAttendanceButtons(event, client.user?.id ?? "")],
   };
 
   const threadChannel = event.threadChannel
@@ -88,18 +95,4 @@ export async function createForumChannelEvent(
   await listenForButtonsInThread(threadChannel);
 
   return threadChannel;
-}
-
-export async function sortEventThreads(channel: ForumChannel) {
-  const threadMessages = [...await (await channel.threads.fetchActive()).threads.values()].sort((a, b) => {
-    const aStart = getEventNameAndStart(a.name).scheduledStartTime.valueOf();
-    const bStart = getEventNameAndStart(b.name).scheduledStartTime.valueOf();
-
-    if (aStart === bStart) return 0;
-    return aStart > bStart ? -1 : 1;
-  });
-
-  for (const threadMessage of threadMessages) {
-    await (await threadMessage.send("Delete me")).delete();
-  }
 }

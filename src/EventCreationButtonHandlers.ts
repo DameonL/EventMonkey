@@ -1,7 +1,6 @@
 import {
   ButtonInteraction,
   Client,
-  EmbedBuilder,
   GuildScheduledEvent,
   ModalSubmitInteraction,
   ThreadChannel,
@@ -12,14 +11,14 @@ import {
   createGuildScheduledEvent,
 } from "./EventCreators";
 import {
-  closeEventThread,
   deleteEvent,
   getEmbedSubmissionCollector,
   saveEvent,
   showEventModal,
 } from "./EventMonkey";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { hours, minutes } from "./TimeConversion";
+import { closeEventThread } from "./ThreadUtilities";
+import { minutes } from "./TimeConversion";
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (
