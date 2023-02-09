@@ -69,13 +69,12 @@ export interface ModalDeserializationConfig {
 }
 
 export function deserializeModalFields<T>(
-  fieldPrefix: string,
   fields: IterableIterator<[string, TextInputComponent]>,
   deserializeTarget?: any,
   config?: ModalDeserializationConfig
 ) {
+  const fieldPrefix = `${deserializeTarget.id}_`;
   const output: any = deserializeTarget ?? {};
-
   for (let [fullFieldName, fieldComponent] of fields) {
     fullFieldName = fullFieldName.replace(fieldPrefix, "");
     const splitFieldName = fullFieldName.split(".");
@@ -131,8 +130,11 @@ export async function deseralizePreviewEmbed(
   client: Client
 ): Promise<EventMonkeyEvent> {
   const pinnedMessages = await thread.messages.fetchPinned();
-  const embed = pinnedMessages.at(0)?.embeds[0];
+  const embed = pinnedMessages.at(pinnedMessages.values.length - 1)?.embeds[0];
   if (!embed) throw new Error("Unable to find event embed for thread.");
+
+  const id = embed.fields.find((x) => x.name === "Event ID")?.value;
+  if (!id) throw new Error("Unable to get ID from embed.");
 
   const userMatches = embed.author?.name.match(
     /(?<username>\w*) \((?<userId>.*)\)$/i
@@ -193,7 +195,7 @@ export async function deseralizePreviewEmbed(
     entityType,
     threadChannel: thread,
     scheduledEvent,
-    id: thread.id,
+    id,
   };
 
   return output;

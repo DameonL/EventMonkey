@@ -18,7 +18,7 @@ import {
   Routes,
   SlashCommandBuilder,
   ThreadChannel,
-  User
+  User,
 } from "discord.js";
 
 import { createSubmissionEmbed, eventEditModal } from "./ContentCreators";
@@ -27,14 +27,13 @@ import eventCreationButtonHandlers from "./EventCreationButtonHandlers";
 import { sortEventThreads } from "./EventCreators";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-export { EventMonkeyConfiguration, EventMonkeyEvent };
 import {
   deseralizePreviewEmbed,
   deserializeModalFields,
-  ModalDeserializationConfig
+  ModalDeserializationConfig,
 } from "./Serialization";
 import { hours, minutes } from "./TimeConversion";
-
+export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 interface UserEventMap {
   [userId: string]: [Date, EventMonkeyEvent];
@@ -226,9 +225,9 @@ export async function registerEventCommand(botToken: string) {
   }
 }
 
-export function listenForButtons() {
+export async function listenForButtons() {
   for (const eventType of configuration.eventTypes) {
-    const channel = configuration.discordClient?.channels.cache.get(
+    const channel = await configuration.discordClient?.channels.fetch(
       eventType.channelId
     );
     if (channel && channel.type === ChannelType.GuildForum) {
@@ -313,7 +312,7 @@ export const eventCommand = {
                   : "Channel Name",
             },
             privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-            id: interaction.id,
+            id: crypto.randomUUID(),
             forumChannelId,
             author: interaction.user,
             entityType,
@@ -419,7 +418,6 @@ export async function showEventModal(
 
   try {
     deserializeModalFields<EventMonkeyEvent>(
-      `${event.id}_`,
       modalSubmission.fields.fields.entries(),
       event,
       deserializationConfig

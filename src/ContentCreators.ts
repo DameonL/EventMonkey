@@ -9,10 +9,7 @@ import {
   TextInputStyle,
 } from "discord.js";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import {
-  ModalSerializationConfig,
-  serializeToModal,
-} from "./Serialization";
+import { ModalSerializationConfig, serializeToModal } from "./Serialization";
 
 export function createSubmissionEmbed(
   event: EventMonkeyEvent,
@@ -59,9 +56,7 @@ export function createSubmissionEmbed(
   };
 }
 
-export function createPreviewEmbed(
-  event: EventMonkeyEvent
-): EmbedBuilder {
+export function createPreviewEmbed(event: EventMonkeyEvent): EmbedBuilder {
   const previewEmbed = new EmbedBuilder().setTitle(
     `${event.scheduledStartTime
       .toLocaleString()
@@ -85,6 +80,7 @@ export function createPreviewEmbed(
     value: `${event.duration} hour${event.duration > 1 ? "s" : ""}`,
     inline: true,
   });
+  fields.push({ name: "Event ID", value: event.id });
   previewEmbed.addFields(fields);
   previewEmbed.setAuthor({
     name: `${event.author.username} (${event.author.id})`,
@@ -94,9 +90,7 @@ export function createPreviewEmbed(
   return previewEmbed;
 }
 
-export function createAttendeesEmbed(
-  event: EventMonkeyEvent
-): EmbedBuilder {
+export function createAttendeesEmbed(event: EventMonkeyEvent): EmbedBuilder {
   const attendeesEmbed = new EmbedBuilder();
   attendeesEmbed.addFields([
     {
@@ -160,16 +154,11 @@ export function createAttendanceButtons(
     new ButtonBuilder()
       .setLabel("Attending")
       .setStyle(ButtonStyle.Success)
-      .setCustomId(
-        `${clientId}_${event.id}_button_attending`
-      ),
+      .setCustomId(`${clientId}_${event.id}_button_attending`),
     new ButtonBuilder()
       .setLabel("Not Attending")
       .setStyle(ButtonStyle.Danger)
-      .setCustomId(
-        `${clientId}_${event.id}_button_notAttending`
-      ),
+      .setCustomId(`${clientId}_${event.id}_button_notAttending`),
   ]);
   return buttonRow;
 }
-
