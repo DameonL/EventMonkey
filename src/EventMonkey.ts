@@ -5,6 +5,7 @@ import {
   Client,
   Events,
   ForumChannel,
+  GuildMemberRoleManager,
   GuildScheduledEvent,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
@@ -213,7 +214,7 @@ export const eventCommand = {
   builder: () =>
     new SlashCommandBuilder()
       .setName(configuration.commandName)
-      .setDescription("Create or edit an event")
+      .setDescription("Create an event")
       .addStringOption((option) => {
         option.setName("type").setDescription("The type of event to schedule");
         option.addChoices(
@@ -256,6 +257,17 @@ export const eventCommand = {
       }),
   execute: async (interaction: ChatInputCommandInteraction) => {
     if (!interaction.guild || !interaction.channel) return;
+    if (!interaction.member?.roles || !interaction.memberPermissions) {
+      interaction.reply({
+        content: "This command can only be used in a channel.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!checkRolePermissions(interaction)) {
+      return;
+    }
 
     const forumChannelId = interaction.options.getString("type") ?? "";
     const entityType = Number(
@@ -309,6 +321,10 @@ export const editEventCommand = {
   execute: async (interaction: ChatInputCommandInteraction) => {
     if (!interaction.guild || !interaction.channel) return;
     const channel = interaction.options.getChannel("thread") as ThreadChannel;
+    if (!checkRolePermissions(interaction)) {
+      return;
+    }
+
     const event = await deseralizePreviewEmbed(
       channel,
       configuration.discordClient as Client
@@ -526,4 +542,47 @@ export function getEmbedSubmissionCollector(
   });
 
   return submissionCollector;
+}
+
+function checkRolePermissions(
+  interaction: ChatInputCommandInteraction
+): boolean {
+  if (!interaction.member) return false;
+
+  let allowed = configuration.roleIds?.allowed == null;
+  const memberPermissions = interaction.memberPermissions;
+  if (memberPermissions && memberPermissions.has("Administrator")) {
+    return true;
+  }
+
+  if (memberPermissions) {
+    const userRoles = interaction.member.roles as GuildMemberRoleManager;
+    if (configuration.roleIds?.allowed) {
+      for (const roleId of configuration.roleIds.allowed) {
+        if (userRoles.cache.has(roleId)) {
+          allowed = true;
+          break;
+        }
+      }
+    }
+
+    if (configuration.roleIds?.denied) {
+      for (const roleId of configuration.roleIds.denied) {
+        if (userRoles.cache.has(roleId)) {
+          allowed = false;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!allowed) {
+    interaction.reply({
+      content:
+        "Sorry, but you do not have permissions to create or edit events.",
+      ephemeral: true,
+    });
+  }
+
+  return allowed;
 }

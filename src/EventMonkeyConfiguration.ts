@@ -9,5 +9,9 @@ export interface EventMonkeyConfiguration {
   }[];
   editingTimeoutInMinutes: number;
   allowedEntityTypes?: GuildScheduledEventEntityType[];
+  roleIds?: {
+    allowed?: string[],
+    denied?: string[]
+  }
 }
 
