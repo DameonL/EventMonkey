@@ -37,6 +37,8 @@ import {
   sortAllEventThreads,
 } from "./ThreadUtilities";
 import { hours, minutes } from "./TimeConversion";
+import { deserialize as deserializeRecurrence, serializeFrequency } from "./Recurrence";
+
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 export { configuration };
 
@@ -82,30 +84,21 @@ export function configure(newConfiguration: EventMonkeyConfiguration) {
     );
 
     client.on("guildScheduledEventUserAdd", userShowedInterest);
-
-    client.on("guildScheduledEventUpdate", async (oldEvent, newEvent) => {
-      if (
-        (newEvent.status === GuildScheduledEventStatus.Completed ||
-          newEvent.status === GuildScheduledEventStatus.Canceled) &&
-        newEvent.description
-      ) {
-        eventWasCompletedOrCancelled(newEvent);
-      }
-    });
+    client.on("guildScheduledEventUpdate", eventWasCompletedOrCancelled);
 
     closeAllOutdatedThreads();
     sortAllEventThreads();
   }
 }
 
-async function eventWasCompletedOrCancelled(event: GuildScheduledEvent) {
+async function eventWasCompletedOrCancelled(oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) {
   if (
     (event.status === GuildScheduledEventStatus.Completed ||
       event.status === GuildScheduledEventStatus.Canceled) &&
     event.description
   ) {
     const thread = getThreadFromEventDescription(event.description);
-    if (thread) {
+    if (thread && !thread.archived) {
       await closeEventThread(
         thread,
         event.status === GuildScheduledEventStatus.Completed

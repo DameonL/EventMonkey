@@ -5,7 +5,7 @@ import {
   ThreadChannel,
 } from "discord.js";
 import { configuration } from "./EventMonkey";
-import { deseralizePreviewEmbed, getEventNameAndStart } from "./Serialization";
+import { deseralizePreviewEmbed, getTimeFromString } from "./Serialization";
 
 interface ChannelWithThreads {
   threads: GuildForumThreadManager;
@@ -15,8 +15,8 @@ export async function sortEventThreads(channel: ChannelWithThreads) {
   const threadMessages = [
     ...(await (await channel.threads.fetchActive()).threads.values()),
   ].sort((a, b) => {
-    const aStart = getEventNameAndStart(a.name).scheduledStartTime.valueOf();
-    const bStart = getEventNameAndStart(b.name).scheduledStartTime.valueOf();
+    const aStart = getTimeFromString(a.name).valueOf();
+    const bStart = getTimeFromString(b.name).valueOf();
 
     if (aStart === bStart) return 0;
     return aStart > bStart ? -1 : 1;

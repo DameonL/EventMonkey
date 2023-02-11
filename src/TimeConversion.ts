@@ -1,3 +1,7 @@
+export function days(numberOfDays: number) {
+  return hours(24) * numberOfDays;
+}
+
 export function hours(numberOfHours: number) {
   return minutes(60) * numberOfHours;
 }

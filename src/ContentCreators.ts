@@ -1,15 +1,31 @@
 import {
   ActionRowBuilder,
+  AnyComponentBuilder,
   APIEmbedField,
   ButtonBuilder,
   ButtonStyle,
+  ComponentBuilder,
   EmbedBuilder,
   GuildScheduledEventEntityType,
+  MessageActionRowComponentBuilder,
+  MessageActionRowComponentData,
   ModalBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { ModalSerializationConfig, serializeToModal } from "./Serialization";
+import {
+  getTimeString,
+  ModalSerializationConfig,
+  serializeToModal,
+} from "./Serialization";
+import {
+  deserialize as deserializeRecurrence,
+  getRecurrenceUnit,
+  serializeFrequency,
+} from "./Recurrence";
 
 export function createSubmissionEmbed(
   event: EventMonkeyEvent,
@@ -17,7 +33,7 @@ export function createSubmissionEmbed(
   clientId: string
 ): {
   embeds: EmbedBuilder[];
-  components: ActionRowBuilder<ButtonBuilder>[];
+  components: ActionRowBuilder<MessageActionRowComponentBuilder>[];
   ephemeral: boolean;
   fetchReply: boolean;
   content: string;
@@ -28,28 +44,36 @@ export function createSubmissionEmbed(
     new ButtonBuilder()
       .setLabel("Edit")
       .setCustomId(`${prefix}_edit`)
-      .setStyle(ButtonStyle.Primary),
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setLabel("Make Recurring")
+      .setCustomId(`${prefix}_makeRecurring`)
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setLabel(event.image === "" ? "Add An Image" : "Change Image")
       .setCustomId(`${prefix}_addImage`)
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setLabel("Save For Later")
-      .setCustomId(`${prefix}_save`)
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setLabel("Finish")
-      .setCustomId(`${prefix}_finish`)
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setLabel("Cancel")
-      .setCustomId(`${prefix}_cancel`)
-      .setStyle(ButtonStyle.Danger),
+      .setStyle(ButtonStyle.Secondary),
   ]);
 
   return {
     embeds: [submissionEmbed, createPreviewEmbed(event)],
-    components: [buttonRow],
+    components: [
+      buttonRow,
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setLabel("Save For Later")
+          .setCustomId(`${prefix}_save`)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setLabel("Finish")
+          .setCustomId(`${prefix}_finish`)
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setLabel("Cancel")
+          .setCustomId(`${prefix}_cancel`)
+          .setStyle(ButtonStyle.Danger)
+      ),
+    ],
     ephemeral: true,
     fetchReply: true,
     content,
@@ -80,6 +104,13 @@ export function createPreviewEmbed(event: EventMonkeyEvent): EmbedBuilder {
     value: `${event.duration} hour${event.duration > 1 ? "s" : ""}`,
     inline: true,
   });
+
+  if (event.recurrence) {
+    fields.push({
+      name: "Event Frequency",
+      value: serializeFrequency(event.recurrence),
+    });
+  }
   fields.push({ name: "Event ID", value: event.id });
   previewEmbed.addFields(fields);
   previewEmbed.setAuthor({
@@ -122,17 +153,7 @@ export function eventEditModal(event: EventMonkeyEvent) {
       scheduledStartTime: "Scheduled Start Time",
     },
     formatters: {
-      scheduledStartTime: (startTime: any) =>
-        startTime
-          .toLocaleString("en-us", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-          .replace(",", "")
-          .replace(" ", " "),
+      scheduledStartTime: getTimeString,
     },
     styles: {
       description: TextInputStyle.Paragraph,
@@ -140,6 +161,37 @@ export function eventEditModal(event: EventMonkeyEvent) {
   };
   modal.addComponents(
     serializeToModal(`${event.id}_`, serializationObject, serializationConfig)
+  );
+
+  return modal;
+}
+
+export function recurrenceModal(event: EventMonkeyEvent) {
+  if (!event.recurrence)
+    throw new Error("Unable to show modal for nonexistent recurrence.");
+
+  const modal = new ModalBuilder();
+  modal.setTitle("Recurring Event");
+  modal.setCustomId(event.id);
+
+  let unit = getRecurrenceUnit(event.recurrence);
+  if (!unit) throw new Error("Unable to get unit from EventRecurrence.");
+
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`${event.id}_frequency`)
+        .setLabel("Time before next recurrence")
+        .setStyle(TextInputStyle.Short)
+        .setValue("1")
+    ),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`${event.id}_unit`)
+        .setLabel("Hours, days, weeks, or months")
+        .setStyle(TextInputStyle.Short)
+        .setValue(unit)
+    )
   );
 
   return modal;

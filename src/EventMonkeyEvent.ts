@@ -8,6 +8,7 @@ import {
   User,
   VoiceBasedChannel,
 } from "discord.js";
+import { EventRecurrence } from "./Recurrence";
 
 export interface EventMonkeyEvent {
   author: User;
@@ -26,4 +27,5 @@ export interface EventMonkeyEvent {
   entityType: GuildScheduledEventEntityType;
   threadChannel?: ThreadChannel;
   scheduledEvent?: GuildScheduledEvent;
+  recurrence?: EventRecurrence;
 }

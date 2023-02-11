@@ -113,16 +113,12 @@ export function deserializeModalFields<T>(
   return output as T;
 }
 
-export function getEventNameAndStart(eventTitle: string) {
-  const titleMatches = eventTitle.match(
-    /(?<time>\d\d?\/\d\d?\/\d\d\d\d, \d\d?:\d\d (AM|PM)) - (?<name>.*)(?= hosted by)/i
-  );
-  if (!titleMatches || !titleMatches.groups)
-    throw new Error("Unable to parse thread name.");
+export function getEventNameFromString(text: string): string {
+  const matches = text.match(/(AM|PM) - (?<name>.*)(?= hosted by)/i);
+  if (!matches || !matches.groups)
+    throw new Error("Unable to parse event name from string.");
 
-  const scheduledStartTime = new Date(titleMatches.groups.time);
-  const name = titleMatches.groups.name;
-  return { name, scheduledStartTime };
+  return matches.groups.name;
 }
 
 export async function deseralizePreviewEmbed(
@@ -147,7 +143,8 @@ export async function deseralizePreviewEmbed(
   const author = client.users.cache.get(userId);
   if (!author) throw new Error("Unable to resolve user ID from embed.");
 
-  const { scheduledStartTime, name } = getEventNameAndStart(thread.name);
+  const scheduledStartTime = getTimeFromString(thread.name);
+  const name = getEventNameFromString(thread.name);
 
   const image = embed.image?.url ?? "";
   const duration = Number(
@@ -199,4 +196,27 @@ export async function deseralizePreviewEmbed(
   };
 
   return output;
+}
+
+export function getTimeFromString(text: string): Date {
+  const matches = text.match(
+    /(?<time>\d\d?\/\d\d?\/\d\d, \d\d?:\d\d (AM|PM))/i
+  );
+  if (!matches || !matches.groups)
+    throw new Error("Unable to parse date from string.");
+
+  return new Date(matches.groups.time);
+}
+
+export function getTimeString(date: Date): string {
+  return date
+    .toLocaleString("en-us", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replace(",", "")
+    .replace(" ", " ");
 }

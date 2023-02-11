@@ -1,11 +1,13 @@
 import {
   ButtonInteraction,
   Client,
+  ComponentType,
   GuildScheduledEvent,
   ModalSubmitInteraction,
+  TextInputModalData,
   ThreadChannel,
 } from "discord.js";
-import { createSubmissionEmbed } from "./ContentCreators";
+import { createSubmissionEmbed, recurrenceModal } from "./ContentCreators";
 import {
   createForumChannelEvent,
   createGuildScheduledEvent,
@@ -36,6 +38,56 @@ const eventCreationButtonHandlers: {
   ) => {
     await modalSubmission.deleteReply();
     await showEventModal(event, submissionInteraction);
+  },
+  makeRecurring: async (
+    event: EventMonkeyEvent,
+    submissionInteraction: ButtonInteraction,
+    modalSubmission: ModalSubmitInteraction,
+    client: Client
+  ) => {
+    event.recurrence = {
+      firstStartTime: event.scheduledStartTime,
+      timesHeld: 0,
+      weeks: 1,
+    };
+    await submissionInteraction.showModal(recurrenceModal(event));
+    var submission = await submissionInteraction.awaitModalSubmit({
+      time: minutes(5),
+      filter: (submitInteraction, collected) => {
+        if (
+          submitInteraction.user.id === submissionInteraction.user.id &&
+          submitInteraction.customId === event.id
+        ) {
+          return true;
+        }
+
+        return false;
+      },
+    });
+    var unitField = submission.fields.getField(`${event.id}_unit`) as TextInputModalData;
+    let unit = unitField.value;
+    
+    if (!unit.endsWith("s")) unit += "s";
+    if (unit !== "hours" && unit !== "days" && unit !== "weeks" && unit !== "months") {
+      await submission.reply({ content: `Invalid time unit. Valid options are "hours", "days", "weeks", or "months"`, ephemeral: true});
+      return;
+    }
+
+    const frequencyField = submission.fields.getField(`${event.id}_frequency`) as TextInputModalData;
+    const frequency = Number(frequencyField.value);
+    if (isNaN(frequency)) {
+      await submission.reply({ content: `The time before the next recurrence must be a number.`, ephemeral: true});
+      return;
+    }
+    
+    const recurrence: any = {
+      firstStartTime: event.scheduledStartTime,
+      timesHeld: 0,
+    }
+
+    recurrence[unit] = frequency;
+
+    event.recurrence = recurrence;
   },
   addImage: async (
     event: EventMonkeyEvent,
