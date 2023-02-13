@@ -11,5 +11,5 @@ export function minutes(numberOfMinutes: number) {
 }
 
 export function seconds(numberOfSeconds: number) {
-  return 100 * numberOfSeconds;
+  return 1000 * numberOfSeconds;
 }
