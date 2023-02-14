@@ -33,13 +33,17 @@ export async function sortEventThreads(channel: ChannelWithThreads) {
 }
 
 export async function closeAllOutdatedThreads() {
-  for (const { name, channel } of configuration.eventTypes) {
-    const resolvedChannel = await resolveChannelString(channel);
-    if (
-      resolvedChannel.type === ChannelType.GuildText ||
-      resolvedChannel.type === ChannelType.GuildForum
-    ) {
-      closeOutdatedThreadsInChannel(resolvedChannel);
+  if (!configuration.discordClient) return;
+
+  for (const [guildId, guild] of configuration.discordClient.guilds.cache) {
+    for (const { name, channel } of configuration.eventTypes) {
+      const resolvedChannel = await resolveChannelString(channel, guild);
+      if (
+        resolvedChannel.type === ChannelType.GuildText ||
+        resolvedChannel.type === ChannelType.GuildForum
+      ) {
+        closeOutdatedThreadsInChannel(resolvedChannel);
+      }
     }
   }
 }
@@ -111,13 +115,16 @@ export async function closeEventThread(
 }
 
 export async function sortAllEventThreads() {
-  for (const eventChannel of configuration.eventTypes) {
-    const channel = await resolveChannelString(eventChannel.channel);
-    if (
-      channel?.type === ChannelType.GuildForum ||
-      channel.type === ChannelType.GuildText
-    ) {
-      await sortEventThreads(channel);
+  if (!configuration.discordClient) return;
+  for (const [guildId, guild] of configuration.discordClient.guilds.cache) {
+    for (const eventChannel of configuration.eventTypes) {
+      const channel = await resolveChannelString(eventChannel.channel, guild);
+      if (
+        channel?.type === ChannelType.GuildForum ||
+        channel.type === ChannelType.GuildText
+      ) {
+        await sortEventThreads(channel);
+      }
     }
   }
 }

@@ -7,6 +7,7 @@ import {
   EmbedBuilder,
   Events,
   ForumChannel,
+  Guild,
   GuildMemberRoleManager,
   GuildScheduledEvent,
   GuildScheduledEventEntityType,
@@ -136,20 +137,19 @@ async function eventStarted(
     : [];
 
   for (const channelId of announcementChannels) {
-    const announcementChannel = await resolveChannelString(channelId);
-    if (
-      !announcementChannel ||
-      announcementChannel.type !== ChannelType.GuildText
-    )
-      continue;
+    if (!event.guild) continue;
 
+    const announcementChannel = await resolveChannelString(
+      channelId,
+      event.guild
+    );
     const monkeyEvent = await deseralizePreviewEmbed(
       thread,
       configuration.discordClient
     );
     var idString = `Event ID: ${monkeyEvent.id}`;
 
-    announcementChannel.send({
+    const message = {
       content: (await getAttendeeTags(thread)) ?? "",
       embeds: [
         new EmbedBuilder({
@@ -164,7 +164,16 @@ async function eventStarted(
           },
         }),
       ],
-    });
+    };
+
+    thread.send(message);
+    if (
+      !announcementChannel ||
+      (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
+    )
+      continue;
+
+    announcementChannel.send(message);
   }
 }
 
@@ -207,12 +216,29 @@ async function performAnnouncements() {
       );
 
       var idString = `Event ID: ${monkeyEvent.id}`;
+      const announcementMessage = {
+        content: (await getAttendeeTags(thread)) ?? "",
+        embeds: [
+          new EmbedBuilder({
+            title: "Event Reminder",
+            description: `The event "${
+              monkeyEvent.name
+            }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
+              timeBeforeStart / minutes(1)
+            )} minutes!\nEvent link: ${event.url}`,
+            footer: {
+              text: idString,
+            },
+          }),
+        ],
+      };
+
       for (const channelId of announcementChannels) {
         const announcementChannel =
           await configuration.discordClient.channels.fetch(channelId);
         if (
           !announcementChannel ||
-          announcementChannel.type != ChannelType.GuildText
+          (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
         ) {
           throw new Error(
             `Unable to get announcement channel from supplied ID ${channelId}, or the channel is not a Text channel. Please check your configuration.`
@@ -228,22 +254,7 @@ async function performAnnouncements() {
         );
 
         if (!existingAnnouncement) {
-          announcementChannel.send({
-            content: (await getAttendeeTags(thread)) ?? "",
-            embeds: [
-              new EmbedBuilder({
-                title: "Event Reminder",
-                description: `The event "${
-                  monkeyEvent.name
-                }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
-                  timeBeforeStart / minutes(1)
-                )} minutes!\nEvent link: ${event.url}`,
-                footer: {
-                  text: idString,
-                },
-              }),
-            ],
-          });
+          announcementChannel.send(announcementMessage);
         }
       }
     }
@@ -393,18 +404,18 @@ export async function registerEventCommand(botToken: string) {
 }
 
 export async function listenForButtons() {
-  for (const eventType of configuration.eventTypes) {
-    const channel = await resolveChannelString(eventType.channel);
-    if (
-      channel &&
-      (channel.type === ChannelType.GuildForum ||
-        channel.type === ChannelType.GuildText)
-    ) {
-      listenForButtonsInChannel(channel);
-    } else {
-      throw new Error(
-        `Channel ${eventType.channel} coul does not exist or is not a forum channel.`
-      );
+  if (!configuration.discordClient) return;
+
+  for (const guild of configuration.discordClient.guilds.cache) {
+    for (const eventType of configuration.eventTypes) {
+      const channel = await resolveChannelString(eventType.channel, guild[1]);
+      if (
+        channel &&
+        (channel.type === ChannelType.GuildForum ||
+          channel.type === ChannelType.GuildText)
+      ) {
+        listenForButtonsInChannel(channel);
+      }
     }
   }
 }
@@ -796,13 +807,16 @@ function checkRolePermissions(
   return allowed;
 }
 
-export async function resolveChannelString(text: string): Promise<Channel> {
+export async function resolveChannelString(
+  text: string,
+  guild: Guild
+): Promise<Channel> {
   if (text.match(/^\d+$/)) {
-    const channel = await configuration.discordClient?.channels.fetch(text);
+    const channel = await guild.channels.fetch(text);
     if (channel) return channel;
   }
 
-  const channel = await configuration.discordClient?.channels.cache.find(
+  const channel = await guild.channels.cache.find(
     (x) =>
       (x.type === ChannelType.GuildText || x.type === ChannelType.GuildForum) &&
       x.name === text
