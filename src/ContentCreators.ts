@@ -23,6 +23,7 @@ import {
 } from "./Serialization";
 import {
   deserialize as deserializeRecurrence,
+  serialize as serializeRecurrence,
   getRecurrenceUnit,
   serializeFrequency,
 } from "./Recurrence";
@@ -82,9 +83,7 @@ export function createSubmissionEmbed(
 
 export function createPreviewEmbed(event: EventMonkeyEvent): EmbedBuilder {
   const previewEmbed = new EmbedBuilder().setTitle(
-    `${event.scheduledStartTime
-      .toLocaleString()
-      .replace(/(?<=\d?\d:\d\d):\d\d/, " ")} - ${event.name}`
+    `${getTimeString(event.scheduledStartTime)} - ${event.name}`
   );
   if (event.image !== "") {
     previewEmbed.setThumbnail(event.image);
@@ -107,10 +106,14 @@ export function createPreviewEmbed(event: EventMonkeyEvent): EmbedBuilder {
 
   if (event.recurrence) {
     fields.push({
-      name: "Event Frequency",
-      value: serializeFrequency(event.recurrence),
+      name: "Frequency",
+      value: serializeRecurrence(event.recurrence),
     });
   }
+  if (event.scheduledEvent) {
+    fields.push({ name: "Event Link", value: event.scheduledEvent.url });
+  }
+  
   fields.push({ name: "Event ID", value: event.id });
   previewEmbed.addFields(fields);
   previewEmbed.setAuthor({
@@ -122,11 +125,11 @@ export function createPreviewEmbed(event: EventMonkeyEvent): EmbedBuilder {
 }
 
 export function createAttendeesEmbed(event: EventMonkeyEvent): EmbedBuilder {
-  const attendeesEmbed = new EmbedBuilder();
+  const attendeesEmbed = new EmbedBuilder().setTitle("Attendees");
   attendeesEmbed.addFields([
     {
       name: "Attending",
-      value: `${event.author.username} (${event.author.id})`,
+      value: event.author.toString(),
     },
   ]);
   return attendeesEmbed;

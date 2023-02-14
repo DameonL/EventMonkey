@@ -3,6 +3,7 @@ import {
   ChannelType,
   Client,
   ForumChannel,
+  Guild,
   GuildScheduledEventEntityType,
 } from "discord.js";
 import {
@@ -16,7 +17,7 @@ import { sortEventThreads } from "./ThreadUtilities";
 
 export async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
-  submissionInteraction: ButtonInteraction,
+  guild: Guild,
   threadUrl: string
 ) {
   const eventToSubmit = { ...event } as any;
@@ -35,23 +36,23 @@ export async function createGuildScheduledEvent(
   }
 
   const scheduledEvent = await (event.scheduledEvent
-    ? submissionInteraction.guild?.scheduledEvents.edit(
+    ? guild.scheduledEvents.edit(
         event.scheduledEvent.id,
         eventToSubmit
       )
-    : submissionInteraction.guild?.scheduledEvents.create(eventToSubmit));
+    : guild.scheduledEvents.create(eventToSubmit));
 
   return scheduledEvent;
 }
 
 export async function createForumChannelEvent(
   event: EventMonkeyEvent,
-  submissionInteraction: ButtonInteraction,
+  guild: Guild,
   client: Client
 ) {
   const scheduledEndTime = new Date(event.scheduledStartTime);
   scheduledEndTime.setHours(scheduledEndTime.getHours() + event.duration);
-  const targetChannel = submissionInteraction.guild?.channels.cache.get(
+  const targetChannel = guild.channels.cache.get(
     event.forumChannelId
   ) as ForumChannel;
 

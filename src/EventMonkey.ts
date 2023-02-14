@@ -1,8 +1,10 @@
 import {
   ButtonInteraction,
+  Channel,
   ChannelType,
   ChatInputCommandInteraction,
   Client,
+  EmbedBuilder,
   Events,
   ForumChannel,
   GuildMemberRoleManager,
@@ -17,6 +19,7 @@ import {
   REST,
   Routes,
   SlashCommandBuilder,
+  TextChannel,
   ThreadChannel,
   User,
 } from "discord.js";
@@ -24,11 +27,21 @@ import {
 import { createSubmissionEmbed, eventEditModal } from "./ContentCreators";
 import buttonHandlers from "./EventButtonHandlers";
 import eventCreationButtonHandlers from "./EventCreationButtonHandlers";
+import {
+  createForumChannelEvent,
+  createGuildScheduledEvent,
+} from "./EventCreators";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import {
+  deserialize as deserializeRecurrence,
+  getNextRecurrence,
+} from "./Recurrence";
+import {
   deseralizePreviewEmbed,
   deserializeModalFields,
+  getAttendeeTags,
+  getTimeString,
   ModalDeserializationConfig,
 } from "./Serialization";
 import {
@@ -36,8 +49,7 @@ import {
   closeEventThread,
   sortAllEventThreads,
 } from "./ThreadUtilities";
-import { hours, minutes } from "./TimeConversion";
-import { deserialize as deserializeRecurrence, serializeFrequency } from "./Recurrence";
+import { days, hours, minutes } from "./TimeConversion";
 
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 export { configuration };
@@ -79,19 +91,171 @@ export function configure(newConfiguration: EventMonkeyConfiguration) {
         const thread = getThreadFromEventDescription(
           guildScheduledEvent.description
         );
-        if (thread) closeEventThread(thread, "This event has been cancelled!");
+        if (thread) closeEventThread(thread, guildScheduledEvent);
       }
     );
 
     client.on("guildScheduledEventUserAdd", userShowedInterest);
     client.on("guildScheduledEventUpdate", eventWasCompletedOrCancelled);
+    client.on("guildScheduledEventUpdate", eventStarted);
 
     closeAllOutdatedThreads();
+    performAnnouncements();
     sortAllEventThreads();
+    startRecurringTasks();
   }
 }
 
-async function eventWasCompletedOrCancelled(oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) {
+function startRecurringTasks() {
+  setInterval(clearEventsUnderConstruction, hours(1));
+  setInterval(closeAllOutdatedThreads, minutes(30));
+  setInterval(performAnnouncements, minutes(1));
+}
+
+async function eventStarted(
+  oldEvent: GuildScheduledEvent | null,
+  event: GuildScheduledEvent
+) {
+  if (!event.description || !event.scheduledStartAt) return;
+  if (event.status !== GuildScheduledEventStatus.Active) return;
+  if (!configuration.discordClient) return;
+
+  const thread = getThreadFromEventDescription(event.description);
+  if (!thread) return;
+
+  const eventType = configuration.eventTypes.find(
+    (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
+  );
+  if (!eventType || !eventType.announcement || !eventType.announcement.onStart)
+    return;
+
+  const announcementChannels = Array.isArray(eventType.announcement.channel)
+    ? eventType.announcement.channel
+    : eventType.announcement.channel
+    ? [eventType.announcement.channel]
+    : [];
+
+  for (const channelId of announcementChannels) {
+    const announcementChannel = await resolveChannelString(channelId);
+    if (
+      !announcementChannel ||
+      announcementChannel.type !== ChannelType.GuildText
+    )
+      continue;
+
+    const monkeyEvent = await deseralizePreviewEmbed(
+      thread,
+      configuration.discordClient
+    );
+    var idString = `Event ID: ${monkeyEvent.id}`;
+
+    announcementChannel.send({
+      content: (await getAttendeeTags(thread)) ?? "",
+      embeds: [
+        new EmbedBuilder({
+          title: "Event Reminder",
+          description: `The event "${
+            monkeyEvent.name
+          }" hosted by ${monkeyEvent.author.toString()} is starting now!\nEvent link: ${
+            event.url
+          }`,
+          footer: {
+            text: idString,
+          },
+        }),
+      ],
+    });
+  }
+}
+
+async function performAnnouncements() {
+  if (!configuration.discordClient) return;
+
+  for (const guild of configuration.discordClient.guilds.cache.values()) {
+    for (const event of guild.scheduledEvents.cache.values()) {
+      if (!event.description || !event.scheduledStartAt) continue;
+
+      const thread = getThreadFromEventDescription(event.description);
+      if (!thread) continue;
+
+      const eventType = configuration.eventTypes.find(
+        (x) =>
+          x.channel === thread.parent?.id || x.channel === thread.parent?.name
+      );
+      if (
+        !eventType ||
+        !eventType.announcement ||
+        !eventType.announcement.beforeStart
+      )
+        continue;
+
+      const timeBeforeStart = event.scheduledStartAt.valueOf() - Date.now();
+      if (
+        timeBeforeStart < 0 ||
+        timeBeforeStart > eventType.announcement.beforeStart
+      )
+        continue;
+
+      const announcementChannels = Array.isArray(eventType.announcement.channel)
+        ? eventType.announcement.channel
+        : eventType.announcement.channel
+        ? [eventType.announcement.channel]
+        : [];
+      const monkeyEvent = await deseralizePreviewEmbed(
+        thread,
+        configuration.discordClient
+      );
+
+      var idString = `Event ID: ${monkeyEvent.id}`;
+      for (const channelId of announcementChannels) {
+        const announcementChannel =
+          await configuration.discordClient.channels.fetch(channelId);
+        if (
+          !announcementChannel ||
+          announcementChannel.type != ChannelType.GuildText
+        ) {
+          throw new Error(
+            `Unable to get announcement channel from supplied ID ${channelId}, or the channel is not a Text channel. Please check your configuration.`
+          );
+        }
+
+        const existingAnnouncement = (
+          await announcementChannel.messages.fetch()
+        ).find((x) =>
+          x.embeds.find(
+            (x) => x.footer?.text === idString && x.title === "Event Reminder"
+          )
+        );
+
+        if (!existingAnnouncement) {
+          announcementChannel.send({
+            content: (await getAttendeeTags(thread)) ?? "",
+            embeds: [
+              new EmbedBuilder({
+                title: "Event Reminder",
+                description: `The event "${
+                  monkeyEvent.name
+                }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
+                  timeBeforeStart / minutes(1)
+                )} minutes!\nEvent link: ${event.url}`,
+                footer: {
+                  text: idString,
+                },
+              }),
+            ],
+          });
+        }
+      }
+    }
+  }
+}
+
+async function eventWasCompletedOrCancelled(
+  oldEvent: GuildScheduledEvent | null,
+  event: GuildScheduledEvent
+) {
+  if (!event.guild) return;
+
   if (
     (event.status === GuildScheduledEventStatus.Completed ||
       event.status === GuildScheduledEventStatus.Canceled) &&
@@ -99,12 +263,54 @@ async function eventWasCompletedOrCancelled(oldEvent: GuildScheduledEvent | null
   ) {
     const thread = getThreadFromEventDescription(event.description);
     if (thread && !thread.archived) {
-      await closeEventThread(
+      const eventMonkeyEvent = await deseralizePreviewEmbed(
         thread,
-        event.status === GuildScheduledEventStatus.Completed
-          ? "This event is over!"
-          : "This event has been cancelled!"
+        event.client
       );
+      if (eventMonkeyEvent.recurrence) {
+        const nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
+        eventMonkeyEvent.scheduledStartTime = nextStartDate;
+        eventMonkeyEvent.scheduledEndTime = new Date(nextStartDate);
+        eventMonkeyEvent.scheduledEndTime.setHours(
+          eventMonkeyEvent.scheduledEndTime.getHours() +
+            eventMonkeyEvent.duration
+        );
+        eventMonkeyEvent.recurrence.timesHeld++;
+        eventMonkeyEvent.scheduledEvent = undefined;
+        eventMonkeyEvent.scheduledEvent = await createGuildScheduledEvent(
+          eventMonkeyEvent,
+          event.guild,
+          thread.url
+        );
+
+        await createForumChannelEvent(
+          eventMonkeyEvent,
+          event.guild,
+          event.client
+        );
+        await thread.send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("Event is over")
+              .setDescription(
+                `We'll see you next time at ${getTimeString(nextStartDate)}!`
+              ),
+          ],
+        });
+      } else {
+        thread.send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("Event is over")
+              .setDescription(
+                `This event has been ended. The thread will be locked and archived after ${
+                  (configuration.closeThreadsAfter ?? days(1)) / hours(1)
+                } hours of inactivity.`
+              ),
+          ],
+        });
+        await closeEventThread(thread, event);
+      }
     }
   }
 }
@@ -128,7 +334,7 @@ function getThreadFromEventDescription(
   eventDescription: string
 ): ThreadChannel | undefined {
   const guildAndThread = eventDescription.match(
-    /(?<=Discussion: https:\/\/discord.com\/channels\/)(?<guildId>\d+)\/(?<threadId>\d+)$/im
+    /(?<=Discussion: <#)(?<threadId>\d+)(?=>$)/im
   );
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
@@ -140,8 +346,6 @@ function getThreadFromEventDescription(
 
   return undefined;
 }
-
-setInterval(clearEventsUnderConstruction, hours(1));
 
 function clearEventsUnderConstruction() {
   const clearList: string[] = [];
@@ -163,7 +367,7 @@ export function getDefaultConfiguration(): EventMonkeyConfiguration {
   return {
     commandName: "event",
     eventTypes: [],
-    editingTimeoutInMinutes: 30,
+    editingTimeout: minutes(30),
   };
 }
 
@@ -190,64 +394,73 @@ export async function registerEventCommand(botToken: string) {
 
 export async function listenForButtons() {
   for (const eventType of configuration.eventTypes) {
-    const channel = await configuration.discordClient?.channels.fetch(
-      eventType.channelId
-    );
-    if (channel && channel.type === ChannelType.GuildForum) {
+    const channel = await resolveChannelString(eventType.channel);
+    if (
+      channel &&
+      (channel.type === ChannelType.GuildForum ||
+        channel.type === ChannelType.GuildText)
+    ) {
       listenForButtonsInChannel(channel);
     } else {
       throw new Error(
-        `Channel with ID ${eventType.channelId} does not exist or is not a forum channel.`
+        `Channel ${eventType.channel} coul does not exist or is not a forum channel.`
       );
     }
   }
 }
 
 export const eventCommand = {
-  builder: () =>
-    new SlashCommandBuilder()
+  builder: () => {
+    const builder = new SlashCommandBuilder()
       .setName(configuration.commandName)
-      .setDescription("Create an event")
-      .addStringOption((option) => {
+      .setDescription("Create an event");
+
+    if (configuration.eventTypes.length > 1) {
+      builder.addStringOption((option) => {
         option.setName("type").setDescription("The type of event to schedule");
         option.addChoices(
           ...configuration.eventTypes.map((eventType) => {
-            return { name: eventType.name, value: eventType.channelId };
+            return { name: eventType.name, value: eventType.channel };
           })
         );
         option.setRequired(true);
         return option;
-      })
-      .addStringOption((option) => {
-        option
-          .setName("location")
-          .setDescription("The type of location the event will be at");
-        option.addChoices(
-          ...[
-            {
-              name: "External",
-              value: GuildScheduledEventEntityType.External.toString(),
-              entityType: GuildScheduledEventEntityType.External,
-            },
-            {
-              name: "Voice",
-              value: GuildScheduledEventEntityType.Voice.toString(),
-              entityType: GuildScheduledEventEntityType.Voice,
-            },
-            {
-              name: "Stage",
-              value: GuildScheduledEventEntityType.StageInstance.toString(),
-              entityType: GuildScheduledEventEntityType.StageInstance,
-            },
-          ].filter(
-            (x) =>
-              !configuration.allowedEntityTypes ||
-              configuration.allowedEntityTypes.includes(x.entityType)
-          )
-        );
-        option.setRequired(true);
-        return option;
-      }),
+      });
+    }
+
+    builder.addStringOption((option) => {
+      option
+        .setName("location")
+        .setDescription("The type of location the event will be at");
+      option.addChoices(
+        ...[
+          {
+            name: "External",
+            value: GuildScheduledEventEntityType.External.toString(),
+            entityType: GuildScheduledEventEntityType.External,
+          },
+          {
+            name: "Voice",
+            value: GuildScheduledEventEntityType.Voice.toString(),
+            entityType: GuildScheduledEventEntityType.Voice,
+          },
+          {
+            name: "Stage",
+            value: GuildScheduledEventEntityType.StageInstance.toString(),
+            entityType: GuildScheduledEventEntityType.StageInstance,
+          },
+        ].filter(
+          (x) =>
+            !configuration.allowedEntityTypes ||
+            configuration.allowedEntityTypes.includes(x.entityType)
+        )
+      );
+      option.setRequired(true);
+      return option;
+    });
+
+    return builder;
+  },
   execute: async (interaction: ChatInputCommandInteraction) => {
     if (!interaction.guild || !interaction.channel) return;
     if (!interaction.member?.roles || !interaction.memberPermissions) {
@@ -365,7 +578,7 @@ export async function showEventModal(
 
   await interactionToReply.showModal(modal);
   const modalSubmission = await interactionToReply.awaitModalSubmit({
-    time: minutes(configuration.editingTimeoutInMinutes),
+    time: configuration.editingTimeout,
     filter: (submitInteraction, collected) => {
       if (
         submitInteraction.user.id === interactionToReply.user.id &&
@@ -391,6 +604,7 @@ export async function showEventModal(
       scheduledStartTime: (fieldValue: string) =>
         new Date(Date.parse(fieldValue)),
       duration: (fieldValue: string) => Number(fieldValue),
+      recurrence: deserializeRecurrence,
     },
   };
 
@@ -455,7 +669,9 @@ export async function showEventModal(
   );
 }
 
-export async function listenForButtonsInChannel(channel: ForumChannel) {
+export async function listenForButtonsInChannel(
+  channel: ForumChannel | TextChannel
+) {
   for (const thread of channel.threads.cache.values()) {
     if (!thread.archived) await listenForButtonsInThread(thread);
   }
@@ -497,7 +713,7 @@ export function getEmbedSubmissionCollector(
         submissionInteraction.customId.startsWith(
           configuration.discordClient?.user?.id ?? ""
         ),
-      time: minutes(configuration.editingTimeoutInMinutes),
+      time: configuration.editingTimeout,
     }) as InteractionCollector<ButtonInteraction>;
 
   submissionCollector.on(
@@ -578,4 +794,20 @@ function checkRolePermissions(
   }
 
   return allowed;
+}
+
+export async function resolveChannelString(text: string): Promise<Channel> {
+  if (text.match(/^\d+$/)) {
+    const channel = await configuration.discordClient?.channels.fetch(text);
+    if (channel) return channel;
+  }
+
+  const channel = await configuration.discordClient?.channels.cache.find(
+    (x) =>
+      (x.type === ChannelType.GuildText || x.type === ChannelType.GuildForum) &&
+      x.name === text
+  );
+  if (channel) return channel;
+
+  throw new Error(`Unable to resolve channel from string "${text}"`);
 }

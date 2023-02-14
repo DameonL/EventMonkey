@@ -1,4 +1,4 @@
-import { getTimeFromString } from "./Serialization";
+import { getTimeFromString, getTimeString } from "./Serialization";
 
 export interface EventRecurrence {
   firstStartTime: Date;
@@ -40,9 +40,9 @@ export function getNextRecurrence(recurrence: EventRecurrence): Date {
 }
 
 export function serializeFirstAndTimes(recurrence: EventRecurrence): string {
-  return   `First held ${recurrence.firstStartTime}, and held ${
+  return   `First held ${getTimeString(recurrence.firstStartTime)}, and held ${
     recurrence.timesHeld
-  } time${recurrence.timesHeld > 1 ? "s" : ""} since then!`;  
+  } time${recurrence.timesHeld === 1 ? "" : "s"} since then!`;  
 }
 
 export function getRecurrenceUnit(recurrence: EventRecurrence) {
@@ -82,12 +82,16 @@ export function serializeFrequency(recurrence: EventRecurrence) {
   }`
 }
 
-export function deserialize(frequencyText: string, firstAndTimesText: string): EventRecurrence {
+export function serialize(recurrence: EventRecurrence) {
+  return `${serializeFrequency(recurrence)}\n${serializeFirstAndTimes(recurrence)}`;
+}
+
+export function deserialize(recurrenceText: string): EventRecurrence {
   const failureMessage = "Unable to deserialize EventRecurrence";
   const deserialized: any = {};
-  deserialized.firstStartTime = getTimeFromString(firstAndTimesText);
+  deserialized.firstStartTime = getTimeFromString(recurrenceText);
 
-  const frequencyMatch = frequencyText.match(
+  const frequencyMatch = recurrenceText.match(
     /^Occurs every (?<frequency>\d+) (?<unit>(hour|day|week|month)s?)$/im
   );
   if (!frequencyMatch || !frequencyMatch.groups)
@@ -100,7 +104,7 @@ export function deserialize(frequencyText: string, firstAndTimesText: string): E
 
   deserialized[unit] = frequency;
 
-  const timesHeldMatch = firstAndTimesText.match(
+  const timesHeldMatch = recurrenceText.match(
     /, and held (?<timesHeld>\d+) times? since then!$/i
   );
   if (!timesHeldMatch || !timesHeldMatch.groups)

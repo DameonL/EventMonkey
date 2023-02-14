@@ -11,8 +11,7 @@ const buttonHandlers: {
       (x) => x.name === "Attending"
     );
     if (!attendingField) throw new Error("Unable to find attending field.");
-
-    const userString = `${interaction.user.username} (${interaction.user.id})`;
+    const userString = interaction.user.toString();
 
     let attendees = attendingField.value;
     if (attendees.includes(userString)) {
@@ -52,7 +51,7 @@ const buttonHandlers: {
       return;
     }
 
-    const userString = `${interaction.user.username} (${interaction.user.id})`;
+    const userString = interaction.user.username;
 
     let attendees = attendingField.value;
     if (!attendees.includes(userString)) {

@@ -13,7 +13,9 @@ import {
   ThreadChannel,
   VoiceBasedChannel,
 } from "discord.js";
+import { configuration } from "./EventMonkey";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
+import { deserialize as deserializeRecurrence, EventRecurrence } from "./Recurrence";
 
 export interface ModalSerializationConfig {
   labels?: {
@@ -121,13 +123,18 @@ export function getEventNameFromString(text: string): string {
   return matches.groups.name;
 }
 
+async function getPreviewEmbed(thread: ThreadChannel) {
+  const pinnedMessages = await thread.messages.fetchPinned();
+  const embed = pinnedMessages.at(pinnedMessages.values.length - 1)?.embeds[0];
+  if (!embed) throw new Error("Unable to find event embed for thread.");
+  return embed;
+}
+
 export async function deseralizePreviewEmbed(
   thread: ThreadChannel,
   client: Client
 ): Promise<EventMonkeyEvent> {
-  const pinnedMessages = await thread.messages.fetchPinned();
-  const embed = pinnedMessages.at(pinnedMessages.values.length - 1)?.embeds[0];
-  if (!embed) throw new Error("Unable to find event embed for thread.");
+  const embed = await getPreviewEmbed(thread);
 
   const id = embed.fields.find((x) => x.name === "Event ID")?.value;
   if (!id) throw new Error("Unable to get ID from embed.");
@@ -176,8 +183,15 @@ export async function deseralizePreviewEmbed(
 
   let scheduledEvent: GuildScheduledEvent | undefined = undefined;
   for (const [guildId, guild] of client.guilds.cache.entries()) {
-    scheduledEvent = await guild.scheduledEvents.fetch(eventId);
+    try {
+      scheduledEvent = await guild.scheduledEvents.fetch(eventId);
+    } catch {
+      continue;
+    }
   }
+  let recurrence: EventRecurrence | undefined = undefined;
+  const frequencyField = embed.fields.find(x => x.name === "Frequency");
+  recurrence = frequencyField ? deserializeRecurrence(frequencyField.value) : undefined;
 
   const output = {
     name,
@@ -193,6 +207,7 @@ export async function deseralizePreviewEmbed(
     threadChannel: thread,
     scheduledEvent,
     id,
+    recurrence
   };
 
   return output;
@@ -200,12 +215,13 @@ export async function deseralizePreviewEmbed(
 
 export function getTimeFromString(text: string): Date {
   const matches = text.match(
-    /(?<time>\d\d?\/\d\d?\/\d\d, \d\d?:\d\d (AM|PM))/i
+    /(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,? \d\d?:\d\d\s(AM|PM)( [a-z]{3})?)/i
   );
   if (!matches || !matches.groups)
     throw new Error("Unable to parse date from string.");
 
-  return new Date(matches.groups.time);
+  const output = new Date(matches.groups.time);
+  return output;
 }
 
 export function getTimeString(date: Date): string {
@@ -216,7 +232,30 @@ export function getTimeString(date: Date): string {
       year: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: configuration.timeZone
+        ? configuration.timeZone
+        : Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZoneName: "short",
     })
     .replace(",", "")
     .replace(" ", " ");
+}
+
+export async function getAttendeeIds(thread: ThreadChannel) {
+  const attendees = (await getAttendeeTags(thread))?.replace(/[^0-9\s]/ig, "").split("\n") ?? "";
+  return attendees;
+}
+
+export async function getAttendeeTags(thread: ThreadChannel) {
+  const embedMessage = (await thread.messages.fetchPinned()).find(x => x.embeds.find(x => x.title === "Attendees"));
+  if (!embedMessage) return null;
+  const threadEmbed = embedMessage.embeds.at(1);
+
+  const attendeeField = threadEmbed?.fields.find(
+    (x) => x.name === "Attending"
+  );
+  if (!attendeeField) throw new Error("Unable to find attending field.");
+
+  const attendees = attendeeField.value.replace(/\n/ig, " ");
+  return attendees;
 }

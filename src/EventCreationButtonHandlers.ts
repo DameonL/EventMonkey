@@ -1,9 +1,9 @@
 import {
   ButtonInteraction,
   Client,
-  ComponentType,
   GuildScheduledEvent,
   ModalSubmitInteraction,
+  PermissionsBitField,
   TextInputModalData,
   ThreadChannel,
 } from "discord.js";
@@ -55,7 +55,7 @@ const eventCreationButtonHandlers: {
       time: minutes(5),
       filter: (submitInteraction, collected) => {
         if (
-          submitInteraction.user.id === submissionInteraction.user.id &&
+          submitInteraction.user.id === modalSubmission.user.id &&
           submitInteraction.customId === event.id
         ) {
           return true;
@@ -64,31 +64,56 @@ const eventCreationButtonHandlers: {
         return false;
       },
     });
-    var unitField = submission.fields.getField(`${event.id}_unit`) as TextInputModalData;
+    var unitField = submission.fields.getField(
+      `${event.id}_unit`
+    ) as TextInputModalData;
     let unit = unitField.value;
-    
+
     if (!unit.endsWith("s")) unit += "s";
-    if (unit !== "hours" && unit !== "days" && unit !== "weeks" && unit !== "months") {
-      await submission.reply({ content: `Invalid time unit. Valid options are "hours", "days", "weeks", or "months"`, ephemeral: true});
+    if (
+      unit !== "hours" &&
+      unit !== "days" &&
+      unit !== "weeks" &&
+      unit !== "months"
+    ) {
+      await submission.reply({
+        content: `Invalid time unit. Valid options are "hours", "days", "weeks", or "months"`,
+        ephemeral: true,
+      });
       return;
     }
 
-    const frequencyField = submission.fields.getField(`${event.id}_frequency`) as TextInputModalData;
+    const frequencyField = submission.fields.getField(
+      `${event.id}_frequency`
+    ) as TextInputModalData;
     const frequency = Number(frequencyField.value);
     if (isNaN(frequency)) {
-      await submission.reply({ content: `The time before the next recurrence must be a number.`, ephemeral: true});
+      await submission.reply({
+        content: `The time before the next recurrence must be a number.`,
+        ephemeral: true,
+      });
       return;
     }
-    
+
     const recurrence: any = {
       firstStartTime: event.scheduledStartTime,
       timesHeld: 0,
-    }
+    };
 
     recurrence[unit] = frequency;
 
     event.recurrence = recurrence;
-  },
+    await submission.reply({
+      content: `Event will recur every ${frequency} ${unit}`,
+      ephemeral: true,
+    });
+    const submissionEmbed = createSubmissionEmbed(
+      event,
+      "Image added!",
+      client?.user?.id ?? ""
+    );
+    await modalSubmission.editReply(submissionEmbed);
+},
   addImage: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
@@ -157,18 +182,23 @@ const eventCreationButtonHandlers: {
     modalSubmission: ModalSubmitInteraction,
     client: Client
   ) => {
+    if (!modalSubmission.guild) return;
+
     if (!submissionInteraction.deferred) submissionInteraction.deferUpdate();
 
     if (
       event.scheduledStartTime.valueOf() - new Date().valueOf() <
       minutes(30)
     ) {
-      await modalSubmission.editReply({
-        content:
-          "Sorry, your start time needs to be more than 30 minutes from now!",
-      });
-
-      return;
+      const permissions = modalSubmission.member?.permissions as Readonly<PermissionsBitField>;
+      if (!permissions.has(PermissionsBitField.Flags.Administrator)) {
+        await modalSubmission.editReply({
+          content:
+            "Sorry, your start time needs to be more than 30 minutes from now!",
+        });
+  
+        return;
+      }
     }
 
     await modalSubmission.editReply({
@@ -179,15 +209,15 @@ const eventCreationButtonHandlers: {
 
     const forumThread = await createForumChannelEvent(
       event,
-      submissionInteraction,
+      modalSubmission.guild,
       client
     );
 
     try {
       const guildScheduledEvent = await createGuildScheduledEvent(
         event,
-        submissionInteraction,
-        forumThread.url
+        modalSubmission.guild,
+        forumThread.toString()
       );
 
       if (guildScheduledEvent) {
@@ -227,15 +257,12 @@ const eventCreationButtonHandlers: {
       components: [],
     });
 
-    if (event.scheduledEvent) {
-      await event.scheduledEvent.delete();
+    if (event.threadChannel && event.scheduledEvent) {
+      await closeEventThread(event.threadChannel, event.scheduledEvent);
     }
 
-    if (event.threadChannel) {
-      await closeEventThread(
-        event.threadChannel,
-        "This event has been cancelled!"
-      );
+    if (event.scheduledEvent) {
+      await event.scheduledEvent.delete();
     }
 
     deleteEvent(submissionInteraction.user.id);
