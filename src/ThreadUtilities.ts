@@ -2,13 +2,18 @@ import {
   ChannelType,
   EmbedBuilder,
   GuildForumThreadManager,
+  GuildScheduledEvent,
+  GuildTextThreadManager,
   ThreadChannel,
 } from "discord.js";
-import { configuration } from "./EventMonkey";
+import { configuration, resolveChannelString } from "./EventMonkey";
 import { deseralizePreviewEmbed, getTimeFromString } from "./Serialization";
+import { days } from "./TimeConversion";
 
 interface ChannelWithThreads {
-  threads: GuildForumThreadManager;
+  threads:
+    | GuildForumThreadManager
+    | GuildTextThreadManager<ChannelType.PublicThread>;
 }
 
 export async function sortEventThreads(channel: ChannelWithThreads) {
@@ -28,12 +33,13 @@ export async function sortEventThreads(channel: ChannelWithThreads) {
 }
 
 export async function closeAllOutdatedThreads() {
-  for (const { name, channelId } of configuration.eventTypes) {
-    const channel = await configuration.discordClient?.channels.fetch(
-      channelId
-    );
-    if (channel && channel.type === ChannelType.GuildForum) {
-      closeOutdatedThreadsInChannel(channel);
+  for (const { name, channel } of configuration.eventTypes) {
+    const resolvedChannel = await resolveChannelString(channel);
+    if (
+      resolvedChannel.type === ChannelType.GuildText ||
+      resolvedChannel.type === ChannelType.GuildForum
+    ) {
+      closeOutdatedThreadsInChannel(resolvedChannel);
     }
   }
 }
@@ -50,32 +56,49 @@ export async function closeOutdatedThreadsInChannel(
     const threadEvent = await deseralizePreviewEmbed(threadChannel, client);
     if (
       threadEvent &&
-      (threadEvent.scheduledEvent?.isCompleted() ||
-        threadEvent.scheduledEvent?.isCanceled())
+      (!threadEvent.scheduledEvent ||
+        threadEvent.scheduledEvent.isCompleted() ||
+        threadEvent.scheduledEvent.isCanceled())
     ) {
-      closeEventThread(
-        threadChannel,
-        `Event is ${
-          threadEvent.scheduledEvent?.isCanceled() ? "Canceled" : "Over"
-        }`
-      );
+      closeEventThread(threadChannel, threadEvent.scheduledEvent);
     }
   }
 }
 
-export async function closeEventThread(thread: ThreadChannel, reason: string) {
+export async function closeEventThread(
+  thread: ThreadChannel,
+  event?: GuildScheduledEvent
+) {
   if (thread.archived) return;
 
   const pinnedMessage = (await thread.messages.fetchPinned()).at(0);
-  if (pinnedMessage) {
+  if (pinnedMessage && pinnedMessage.components.length > 0) {
     await pinnedMessage.edit({ components: [] });
   }
+
+  let lastMessage = await thread.messages.cache.last();
+  let threadAge = thread.createdAt;
+  if (lastMessage && lastMessage.createdAt) {
+    threadAge =
+      thread.lastPinAt && lastMessage.createdAt < thread.lastPinAt
+        ? thread.lastPinAt
+        : lastMessage.createdAt;
+  }
+
+  const closeThreadsAfter = configuration.closeThreadsAfter ?? days(1);
+  if (
+    threadAge &&
+    new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter
+  )
+    return;
 
   await (
     await thread.send({
       embeds: [
         new EmbedBuilder()
-          .setTitle(reason)
+          .setTitle(
+            `Event is ${event && event.isCanceled() ? "Canceled" : "Over"}`
+          )
           .setDescription("Thread has been locked and archived.")
           .setColor("DarkRed"),
       ],
@@ -89,11 +112,11 @@ export async function closeEventThread(thread: ThreadChannel, reason: string) {
 
 export async function sortAllEventThreads() {
   for (const eventChannel of configuration.eventTypes) {
-    const channel = await configuration.discordClient?.channels.fetch(
-      eventChannel.channelId
-    );
-
-    if (channel?.type === ChannelType.GuildForum) {
+    const channel = await resolveChannelString(eventChannel.channel);
+    if (
+      channel?.type === ChannelType.GuildForum ||
+      channel.type === ChannelType.GuildText
+    ) {
       await sortEventThreads(channel);
     }
   }
