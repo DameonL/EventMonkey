@@ -1,5 +1,5 @@
 {
-  "name": "@solarweb/eventmonkey",
+  "name": "eventmonkey",
   "version": "0.0.1",
   "description": "Discord package to add event scheduling to bots",
   "main": "dist/EventMonkey.js",
