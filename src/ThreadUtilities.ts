@@ -16,22 +16,6 @@ interface ChannelWithThreads {
     | GuildTextThreadManager<ChannelType.PublicThread>;
 }
 
-export async function sortEventThreads(channel: ChannelWithThreads) {
-  const threadMessages = [
-    ...(await (await channel.threads.fetchActive()).threads.values()),
-  ].sort((a, b) => {
-    const aStart = getTimeFromString(a.name).valueOf();
-    const bStart = getTimeFromString(b.name).valueOf();
-
-    if (aStart === bStart) return 0;
-    return aStart > bStart ? -1 : 1;
-  });
-
-  for (const threadMessage of threadMessages) {
-    await (await threadMessage.send("Delete me")).delete();
-  }
-}
-
 export async function closeAllOutdatedThreads() {
   if (!configuration.discordClient) return;
 
@@ -111,20 +95,4 @@ export async function closeEventThread(
 
   await thread.setLocked(true);
   await thread.setArchived(true);
-  await sortAllEventThreads();
-}
-
-export async function sortAllEventThreads() {
-  if (!configuration.discordClient) return;
-  for (const [guildId, guild] of configuration.discordClient.guilds.cache) {
-    for (const eventChannel of configuration.eventTypes) {
-      const channel = await resolveChannelString(eventChannel.channel, guild);
-      if (
-        channel?.type === ChannelType.GuildForum ||
-        channel.type === ChannelType.GuildText
-      ) {
-        await sortEventThreads(channel);
-      }
-    }
-  }
 }

@@ -48,7 +48,6 @@ import {
 import {
   closeAllOutdatedThreads,
   closeEventThread,
-  sortAllEventThreads,
 } from "./ThreadUtilities";
 import { days, hours, minutes } from "./TimeConversion";
 
@@ -102,7 +101,6 @@ export function configure(newConfiguration: EventMonkeyConfiguration) {
 
     closeAllOutdatedThreads();
     performAnnouncements();
-    sortAllEventThreads();
     startRecurringTasks();
   }
 }

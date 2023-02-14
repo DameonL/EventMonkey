@@ -86,6 +86,14 @@ const eventCreationButtonHandlers: {
     const frequencyField = submission.fields.getField(
       `${event.id}_frequency`
     ) as TextInputModalData;
+    if (frequencyField.value.match(/[^\d]/)) {
+      await submission.reply({
+        content: `Frequency must be a whole number.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
     const frequency = Number(frequencyField.value);
     if (isNaN(frequency)) {
       await submission.reply({

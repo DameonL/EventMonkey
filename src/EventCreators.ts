@@ -13,7 +13,6 @@ import {
 } from "./ContentCreators";
 import { listenForButtonsInThread, resolveChannelString } from "./EventMonkey";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { sortEventThreads } from "./ThreadUtilities";
 
 export async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
@@ -90,7 +89,6 @@ export async function createForumChannelEvent(
     threadChannel.messages.cache.at(0)?.pin();
   }
 
-  await sortEventThreads(targetChannel);
   await listenForButtonsInThread(threadChannel);
 
   return threadChannel;
