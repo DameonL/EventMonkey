@@ -123,6 +123,11 @@ async function eventStarted(
 
   const thread = getThreadFromEventDescription(event.description);
   if (!thread) return;
+  const monkeyEvent = await deseralizePreviewEmbed(
+    thread,
+    configuration.discordClient
+  );
+  var idString = `Event ID: ${monkeyEvent.id}`;
 
   const eventType = configuration.eventTypes.find(
     (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
@@ -130,6 +135,24 @@ async function eventStarted(
   if (!eventType || !eventType.announcement || !eventType.announcement.onStart)
     return;
 
+  const message = {
+    content: (await getAttendeeTags(thread)) ?? "",
+    embeds: [
+      new EmbedBuilder({
+        title: "Event Starting",
+        description: `The event "${
+          monkeyEvent.name
+        }" hosted by ${monkeyEvent.author.toString()} is starting now!\nEvent link: ${
+          event.url
+        }`,
+        footer: {
+          text: idString,
+        },
+      }),
+    ],
+  };
+
+  thread.send(message);
   const announcementChannels = Array.isArray(eventType.announcement.channel)
     ? eventType.announcement.channel
     : eventType.announcement.channel
@@ -143,33 +166,11 @@ async function eventStarted(
       channelId,
       event.guild
     );
-    const monkeyEvent = await deseralizePreviewEmbed(
-      thread,
-      configuration.discordClient
-    );
-    var idString = `Event ID: ${monkeyEvent.id}`;
 
-    const message = {
-      content: (await getAttendeeTags(thread)) ?? "",
-      embeds: [
-        new EmbedBuilder({
-          title: "Event Reminder",
-          description: `The event "${
-            monkeyEvent.name
-          }" hosted by ${monkeyEvent.author.toString()} is starting now!\nEvent link: ${
-            event.url
-          }`,
-          footer: {
-            text: idString,
-          },
-        }),
-      ],
-    };
-
-    thread.send(message);
     if (
       !announcementChannel ||
-      (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
+      (announcementChannel.type !== ChannelType.GuildText &&
+        announcementChannel.type !== ChannelType.GuildAnnouncement)
     )
       continue;
 
@@ -205,11 +206,6 @@ async function performAnnouncements() {
       )
         continue;
 
-      const announcementChannels = Array.isArray(eventType.announcement.channel)
-        ? eventType.announcement.channel
-        : eventType.announcement.channel
-        ? [eventType.announcement.channel]
-        : [];
       const monkeyEvent = await deseralizePreviewEmbed(
         thread,
         configuration.discordClient
@@ -233,17 +229,30 @@ async function performAnnouncements() {
         ],
       };
 
+      let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
+        x.embeds.find(
+          (x) => x.footer?.text === idString && x.title === "Event Reminder"
+        )
+      );
+
+      if (!threadAnnouncement) thread.send(announcementMessage);
+
+      const announcementChannels = Array.isArray(eventType.announcement.channel)
+        ? eventType.announcement.channel
+        : eventType.announcement.channel
+        ? [eventType.announcement.channel]
+        : [];
+
       for (const channelId of announcementChannels) {
-        const announcementChannel =
-          await configuration.discordClient.channels.fetch(channelId);
+        const announcementChannel = await resolveChannelString(
+          channelId,
+          guild
+        );
         if (
-          !announcementChannel ||
-          (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
-        ) {
-          throw new Error(
-            `Unable to get announcement channel from supplied ID ${channelId}, or the channel is not a Text channel. Please check your configuration.`
-          );
-        }
+          announcementChannel.type !== ChannelType.GuildText &&
+          announcementChannel.type !== ChannelType.GuildAnnouncement
+        )
+          continue;
 
         const existingAnnouncement = (
           await announcementChannel.messages.fetch()
@@ -309,14 +318,26 @@ async function eventWasCompletedOrCancelled(
           ],
         });
       } else {
+        let nextTime = (configuration.closeThreadsAfter ?? days(1)) / days(1);
+        let timeUnit = "day";
+        if (nextTime <= 1) {
+          nextTime = (configuration.closeThreadsAfter ?? days(1)) / hours(1);
+          timeUnit = "hour";
+        }
+        if (nextTime <= 1) {
+          nextTime = (configuration.closeThreadsAfter ?? days(1)) / minutes(1);
+          timeUnit = "minute";
+        }
+
+        nextTime = Math.round(nextTime);
+        if (nextTime > 1) timeUnit += "s";
+
         thread.send({
           embeds: [
             new EmbedBuilder()
-              .setTitle("Event is over")
+              .setTitle(`Event is ${event.status === GuildScheduledEventStatus.Canceled ? "Canceled" : "Over"}`)
               .setDescription(
-                `This event has been ended. The thread will be locked and archived after ${
-                  (configuration.closeThreadsAfter ?? days(1)) / hours(1)
-                } hours of inactivity.`
+                `This event has ended. The thread will be locked and archived after ${nextTime} ${timeUnit} of inactivity.`
               ),
           ],
         });

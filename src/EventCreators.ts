@@ -11,7 +11,7 @@ import {
   createAttendeesEmbed,
   createPreviewEmbed,
 } from "./ContentCreators";
-import { listenForButtonsInThread } from "./EventMonkey";
+import { listenForButtonsInThread, resolveChannelString } from "./EventMonkey";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import { sortEventThreads } from "./ThreadUtilities";
 
@@ -52,11 +52,9 @@ export async function createForumChannelEvent(
 ) {
   const scheduledEndTime = new Date(event.scheduledStartTime);
   scheduledEndTime.setHours(scheduledEndTime.getHours() + event.duration);
-  const targetChannel = guild.channels.cache.get(
-    event.forumChannelId
-  ) as ForumChannel;
+  const targetChannel = await resolveChannelString(event.forumChannelId, guild);
 
-  if (targetChannel.type !== ChannelType.GuildForum)
+  if (targetChannel.type !== ChannelType.GuildForum && targetChannel.type !== ChannelType.GuildText)
     throw new Error(
       `Channel with ID ${event.forumChannelId} is of type ${targetChannel.type}, but expected a forum channel!`
     );
