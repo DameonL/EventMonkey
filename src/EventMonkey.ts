@@ -45,10 +45,7 @@ import {
   getTimeString,
   ModalDeserializationConfig,
 } from "./Serialization";
-import {
-  closeAllOutdatedThreads,
-  closeEventThread,
-} from "./ThreadUtilities";
+import { closeAllOutdatedThreads, closeEventThread } from "./ThreadUtilities";
 import { days, hours, minutes } from "./TimeConversion";
 
 export { EventMonkeyConfiguration, EventMonkeyEvent };
@@ -70,7 +67,7 @@ export function deleteEvent(userId: string) {
   delete eventsUnderConstruction[userId];
 }
 
-export function configure(newConfiguration: EventMonkeyConfiguration) {
+export async function configure(newConfiguration: EventMonkeyConfiguration) {
   const cachedClient = configuration?.discordClient;
   configuration = newConfiguration;
 
@@ -84,20 +81,31 @@ export function configure(newConfiguration: EventMonkeyConfiguration) {
   if (client && client !== cachedClient) {
     listenForButtons();
     client.on(
-      "guildScheduledEventDelete",
+      Events.GuildScheduledEventDelete,
       async (guildScheduledEvent: GuildScheduledEvent) => {
         if (!guildScheduledEvent.description) return;
 
-        const thread = getThreadFromEventDescription(
+        const thread = await getThreadFromEventDescription(
           guildScheduledEvent.description
         );
         if (thread) closeEventThread(thread, guildScheduledEvent);
       }
     );
 
-    client.on("guildScheduledEventUserAdd", userShowedInterest);
-    client.on("guildScheduledEventUpdate", eventWasCompletedOrCancelled);
-    client.on("guildScheduledEventUpdate", eventStarted);
+    client.on(Events.GuildScheduledEventUserAdd, userShowedInterest);
+    client.on(
+      Events.GuildScheduledEventUpdate,
+      (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
+        if (event.status === GuildScheduledEventStatus.Active) {
+          eventStarted(oldEvent, event);
+        } else if (
+          event.status === GuildScheduledEventStatus.Completed ||
+          event.status === GuildScheduledEventStatus.Canceled
+        ) {
+          eventWasCompletedOrCancelled(oldEvent, event);
+        }
+      }
+    );
 
     closeAllOutdatedThreads();
     performAnnouncements();
@@ -116,10 +124,9 @@ async function eventStarted(
   event: GuildScheduledEvent
 ) {
   if (!event.description || !event.scheduledStartAt) return;
-  if (event.status !== GuildScheduledEventStatus.Active) return;
   if (!configuration.discordClient) return;
 
-  const thread = getThreadFromEventDescription(event.description);
+  const thread = await getThreadFromEventDescription(event.description);
   if (!thread) return;
   const monkeyEvent = await deseralizePreviewEmbed(
     thread,
@@ -179,92 +186,98 @@ async function eventStarted(
 async function performAnnouncements() {
   if (!configuration.discordClient) return;
 
-  for (const guild of configuration.discordClient.guilds.cache.values()) {
-    for (const event of guild.scheduledEvents.cache.values()) {
-      if (!event.description || !event.scheduledStartAt) continue;
+  try {
+    for (const guild of configuration.discordClient.guilds.cache.values()) {
+      for (const event of guild.scheduledEvents.cache.values()) {
+        if (!event.description || !event.scheduledStartAt) continue;
 
-      const thread = getThreadFromEventDescription(event.description);
-      if (!thread) continue;
+        const thread = await getThreadFromEventDescription(event.description);
+        if (!thread) continue;
 
-      const eventType = configuration.eventTypes.find(
-        (x) =>
-          x.channel === thread.parent?.id || x.channel === thread.parent?.name
-      );
-      if (
-        !eventType ||
-        !eventType.announcement ||
-        !eventType.announcement.beforeStart
-      )
-        continue;
-
-      const timeBeforeStart = event.scheduledStartAt.valueOf() - Date.now();
-      if (
-        timeBeforeStart < 0 ||
-        timeBeforeStart > eventType.announcement.beforeStart
-      )
-        continue;
-
-      const monkeyEvent = await deseralizePreviewEmbed(
-        thread,
-        configuration.discordClient
-      );
-
-      var idString = `Event ID: ${monkeyEvent.id}`;
-      const announcementMessage = {
-        content: (await getAttendeeTags(thread)) ?? "",
-        embeds: [
-          new EmbedBuilder({
-            title: "Event Reminder",
-            description: `The event "${
-              monkeyEvent.name
-            }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
-              timeBeforeStart / minutes(1)
-            )} minutes!\nEvent link: ${event.url}`,
-            footer: {
-              text: idString,
-            },
-          }),
-        ],
-      };
-
-      let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
-        x.embeds.find(
-          (x) => x.footer?.text === idString && x.title === "Event Reminder"
-        )
-      );
-
-      if (!threadAnnouncement) thread.send(announcementMessage);
-
-      const announcementChannels = Array.isArray(eventType.announcement.channel)
-        ? eventType.announcement.channel
-        : eventType.announcement.channel
-        ? [eventType.announcement.channel]
-        : [];
-
-      for (const channelId of announcementChannels) {
-        const announcementChannel = await resolveChannelString(
-          channelId,
-          guild
+        const eventType = configuration.eventTypes.find(
+          (x) =>
+            x.channel === thread.parent?.id || x.channel === thread.parent?.name
         );
         if (
-          announcementChannel.type !== ChannelType.GuildText &&
-          announcementChannel.type !== ChannelType.GuildAnnouncement
+          !eventType ||
+          !eventType.announcement ||
+          !eventType.announcement.beforeStart
         )
           continue;
 
-        const existingAnnouncement = (
-          await announcementChannel.messages.fetch()
-        ).find((x) =>
+        const timeBeforeStart = event.scheduledStartAt.valueOf() - Date.now();
+        if (
+          timeBeforeStart < 0 ||
+          timeBeforeStart > eventType.announcement.beforeStart
+        )
+          continue;
+
+        const monkeyEvent = await deseralizePreviewEmbed(
+          thread,
+          configuration.discordClient
+        );
+
+        var idString = `Event ID: ${monkeyEvent.id}`;
+        const announcementMessage = {
+          content: (await getAttendeeTags(thread)) ?? "",
+          embeds: [
+            new EmbedBuilder({
+              title: "Event Reminder",
+              description: `The event "${
+                monkeyEvent.name
+              }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
+                timeBeforeStart / minutes(1)
+              )} minutes!\nEvent link: ${event.url}`,
+              footer: {
+                text: idString,
+              },
+            }),
+          ],
+        };
+
+        let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
           x.embeds.find(
             (x) => x.footer?.text === idString && x.title === "Event Reminder"
           )
         );
 
-        if (!existingAnnouncement) {
-          announcementChannel.send(announcementMessage);
+        if (!threadAnnouncement) thread.send(announcementMessage);
+
+        const announcementChannels = Array.isArray(
+          eventType.announcement.channel
+        )
+          ? eventType.announcement.channel
+          : eventType.announcement.channel
+          ? [eventType.announcement.channel]
+          : [];
+
+        for (const channelId of announcementChannels) {
+          const announcementChannel = await resolveChannelString(
+            channelId,
+            guild
+          );
+          if (
+            announcementChannel.type !== ChannelType.GuildText &&
+            announcementChannel.type !== ChannelType.GuildAnnouncement
+          )
+            continue;
+
+          const existingAnnouncement = (
+            await announcementChannel.messages.fetch()
+          ).find((x) =>
+            x.embeds.find(
+              (x) => x.footer?.text === idString && x.title === "Event Reminder"
+            )
+          );
+
+          if (!existingAnnouncement) {
+            announcementChannel.send(announcementMessage);
+          }
         }
       }
     }
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -273,13 +286,19 @@ async function eventWasCompletedOrCancelled(
   event: GuildScheduledEvent
 ) {
   if (!event.guild) return;
-
   if (
-    (event.status === GuildScheduledEventStatus.Completed ||
-      event.status === GuildScheduledEventStatus.Canceled) &&
-    event.description
+    (event.status !== GuildScheduledEventStatus.Completed &&
+      event.status !== GuildScheduledEventStatus.Canceled) ||
+    !event.description
   ) {
-    const thread = getThreadFromEventDescription(event.description);
+    return;
+  }
+
+  try {
+    const thread = await getThreadFromEventDescription(event.description);
+    console.log("Event complete");
+    console.log(event);
+    console.log(thread);
     if (thread && !thread.archived) {
       const eventMonkeyEvent = await deseralizePreviewEmbed(
         thread,
@@ -333,7 +352,13 @@ async function eventWasCompletedOrCancelled(
         thread.send({
           embeds: [
             new EmbedBuilder()
-              .setTitle(`Event is ${event.status === GuildScheduledEventStatus.Canceled ? "Canceled" : "Over"}`)
+              .setTitle(
+                `Event is ${
+                  event.status === GuildScheduledEventStatus.Canceled
+                    ? "Canceled"
+                    : "Over"
+                }`
+              )
               .setDescription(
                 `This event has ended. The thread will be locked and archived after ${nextTime} ${timeUnit} of inactivity.`
               ),
@@ -342,6 +367,8 @@ async function eventWasCompletedOrCancelled(
         await closeEventThread(thread, event);
       }
     }
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -351,7 +378,7 @@ async function userShowedInterest(
 ) {
   if (!guildScheduledEvent.description) return;
 
-  const thread = getThreadFromEventDescription(guildScheduledEvent.description);
+  const thread = await getThreadFromEventDescription(guildScheduledEvent.description);
 
   if (!thread) return;
 
@@ -360,15 +387,15 @@ async function userShowedInterest(
   });
 }
 
-function getThreadFromEventDescription(
+async function getThreadFromEventDescription(
   eventDescription: string
-): ThreadChannel | undefined {
+): Promise<ThreadChannel | undefined> {
   const guildAndThread = eventDescription.match(
     /(?<=Discussion: <#)(?<threadId>\d+)(?=>$)/im
   );
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
-    const thread = configuration.discordClient?.channels.cache.get(threadId);
+    const thread = await configuration.discordClient?.channels.fetch(threadId);
     if (thread && thread.type === ChannelType.PublicThread) {
       return thread;
     }
@@ -378,18 +405,22 @@ function getThreadFromEventDescription(
 }
 
 function clearEventsUnderConstruction() {
-  const clearList: string[] = [];
-  const now = new Date().valueOf();
+  try {
+    const clearList: string[] = [];
+    const now = new Date().valueOf();
 
-  for (const userId in eventsUnderConstruction) {
-    const eventTimestamp = eventsUnderConstruction[userId][0];
-    if (Math.abs(now - eventTimestamp.valueOf()) >= hours(2)) {
-      clearList.push(userId);
+    for (const userId in eventsUnderConstruction) {
+      const eventTimestamp = eventsUnderConstruction[userId][0];
+      if (Math.abs(now - eventTimestamp.valueOf()) >= hours(2)) {
+        clearList.push(userId);
+      }
     }
-  }
 
-  for (const userId of clearList) {
-    delete eventsUnderConstruction[userId];
+    for (const userId of clearList) {
+      delete eventsUnderConstruction[userId];
+    }
+  } catch (error) {
+    console.error(error);
   }
 }
 
