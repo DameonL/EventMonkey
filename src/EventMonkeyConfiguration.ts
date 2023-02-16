@@ -3,7 +3,7 @@ import { Client, GuildScheduledEventEntityType } from "discord.js";
 export interface EventMonkeyConfiguration {
   commandName: string;
   discordClient?: Client;
-  timeZone?: string;
+  editingTimeout: number;
   eventTypes: {
     name: string;
     channel: string;
@@ -14,10 +14,10 @@ export interface EventMonkeyConfiguration {
       message?: string;
     }
   }[];
-  editingTimeout: number;
+  timeZone?: string;
   closeThreadsAfter?: number;
   allowedEntityTypes?: GuildScheduledEventEntityType[];
-  roleIds?: {
+  roles?: {
     allowed?: string[],
     denied?: string[]
   };

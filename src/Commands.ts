@@ -196,7 +196,7 @@ function checkRolePermissions(
   if (!interaction.member) return false;
 
   const configuration = Configuration.current;
-  let allowed = configuration.roleIds?.allowed == null;
+  let allowed = configuration.roles?.allowed == null;
   const memberPermissions = interaction.memberPermissions;
   if (memberPermissions && memberPermissions.has("Administrator")) {
     return true;
@@ -204,18 +204,18 @@ function checkRolePermissions(
 
   if (memberPermissions) {
     const userRoles = interaction.member.roles as GuildMemberRoleManager;
-    if (configuration.roleIds?.allowed) {
-      for (const roleId of configuration.roleIds.allowed) {
-        if (userRoles.cache.has(roleId)) {
+    if (configuration.roles?.allowed) {
+      for (const role of configuration.roles.allowed) {
+        if (userRoles.cache.find((value, key) => key === role || value.name === role)) {
           allowed = true;
           break;
         }
       }
     }
 
-    if (configuration.roleIds?.denied) {
-      for (const roleId of configuration.roleIds.denied) {
-        if (userRoles.cache.has(roleId)) {
+    if (configuration.roles?.denied) {
+      for (const role of configuration.roles.denied) {
+        if (userRoles.cache.find((value, key) => key === role || value.name === role)) {
           allowed = false;
           break;
         }
