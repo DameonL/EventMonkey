@@ -2,6 +2,8 @@ import {
   Events,
   GuildScheduledEvent,
   GuildScheduledEventStatus,
+  REST,
+  Routes,
 } from "discord.js";
 
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
@@ -23,7 +25,17 @@ export default {
   commands: { create: eventCommand, edit: editEventCommand }, 
   defaultConfiguration: Configuration.defaultConfiguration,
   configure,
+  registerCommands,
 };
+
+async function registerCommands() {
+  if (!Configuration.current.discordClient?.user?.id) {
+    throw new Error(`discordClient in the configuration must be set before commands can be registered.`);
+  }
+
+  const rest = new REST({ version: "10" });
+  await rest.put(Routes.applicationCommands(Configuration.current.discordClient?.user?.id), { body: [eventCommand.builder(), editEventCommand.builder()]})
+}
 
 async function configure(newConfiguration: EventMonkeyConfiguration) {
   const cachedClient = Configuration.current.discordClient;
