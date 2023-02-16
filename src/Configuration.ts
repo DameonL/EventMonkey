@@ -7,7 +7,15 @@ let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
   return {
     commandName: "event",
-    eventTypes: [],
+    eventTypes: [
+      {
+        name: "Meetup",
+        channel: "meetups",
+        announcement: {
+          onStart: true,
+        },
+      },
+    ],
     editingTimeout: Time.toMilliseconds.minutes(30),
   };
 }
