@@ -39,12 +39,6 @@ export function getNextRecurrence(recurrence: EventRecurrence): Date {
   return nextRecurrence;
 }
 
-export function serializeFirstAndTimes(recurrence: EventRecurrence): string {
-  return   `First held ${getTimeString(recurrence.firstStartTime)}, and held ${
-    recurrence.timesHeld
-  } time${recurrence.timesHeld === 1 ? "" : "s"} since then!`;  
-}
-
 export function getRecurrenceUnit(recurrence: EventRecurrence) {
   return recurrence.hours
   ? "hour"
@@ -57,7 +51,7 @@ export function getRecurrenceUnit(recurrence: EventRecurrence) {
   : undefined;
 }
 
-export function serializeFrequency(recurrence: EventRecurrence) {
+export function serializeRecurrence(recurrence: EventRecurrence) {
   const recurrenceAmount =
     recurrence.hours ??
     recurrence.days ??
@@ -79,14 +73,12 @@ export function serializeFrequency(recurrence: EventRecurrence) {
 
   return `Occurs every ${recurrenceAmount} ${recurrenceDescription}${
     recurrenceAmount > 1 ? "s" : ""
-  }`
+  }\nFirst held ${getTimeString(recurrence.firstStartTime)}, and held ${
+    recurrence.timesHeld
+  } time${recurrence.timesHeld === 1 ? "" : "s"} since then!`;
 }
 
-export function serialize(recurrence: EventRecurrence) {
-  return `${serializeFrequency(recurrence)}\n${serializeFirstAndTimes(recurrence)}`;
-}
-
-export function deserialize(recurrenceText: string): EventRecurrence {
+export function deserializeRecurrence(recurrenceText: string): EventRecurrence {
   const failureMessage = "Unable to deserialize EventRecurrence";
   const deserialized: any = {};
   deserialized.firstStartTime = getTimeFromString(recurrenceText);

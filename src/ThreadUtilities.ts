@@ -6,9 +6,10 @@ import {
   GuildTextThreadManager,
   ThreadChannel,
 } from "discord.js";
-import { configuration, resolveChannelString } from "./EventMonkey";
-import { deseralizePreviewEmbed, getTimeFromString } from "./Serialization";
+import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
+import { configuration } from "./EventMonkey";
 import { days } from "./TimeConversion";
+import { resolveChannelString } from "./Utilities";
 
 interface ChannelWithThreads {
   threads:
@@ -26,7 +27,7 @@ export async function closeAllOutdatedThreads() {
         resolvedChannel.type === ChannelType.GuildText ||
         resolvedChannel.type === ChannelType.GuildForum
       ) {
-        closeOutdatedThreadsInChannel(resolvedChannel);
+        await closeOutdatedThreadsInChannel(resolvedChannel);
       }
     }
   }
@@ -36,12 +37,10 @@ export async function closeOutdatedThreadsInChannel(
   channel: ChannelWithThreads
 ) {
   const threads = await (await channel.threads.fetchActive()).threads;
-  const client = configuration.discordClient;
-  const now = new Date();
-  if (!client) throw new Error("Client not set in configuration.");
+  const client = channel.threads.client;
 
   for (const [threadName, threadChannel] of threads) {
-    const threadEvent = await deseralizePreviewEmbed(threadChannel, client);
+    const threadEvent = await deseralizeEventEmbed(threadChannel, client);
     if (
       threadEvent &&
       (!threadEvent.scheduledEvent ||
@@ -95,4 +94,21 @@ export async function closeEventThread(
 
   await thread.setLocked(true);
   await thread.setArchived(true);
+}
+
+export async function getThreadFromEventDescription(
+  eventDescription: string
+): Promise<ThreadChannel | undefined> {
+  const guildAndThread = eventDescription.match(
+    /(?<=Discussion: <#)(?<threadId>\d+)(?=>$)/im
+  );
+  if (guildAndThread && guildAndThread.groups) {
+    const threadId = guildAndThread.groups.threadId;
+    const thread = await configuration.discordClient?.channels.fetch(threadId);
+    if (thread && thread.type === ChannelType.PublicThread) {
+      return thread;
+    }
+  }
+
+  return undefined;
 }

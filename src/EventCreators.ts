@@ -1,23 +1,23 @@
 import {
-  ButtonInteraction,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
   Client,
-  ForumChannel,
+  EmbedBuilder,
   Guild,
   GuildScheduledEventEntityType,
+  ThreadChannel,
 } from "discord.js";
-import {
-  createAttendanceButtons,
-  createAttendeesEmbed,
-  createPreviewEmbed,
-} from "./ContentCreators";
-import { listenForButtonsInThread, resolveChannelString } from "./EventMonkey";
+import { createEventEmbed } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
+import { listenForButtonsInThread } from "./Listeners";
+import { resolveChannelString } from "./Utilities";
 
 export async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
   guild: Guild,
-  threadUrl: string
+  thread: ThreadChannel
 ) {
   const eventToSubmit = { ...event } as any;
   const scheduledEndTime = new Date(eventToSubmit.scheduledStartTime);
@@ -27,7 +27,7 @@ export async function createGuildScheduledEvent(
   eventToSubmit.scheduledEndTime = scheduledEndTime;
   eventToSubmit.description = `${
     eventToSubmit.description
-  }\nDiscussion: ${threadUrl}\nHosted by: ${eventToSubmit.author.toString()}`;
+  }\nDiscussion: ${thread.toString()}\nHosted by: ${eventToSubmit.author.toString()}`;
   eventToSubmit.name = `${eventToSubmit.name} hosted by ${eventToSubmit.author.username}`;
   if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
     eventToSubmit.channelId = eventToSubmit.entityMetadata.location;
@@ -35,10 +35,7 @@ export async function createGuildScheduledEvent(
   }
 
   const scheduledEvent = await (event.scheduledEvent
-    ? guild.scheduledEvents.edit(
-        event.scheduledEvent.id,
-        eventToSubmit
-      )
+    ? guild.scheduledEvents.edit(event.scheduledEvent.id, eventToSubmit)
     : guild.scheduledEvents.create(eventToSubmit));
 
   return scheduledEvent;
@@ -53,7 +50,10 @@ export async function createForumChannelEvent(
   scheduledEndTime.setHours(scheduledEndTime.getHours() + event.duration);
   const targetChannel = await resolveChannelString(event.forumChannelId, guild);
 
-  if (targetChannel.type !== ChannelType.GuildForum && targetChannel.type !== ChannelType.GuildText)
+  if (
+    targetChannel.type !== ChannelType.GuildForum &&
+    targetChannel.type !== ChannelType.GuildText
+  )
     throw new Error(
       `Channel with ID ${event.forumChannelId} is of type ${targetChannel.type}, but expected a forum channel!`
     );
@@ -69,7 +69,7 @@ export async function createForumChannelEvent(
     event.author.username
   }`;
   const threadMessage = {
-    embeds: [createPreviewEmbed(event), createAttendeesEmbed(event)],
+    embeds: [createEventEmbed(event), createAttendeesEmbed(event)],
     components: [createAttendanceButtons(event, client.user?.id ?? "")],
   };
 
@@ -92,4 +92,33 @@ export async function createForumChannelEvent(
   await listenForButtonsInThread(threadChannel);
 
   return threadChannel;
+}
+
+export function createAttendeesEmbed(event: EventMonkeyEvent): EmbedBuilder {
+  const attendeesEmbed = new EmbedBuilder().setTitle("Attendees");
+  attendeesEmbed.addFields([
+    {
+      name: "Attending",
+      value: event.author.toString(),
+    },
+  ]);
+  return attendeesEmbed;
+}
+
+export function createAttendanceButtons(
+  event: EventMonkeyEvent,
+  clientId: string
+): ActionRowBuilder<ButtonBuilder> {
+  const buttonRow = new ActionRowBuilder<ButtonBuilder>();
+  buttonRow.addComponents([
+    new ButtonBuilder()
+      .setLabel("Attending")
+      .setStyle(ButtonStyle.Success)
+      .setCustomId(`${clientId}_${event.id}_button_attending`),
+    new ButtonBuilder()
+      .setLabel("Not Attending")
+      .setStyle(ButtonStyle.Danger)
+      .setCustomId(`${clientId}_${event.id}_button_notAttending`),
+  ]);
+  return buttonRow;
 }

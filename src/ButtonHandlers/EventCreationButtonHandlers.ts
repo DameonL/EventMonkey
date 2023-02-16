@@ -7,20 +7,18 @@ import {
   TextInputModalData,
   ThreadChannel,
 } from "discord.js";
-import { createSubmissionEmbed, recurrenceModal } from "./ContentCreators";
+import Submission from "../Content/Embed/submission";
+import { editRecurrence } from "../Content/Modal/editRecurrence";
+import { eventModal } from "../Content/Modal/eventModal";
 import {
   createForumChannelEvent,
   createGuildScheduledEvent,
-} from "./EventCreators";
-import {
-  deleteEvent,
-  getEmbedSubmissionCollector,
-  saveEvent,
-  showEventModal,
-} from "./EventMonkey";
-import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { closeEventThread } from "./ThreadUtilities";
-import { minutes } from "./TimeConversion";
+} from "../EventCreators";
+import { EventMonkeyEvent } from "../EventMonkeyEvent";
+import { deleteEvent, saveEvent } from "../EventsUnderConstruction";
+import { getEmbedSubmissionCollector } from "../Listeners";
+import { closeEventThread } from "../ThreadUtilities";
+import { minutes } from "../TimeConversion";
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (
@@ -37,7 +35,7 @@ const eventCreationButtonHandlers: {
     client: Client
   ) => {
     await modalSubmission.deleteReply();
-    await showEventModal(event, submissionInteraction);
+    await eventModal(event, submissionInteraction);
   },
   makeRecurring: async (
     event: EventMonkeyEvent,
@@ -50,7 +48,7 @@ const eventCreationButtonHandlers: {
       timesHeld: 0,
       weeks: 1,
     };
-    await submissionInteraction.showModal(recurrenceModal(event));
+    await submissionInteraction.showModal(editRecurrence(event));
     var submission = await submissionInteraction.awaitModalSubmit({
       time: minutes(5),
       filter: (submitInteraction, collected) => {
@@ -115,13 +113,13 @@ const eventCreationButtonHandlers: {
       content: `Event will recur every ${frequency} ${unit}`,
       ephemeral: true,
     });
-    const submissionEmbed = createSubmissionEmbed(
+    const submissionEmbed = Submission(
       event,
       "Image added!",
       client?.user?.id ?? ""
     );
     await modalSubmission.editReply(submissionEmbed);
-},
+  },
   addImage: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
@@ -149,11 +147,7 @@ const eventCreationButtonHandlers: {
     if (!replies.at(0)) {
       imageResponse.edit("Sorry, you took too long! Please try again.");
       setTimeout(() => imageResponse.delete(), minutes(1));
-      const submissionEmbed = createSubmissionEmbed(
-        event,
-        "",
-        client?.user?.id ?? ""
-      );
+      const submissionEmbed = Submission(event, "", client?.user?.id ?? "");
       await modalSubmission.editReply(submissionEmbed);
       return;
     }
@@ -162,7 +156,7 @@ const eventCreationButtonHandlers: {
       event.image = replies.at(0)?.attachments.at(0)?.url as string;
       await replies.at(0)?.delete();
       await imageResponse.delete();
-      const submissionEmbed = createSubmissionEmbed(
+      const submissionEmbed = Submission(
         event,
         "Image added!",
         client?.user?.id ?? ""
@@ -198,13 +192,14 @@ const eventCreationButtonHandlers: {
       event.scheduledStartTime.valueOf() - new Date().valueOf() <
       minutes(30)
     ) {
-      const permissions = modalSubmission.member?.permissions as Readonly<PermissionsBitField>;
+      const permissions = modalSubmission.member
+        ?.permissions as Readonly<PermissionsBitField>;
       if (!permissions.has(PermissionsBitField.Flags.Administrator)) {
         await modalSubmission.editReply({
           content:
             "Sorry, your start time needs to be more than 30 minutes from now!",
         });
-  
+
         return;
       }
     }
@@ -225,7 +220,7 @@ const eventCreationButtonHandlers: {
       const guildScheduledEvent = await createGuildScheduledEvent(
         event,
         modalSubmission.guild,
-        forumThread.toString()
+        forumThread
       );
 
       if (guildScheduledEvent) {
@@ -279,7 +274,7 @@ const eventCreationButtonHandlers: {
 };
 
 export default eventCreationButtonHandlers;
-async function updateScheduledEventUrl(
+export async function updateScheduledEventUrl(
   guildScheduledEvent: GuildScheduledEvent,
   forumThread: ThreadChannel
 ) {
