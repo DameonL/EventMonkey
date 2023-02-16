@@ -1,18 +1,16 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   ChannelType,
   Client,
-  EmbedBuilder,
   Guild,
   GuildScheduledEventEntityType,
   ThreadChannel,
 } from "discord.js";
+import { attendanceButtons } from "./Content/Component/attendanceButtons";
+import { attendees } from "./Content/Embed/attendees";
 import { createEventEmbed } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import { listenForButtonsInThread } from "./Listeners";
-import { resolveChannelString } from "./Utilities";
+import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
@@ -25,9 +23,9 @@ export async function createGuildScheduledEvent(
     scheduledEndTime.getHours() + eventToSubmit.duration
   );
   eventToSubmit.scheduledEndTime = scheduledEndTime;
-  eventToSubmit.description = `${
-    eventToSubmit.description
-  }\nDiscussion: ${thread.toString()}\nHosted by: ${eventToSubmit.author.toString()}`;
+  eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${
+    thread.url
+  }\nHosted by: ${eventToSubmit.author.toString()}`;
   eventToSubmit.name = `${eventToSubmit.name} hosted by ${eventToSubmit.author.username}`;
   if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
     eventToSubmit.channelId = eventToSubmit.entityMetadata.location;
@@ -69,8 +67,8 @@ export async function createForumChannelEvent(
     event.author.username
   }`;
   const threadMessage = {
-    embeds: [createEventEmbed(event), createAttendeesEmbed(event)],
-    components: [createAttendanceButtons(event, client.user?.id ?? "")],
+    embeds: [createEventEmbed(event), attendees(event)],
+    components: [attendanceButtons(event, client.user?.id ?? "")],
   };
 
   const threadChannel = event.threadChannel
@@ -92,33 +90,4 @@ export async function createForumChannelEvent(
   await listenForButtonsInThread(threadChannel);
 
   return threadChannel;
-}
-
-export function createAttendeesEmbed(event: EventMonkeyEvent): EmbedBuilder {
-  const attendeesEmbed = new EmbedBuilder().setTitle("Attendees");
-  attendeesEmbed.addFields([
-    {
-      name: "Attending",
-      value: event.author.toString(),
-    },
-  ]);
-  return attendeesEmbed;
-}
-
-export function createAttendanceButtons(
-  event: EventMonkeyEvent,
-  clientId: string
-): ActionRowBuilder<ButtonBuilder> {
-  const buttonRow = new ActionRowBuilder<ButtonBuilder>();
-  buttonRow.addComponents([
-    new ButtonBuilder()
-      .setLabel("Attending")
-      .setStyle(ButtonStyle.Success)
-      .setCustomId(`${clientId}_${event.id}_button_attending`),
-    new ButtonBuilder()
-      .setLabel("Not Attending")
-      .setStyle(ButtonStyle.Danger)
-      .setCustomId(`${clientId}_${event.id}_button_notAttending`),
-  ]);
-  return buttonRow;
 }

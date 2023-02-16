@@ -1,5 +1,5 @@
 import { EventMonkeyEvent } from "./EventMonkey";
-import { hours } from "./TimeConversion";
+import Time from "./Utility/Time";
 
 const eventsUnderConstruction: UserEventMap = {};
 
@@ -28,7 +28,7 @@ export function maintainEvents() {
 
     for (const userId in eventsUnderConstruction) {
       const eventTimestamp = eventsUnderConstruction[userId][0];
-      if (Math.abs(now - eventTimestamp.valueOf()) >= hours(2)) {
+      if (Math.abs(now - eventTimestamp.valueOf()) >= Time.toMilliseconds.hours(2)) {
         clearList.push(userId);
       }
     }

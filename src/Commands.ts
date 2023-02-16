@@ -3,6 +3,8 @@ import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import { eventModal } from "./Content/Modal/eventModal";
 import { configuration, EventMonkeyEvent } from "./EventMonkey";
 import { getEvent, saveEvent } from "./EventsUnderConstruction";
+import Submission from "./Content/Embed/submission";
+import { getEmbedSubmissionCollector } from "./Listeners";
 
 export const eventCommand = {
   builder: () => {
@@ -127,6 +129,11 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild || !interaction.channel) return;
   const channel = interaction.options.getChannel("thread") as ThreadChannel;
   if (!checkRolePermissions(interaction)) {
+    interaction.reply({
+      content: "Sorry, you lack permission to use this command.",
+      ephemeral: true,
+    });
+
     return;
   }
 
@@ -165,7 +172,15 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  await eventModal(event, interaction);
+  const submissionMessage = Submission(event, "Editing your existing event...", configuration.discordClient?.user?.id ?? "");
+  event.submissionCollector?.stop();
+  event.submissionCollector = undefined;
+  await interaction.reply(submissionMessage);
+  const message = await interaction.fetchReply();
+  event.submissionCollector = getEmbedSubmissionCollector(
+    event,
+    message
+  );
 }
 
 function checkRolePermissions(

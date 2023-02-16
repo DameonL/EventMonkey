@@ -1,12 +1,17 @@
-import { ChannelType, EmbedBuilder, GuildScheduledEvent, GuildScheduledEventStatus } from "discord.js";
-import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
-import { configuration } from "./EventMonkey";
-import { getAttendeeTags } from "./Serialization";
-import { getThreadFromEventDescription } from "./ThreadUtilities";
-import { minutes } from "./TimeConversion";
-import { resolveChannelString } from "./Utilities";
+import {
+  ChannelType,
+  EmbedBuilder,
+  GuildScheduledEvent,
+  GuildScheduledEventStatus,
+} from "discord.js";
+import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
+import { configuration } from "../EventMonkey";
+import { getAttendeeTags } from "./Attendees";
+import { resolveChannelString } from "./resolveChannelString";
+import Threads from "./Threads";
+import Time from "./Time";
 
-export async function performAnnouncements() {
+export default async function performAnnouncements() {
   if (!configuration.discordClient) return;
 
   try {
@@ -25,19 +30,18 @@ export async function performAnnouncements() {
 async function performEventAnnouncement(event: GuildScheduledEvent) {
   if (!event.description || !event.scheduledStartAt || !event.guild) return;
 
-  const thread = await getThreadFromEventDescription(event.description);
+  const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
 
   const eventType = configuration.eventTypes.find(
-    (x) =>
-      x.channel === thread.parent?.id || x.channel === thread.parent?.name
+    (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
   );
   if (
     !eventType ||
     !eventType.announcement ||
     !eventType.announcement.beforeStart
   )
-  return;
+    return;
 
   const timeBeforeStart = event.scheduledStartAt.valueOf() - Date.now();
   if (
@@ -45,12 +49,9 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     timeBeforeStart > eventType.announcement.beforeStart ||
     event.status === GuildScheduledEventStatus.Active
   )
-  return;
+    return;
 
-  const monkeyEvent = await deseralizeEventEmbed(
-    thread,
-    event.client
-  );
+  const monkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
   var idString = `Event ID: ${monkeyEvent.id}`;
   const announcementMessage = {
@@ -61,7 +62,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
         description: `The event "${
           monkeyEvent.name
         }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
-          timeBeforeStart / minutes(1)
+          timeBeforeStart / Time.toMilliseconds.minutes(1)
         )} minutes!\nEvent link: ${event.url}`,
         footer: {
           text: idString,
@@ -78,9 +79,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
 
   if (!threadAnnouncement) thread.send(announcementMessage);
 
-  const announcementChannels = Array.isArray(
-    eventType.announcement.channel
-  )
+  const announcementChannels = Array.isArray(eventType.announcement.channel)
     ? eventType.announcement.channel
     : eventType.announcement.channel
     ? [eventType.announcement.channel]
@@ -110,4 +109,3 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     }
   }
 }
-

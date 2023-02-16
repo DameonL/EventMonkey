@@ -16,15 +16,11 @@ import {
   EventRecurrence,
   serializeRecurrence,
 } from "../../Recurrence";
-import {
-  getEventNameFromString,
-  getTimeFromString,
-  getTimeString,
-} from "../../Serialization";
+import Time from "../../Utility/Time";
 
 export function createEventEmbed(event: EventMonkeyEvent): EmbedBuilder {
   const previewEmbed = new EmbedBuilder().setTitle(
-    `${getTimeString(event.scheduledStartTime)} - ${event.name}`
+    `${Time.getTimeString(event.scheduledStartTime)} - ${event.name}`
   );
   if (event.image !== "") {
     previewEmbed.setThumbnail(event.image);
@@ -89,7 +85,7 @@ export async function deseralizeEventEmbed(
   const author = client.users.cache.get(userId);
   if (!author) throw new Error("Unable to resolve user ID from embed.");
 
-  const scheduledStartTime = getTimeFromString(thread.name);
+  const scheduledStartTime = Time.getTimeFromString(thread.name);
   const name = getEventNameFromString(thread.name);
 
   const image = embed.image?.url ?? "";
@@ -159,4 +155,12 @@ async function getPreviewEmbed(thread: ThreadChannel) {
   const embed = pinnedMessages.at(pinnedMessages.values.length - 1)?.embeds[0];
   if (!embed) throw new Error("Unable to find event embed for thread.");
   return embed;
+}
+
+export function getEventNameFromString(text: string): string {
+  const matches = text.match(/(AM|PM) - (?<name>.*)(?= hosted by)/i);
+  if (!matches || !matches.groups)
+    throw new Error("Unable to parse event name from string.");
+
+  return matches.groups.name;
 }

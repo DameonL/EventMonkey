@@ -1,8 +1,8 @@
-import { ButtonInteraction, ChannelType, ForumChannel, InteractionCollector, ModalSubmitInteraction, TextChannel, ThreadChannel } from "discord.js";
+import { ButtonInteraction, ChannelType, ForumChannel, InteractionCollector, Message, ModalSubmitInteraction, TextChannel, ThreadChannel } from "discord.js";
 import { configuration, EventMonkeyEvent } from "./EventMonkey";
 import buttonHandlers from "./ButtonHandlers/EventButtonHandlers";
 import eventCreationButtonHandlers from "./ButtonHandlers/EventCreationButtonHandlers";
-import { resolveChannelString } from "./Utilities";
+import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export async function listenForButtons() {
   if (!configuration.discordClient) return;
@@ -51,17 +51,17 @@ export async function listenForButtonsInThread(thread: ThreadChannel) {
 
 export function getEmbedSubmissionCollector(
   event: EventMonkeyEvent,
-  modalSubmission: ModalSubmitInteraction
+  message: Message
 ): InteractionCollector<ButtonInteraction> {
-  if (!modalSubmission.channel)
+  if (!message.channel)
     throw new Error("This command needs to be triggered in a channel.");
 
   if (event.submissionCollector) return event.submissionCollector;
 
   const submissionCollector =
-    modalSubmission.channel.createMessageComponentCollector({
+    message.channel.createMessageComponentCollector({
       filter: (submissionInteraction) =>
-        submissionInteraction.user.id === modalSubmission.user.id &&
+        submissionInteraction.user.id === event.author.id &&
         submissionInteraction.customId.startsWith(
           configuration.discordClient?.user?.id ?? ""
         ),
@@ -84,7 +84,7 @@ export function getEmbedSubmissionCollector(
         await handler(
           event,
           submissionInteraction,
-          modalSubmission,
+          message,
           configuration.discordClient
         );
       }
@@ -93,7 +93,7 @@ export function getEmbedSubmissionCollector(
 
   submissionCollector.on("end", (collected, reason) => {
     if (reason === "time") {
-      modalSubmission.editReply({
+      message.edit({
         content:
           "Sorry, your event editing timed out! You can continue from where you left off when ready.",
         embeds: [],

@@ -1,7 +1,11 @@
-import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
+import {
+  ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import { EventRecurrence, getRecurrenceUnit } from "../../Recurrence";
-import { getTimeFromString, getTimeString } from "../../Serialization";
+import { getRecurrenceUnit } from "../../Recurrence";
 
 export function editRecurrence(event: EventMonkeyEvent) {
   if (!event.recurrence)

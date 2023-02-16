@@ -6,13 +6,10 @@ import {
   ModalBuilder,
   TextInputStyle,
 } from "discord.js";
-import {
-  configuration,
-  EventMonkeyEvent,
-} from "../../EventMonkey";
+import { configuration, EventMonkeyEvent } from "../../EventMonkey";
 import { saveEvent } from "../../EventsUnderConstruction";
 import { getEmbedSubmissionCollector } from "../../Listeners";
-import { getTimeString } from "../../Serialization";
+import Time from "../../Utility/Time";
 import submission from "../Embed/submission";
 import {
   deserializeModal,
@@ -111,12 +108,10 @@ export async function eventModal(
     configuration.discordClient?.user?.id ?? ""
   );
   await modalSubmission.reply(submissionEmbed);
+  const replyMessage = await modalSubmission.fetchReply();
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
-  event.submissionCollector = getEmbedSubmissionCollector(
-    event,
-    modalSubmission
-  );
+  event.submissionCollector = getEmbedSubmissionCollector(event, replyMessage);
 }
 
 export function eventEditModal(event: EventMonkeyEvent) {
@@ -140,7 +135,7 @@ export function eventEditModal(event: EventMonkeyEvent) {
       scheduledStartTime: "Scheduled Start Time",
     },
     formatters: {
-      scheduledStartTime: getTimeString,
+      scheduledStartTime: Time.getTimeString,
     },
     styles: {
       description: TextInputStyle.Paragraph,

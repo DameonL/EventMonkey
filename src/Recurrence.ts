@@ -1,4 +1,4 @@
-import { getTimeFromString, getTimeString } from "./Serialization";
+import Time from "./Utility/Time";
 
 export interface EventRecurrence {
   firstStartTime: Date;
@@ -73,7 +73,7 @@ export function serializeRecurrence(recurrence: EventRecurrence) {
 
   return `Occurs every ${recurrenceAmount} ${recurrenceDescription}${
     recurrenceAmount > 1 ? "s" : ""
-  }\nFirst held ${getTimeString(recurrence.firstStartTime)}, and held ${
+  }\nFirst held ${Time.getTimeString(recurrence.firstStartTime)}, and held ${
     recurrence.timesHeld
   } time${recurrence.timesHeld === 1 ? "" : "s"} since then!`;
 }
@@ -81,7 +81,7 @@ export function serializeRecurrence(recurrence: EventRecurrence) {
 export function deserializeRecurrence(recurrenceText: string): EventRecurrence {
   const failureMessage = "Unable to deserialize EventRecurrence";
   const deserialized: any = {};
-  deserialized.firstStartTime = getTimeFromString(recurrenceText);
+  deserialized.firstStartTime = Time.getTimeFromString(recurrenceText);
 
   const frequencyMatch = recurrenceText.match(
     /^Occurs every (?<frequency>\d+) (?<unit>(hour|day|week|month)s?)$/im

@@ -6,10 +6,10 @@ import {
   GuildTextThreadManager,
   ThreadChannel,
 } from "discord.js";
-import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
-import { configuration } from "./EventMonkey";
-import { days } from "./TimeConversion";
-import { resolveChannelString } from "./Utilities";
+import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
+import { configuration } from "../EventMonkey";
+import { resolveChannelString } from "./resolveChannelString";
+import Time from "./Time";
 
 interface ChannelWithThreads {
   threads:
@@ -17,7 +17,14 @@ interface ChannelWithThreads {
     | GuildTextThreadManager<ChannelType.PublicThread>;
 }
 
-export async function closeAllOutdatedThreads() {
+export default {
+  closeAllOutdatedThreads,
+  closeOutdatedThreadsInChannel,
+  closeEventThread,
+  getThreadFromEventDescription
+}
+
+async function closeAllOutdatedThreads() {
   if (!configuration.discordClient) return;
 
   for (const [guildId, guild] of configuration.discordClient.guilds.cache) {
@@ -33,7 +40,7 @@ export async function closeAllOutdatedThreads() {
   }
 }
 
-export async function closeOutdatedThreadsInChannel(
+async function closeOutdatedThreadsInChannel(
   channel: ChannelWithThreads
 ) {
   const threads = await (await channel.threads.fetchActive()).threads;
@@ -52,7 +59,7 @@ export async function closeOutdatedThreadsInChannel(
   }
 }
 
-export async function closeEventThread(
+async function closeEventThread(
   thread: ThreadChannel,
   event?: GuildScheduledEvent
 ) {
@@ -72,7 +79,7 @@ export async function closeEventThread(
         : lastMessage.createdAt;
   }
 
-  const closeThreadsAfter = configuration.closeThreadsAfter ?? days(1);
+  const closeThreadsAfter = configuration.closeThreadsAfter ?? Time.toMilliseconds.days(1);
   if (
     threadAge &&
     new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter
@@ -96,11 +103,11 @@ export async function closeEventThread(
   await thread.setArchived(true);
 }
 
-export async function getThreadFromEventDescription(
+async function getThreadFromEventDescription(
   eventDescription: string
 ): Promise<ThreadChannel | undefined> {
   const guildAndThread = eventDescription.match(
-    /(?<=Discussion: <#)(?<threadId>\d+)(?=>$)/im
+    /(?<=https:\/\/discord.com\/channels\/\d+\/)(?<threadId>\d+)/im
   );
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;

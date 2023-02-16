@@ -2,6 +2,7 @@ import {
   ButtonInteraction,
   Client,
   GuildScheduledEvent,
+  Message,
   ModalSubmitInteraction,
   PermissionsBitField,
   TextInputModalData,
@@ -17,30 +18,30 @@ import {
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import { deleteEvent, saveEvent } from "../EventsUnderConstruction";
 import { getEmbedSubmissionCollector } from "../Listeners";
-import { closeEventThread } from "../ThreadUtilities";
-import { minutes } from "../TimeConversion";
+import Threads from "../Utility/Threads";
+import Time from "../Utility/Time";
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => void;
 } = {
   edit: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => {
-    await modalSubmission.deleteReply();
+    await message.delete();
     await eventModal(event, submissionInteraction);
   },
   makeRecurring: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => {
     event.recurrence = {
@@ -50,10 +51,10 @@ const eventCreationButtonHandlers: {
     };
     await submissionInteraction.showModal(editRecurrence(event));
     var submission = await submissionInteraction.awaitModalSubmit({
-      time: minutes(5),
+      time: Time.toMilliseconds.minutes(5),
       filter: (submitInteraction, collected) => {
         if (
-          submitInteraction.user.id === modalSubmission.user.id &&
+          submitInteraction.user.id === event.author.id &&
           submitInteraction.customId === event.id
         ) {
           return true;
@@ -118,15 +119,15 @@ const eventCreationButtonHandlers: {
       "Image added!",
       client?.user?.id ?? ""
     );
-    await modalSubmission.editReply(submissionEmbed);
+    await message.edit(submissionEmbed);
   },
   addImage: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => {
-    await modalSubmission.editReply({
+    await message.edit({
       content: "Adding image...",
       embeds: [],
       components: [],
@@ -140,15 +141,15 @@ const eventCreationButtonHandlers: {
     let replies = await imageResponse.channel.awaitMessages({
       filter: (replyInteraction) =>
         replyInteraction.reference?.messageId === imageResponse.id,
-      time: minutes(10),
+      time: Time.toMilliseconds.minutes(10),
       max: 1,
     });
 
     if (!replies.at(0)) {
       imageResponse.edit("Sorry, you took too long! Please try again.");
-      setTimeout(() => imageResponse.delete(), minutes(1));
+      setTimeout(() => imageResponse.delete(), Time.toMilliseconds.minutes(1));
       const submissionEmbed = Submission(event, "", client?.user?.id ?? "");
-      await modalSubmission.editReply(submissionEmbed);
+      await message.edit(submissionEmbed);
       return;
     }
 
@@ -161,13 +162,13 @@ const eventCreationButtonHandlers: {
         "Image added!",
         client?.user?.id ?? ""
       );
-      await modalSubmission.editReply(submissionEmbed);
+      await message.edit(submissionEmbed);
     }
   },
   save: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => {
     await submissionInteraction.update({
@@ -176,26 +177,25 @@ const eventCreationButtonHandlers: {
       components: [],
     });
     saveEvent(event);
-    getEmbedSubmissionCollector(event, modalSubmission)?.stop();
+    getEmbedSubmissionCollector(event, message)?.stop();
   },
   finish: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => {
-    if (!modalSubmission.guild) return;
+    if (!message.guild) return;
 
     if (!submissionInteraction.deferred) submissionInteraction.deferUpdate();
 
     if (
       event.scheduledStartTime.valueOf() - new Date().valueOf() <
-      minutes(30)
+      Time.toMilliseconds.minutes(30)
     ) {
-      const permissions = modalSubmission.member
-        ?.permissions as Readonly<PermissionsBitField>;
-      if (!permissions.has(PermissionsBitField.Flags.Administrator)) {
-        await modalSubmission.editReply({
+      const member = await message.guild.members.fetch(event.author.id);
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        await message.edit({
           content:
             "Sorry, your start time needs to be more than 30 minutes from now!",
         });
@@ -204,7 +204,7 @@ const eventCreationButtonHandlers: {
       }
     }
 
-    await modalSubmission.editReply({
+    await message.edit({
       content: "Creating event...",
       embeds: [],
       components: [],
@@ -212,14 +212,14 @@ const eventCreationButtonHandlers: {
 
     const forumThread = await createForumChannelEvent(
       event,
-      modalSubmission.guild,
+      message.guild,
       client
     );
 
     try {
       const guildScheduledEvent = await createGuildScheduledEvent(
         event,
-        modalSubmission.guild,
+        message.guild,
         forumThread
       );
 
@@ -229,7 +229,7 @@ const eventCreationButtonHandlers: {
     } catch (error) {
       console.error(error);
       console.log(event);
-      await modalSubmission.editReply({
+      await message.edit({
         content: `Sorry, something went wrong!`,
         embeds: [],
         components: [],
@@ -237,10 +237,10 @@ const eventCreationButtonHandlers: {
 
       saveEvent(event);
     } finally {
-      getEmbedSubmissionCollector(event, modalSubmission)?.stop();
+      getEmbedSubmissionCollector(event, message)?.stop();
     }
 
-    await modalSubmission.editReply({
+    await message.edit({
       content: "Event created successfully!",
       embeds: [],
       components: [],
@@ -251,17 +251,17 @@ const eventCreationButtonHandlers: {
   cancel: async (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    modalSubmission: ModalSubmitInteraction,
+    message: Message,
     client: Client
   ) => {
-    await modalSubmission.editReply({
+    await message.edit({
       content: "Cancelled event creation.",
       embeds: [],
       components: [],
     });
 
     if (event.threadChannel && event.scheduledEvent) {
-      await closeEventThread(event.threadChannel, event.scheduledEvent);
+      await Threads.closeEventThread(event.threadChannel, event.scheduledEvent);
     }
 
     if (event.scheduledEvent) {
@@ -269,7 +269,7 @@ const eventCreationButtonHandlers: {
     }
 
     deleteEvent(submissionInteraction.user.id);
-    getEmbedSubmissionCollector(event, modalSubmission)?.stop();
+    getEmbedSubmissionCollector(event, message)?.stop();
   },
 };
 

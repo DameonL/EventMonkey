@@ -45,7 +45,7 @@ const buttonHandlers: {
     )?.[0] as string;
     if (eventAuthorId === interaction.user.id) {
       interaction.reply({
-        content: `Hey, you can't leave your own event! If you want to cancel your event, use the "/event cancel" command.`,
+        content: `Hey, you can't leave your own event! If you want to cancel your event, use the edit event command, and hit the red "Cancel" button.`,
         ephemeral: true,
       });
       return;
