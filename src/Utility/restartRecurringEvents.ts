@@ -61,7 +61,7 @@ export async function restartRecurringEvents() {
             guild,
             thread
           );
-          createForumChannelEvent(
+          await createForumChannelEvent(
             eventMonkeyEvent,
             guild,
             configuration.discordClient

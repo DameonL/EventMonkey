@@ -1,11 +1,19 @@
-import { ChannelType, ChatInputCommandInteraction, GuildMemberRoleManager, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, SlashCommandBuilder, ThreadChannel } from "discord.js";
+import {
+  ChannelType,
+  ChatInputCommandInteraction,
+  GuildMemberRoleManager,
+  GuildScheduledEventEntityType,
+  GuildScheduledEventPrivacyLevel,
+  SlashCommandBuilder,
+  ThreadChannel,
+} from "discord.js";
+import Configuration from "./Configuration";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
+import Submission from "./Content/Embed/submission";
 import { eventModal } from "./Content/Modal/eventModal";
 import { EventMonkeyEvent } from "./EventMonkey";
-import { getEvent, saveEvent } from "./EventsUnderConstruction";
-import Submission from "./Content/Embed/submission";
-import { getEmbedSubmissionCollector } from "./Listeners";
-import Configuration from "./Configuration";
+import EventsUnderConstruction from "./EventsUnderConstruction";
+import Listeners from "./Listeners";
 
 export const eventCommand = {
   builder: () => {
@@ -84,29 +92,29 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   defaultStartTime.setDate(defaultStartTime.getDate() + 1);
   const defaultDuration = 1;
 
-  const newEvent: EventMonkeyEvent =
-    getEvent(interaction.user.id) ?? 
-      {
-          name: "New Meetup",
-          description: "Your meetup description",
-          image: "",
-          scheduledStartTime: defaultStartTime,
-          duration: defaultDuration,
-          entityMetadata: {
-            location:
-              entityType === GuildScheduledEventEntityType.External
-                ? "Meetup Location"
-                : "Channel Name",
-          },
-          privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-          id: crypto.randomUUID(),
-          forumChannelId,
-          author: interaction.user,
-          entityType,
-        };
+  const newEvent: EventMonkeyEvent = EventsUnderConstruction.getEvent(
+    interaction.user.id
+  ) ?? {
+    name: "New Meetup",
+    description: "Your meetup description",
+    image: "",
+    scheduledStartTime: defaultStartTime,
+    duration: defaultDuration,
+    entityMetadata: {
+      location:
+        entityType === GuildScheduledEventEntityType.External
+          ? "Meetup Location"
+          : "Channel Name",
+    },
+    privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+    id: crypto.randomUUID(),
+    forumChannelId,
+    author: interaction.user,
+    entityType,
+  };
 
   newEvent.entityType = entityType;
-  saveEvent(newEvent);
+  EventsUnderConstruction.saveEvent(newEvent);
 
   await eventModal(newEvent, interaction);
 }
@@ -138,10 +146,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const event = await deseralizeEventEmbed(
-    channel,
-    channel.client
-  );
+  const event = await deseralizeEventEmbed(channel, channel.client);
 
   if (event.author.id !== interaction.user.id) {
     interaction.reply({
@@ -173,15 +178,16 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const submissionMessage = Submission(event, "Editing your existing event...", Configuration.current.discordClient?.user?.id ?? "");
+  const submissionMessage = Submission(
+    event,
+    "Editing your existing event...",
+    Configuration.current.discordClient?.user?.id ?? ""
+  );
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
   await interaction.reply(submissionMessage);
   const message = await interaction.fetchReply();
-  event.submissionCollector = getEmbedSubmissionCollector(
-    event,
-    message
-  );
+  event.submissionCollector = Listeners.getEmbedSubmissionCollector(event, message);
 }
 
 function checkRolePermissions(

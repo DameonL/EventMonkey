@@ -7,21 +7,28 @@ interface UserEventMap {
   [userId: string]: [Date, EventMonkeyEvent];
 }
 
-export function getEvent(userId: string) {
+export default {
+  getEvent,
+  saveEvent,
+  deleteEvent,
+  maintainEvents
+}
+
+function getEvent(userId: string) {
   if (userId in eventsUnderConstruction) return eventsUnderConstruction[userId][1];
 
   return undefined;
 }
 
-export function saveEvent(event: EventMonkeyEvent) {
+function saveEvent(event: EventMonkeyEvent) {
   eventsUnderConstruction[event.author.id] = [new Date(), event];
 }
 
-export function deleteEvent(userId: string) {
+function deleteEvent(userId: string) {
   delete eventsUnderConstruction[userId];
 }
 
-export function maintainEvents() {
+function maintainEvents() {
   try {
     const clearList: string[] = [];
     const now = new Date().valueOf();

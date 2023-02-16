@@ -8,8 +8,8 @@ import {
 } from "discord.js";
 import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import { saveEvent } from "../../EventsUnderConstruction";
-import { getEmbedSubmissionCollector } from "../../Listeners";
+import EventsUnderConstruction from "../../EventsUnderConstruction";
+import Listeners from "../../Listeners";
 import Time from "../../Utility/TimeUtilities";
 import submission from "../Embed/submission";
 import {
@@ -68,7 +68,7 @@ export async function eventModal(
       ephemeral: true,
     });
 
-    saveEvent(event);
+    EventsUnderConstruction.saveEvent(event);
     return;
   }
 
@@ -83,7 +83,7 @@ export async function eventModal(
         ephemeral: true,
       });
 
-      saveEvent(event);
+      EventsUnderConstruction.saveEvent(event);
       return;
     }
     if (
@@ -95,7 +95,7 @@ export async function eventModal(
         ephemeral: true,
       });
 
-      saveEvent(event);
+      EventsUnderConstruction.saveEvent(event);
       return;
     }
 
@@ -112,7 +112,7 @@ export async function eventModal(
   const replyMessage = await modalSubmission.fetchReply();
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
-  event.submissionCollector = getEmbedSubmissionCollector(event, replyMessage);
+  event.submissionCollector = Listeners.getEmbedSubmissionCollector(event, replyMessage);
 }
 
 export function eventEditModal(event: EventMonkeyEvent) {

@@ -6,15 +6,11 @@ import {
 
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { maintainEvents } from "./EventsUnderConstruction";
+import EventsUnderConstruction from "./EventsUnderConstruction";
 
-import {
-  eventCompleted,
-  eventStarted,
-  userShowedInterest,
-} from "./ClientEvents";
+import ClientEventHandlers from "./ClientEventHandlers";
 import { editEventCommand, eventCommand } from "./Commands";
-import { listenForButtons } from "./Listeners";
+import Listeners from "./Listeners";
 import performAnnouncements from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
@@ -41,7 +37,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
 
   const client = Configuration.current.discordClient;
   if (client && client !== cachedClient) {
-    listenForButtons();
+    await Listeners.listenForButtons();
     client.on(
       Events.GuildScheduledEventDelete,
       async (guildScheduledEvent: GuildScheduledEvent) => {
@@ -58,14 +54,14 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     );
 
-    client.on(Events.GuildScheduledEventUserAdd, userShowedInterest);
+    client.on(Events.GuildScheduledEventUserAdd, ClientEventHandlers.userShowedInterest);
     client.on(
       Events.GuildScheduledEventUpdate,
       (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
         if (event.status === GuildScheduledEventStatus.Active) {
-          eventStarted(oldEvent, event);
+          ClientEventHandlers.eventStarted(oldEvent, event);
         } else if (event.status === GuildScheduledEventStatus.Completed) {
-          eventCompleted(oldEvent, event);
+          ClientEventHandlers.eventCompleted(oldEvent, event);
         }
       }
     );
@@ -78,7 +74,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
 }
 
 function startRecurringTasks() {
-  setInterval(maintainEvents, Time.toMilliseconds.hours(1));
+  setInterval(EventsUnderConstruction.maintainEvents, Time.toMilliseconds.hours(1));
   setInterval(Threads.closeAllOutdatedThreads, Time.toMilliseconds.minutes(30));
   setInterval(performAnnouncements, Time.toMilliseconds.minutes(1));
 }

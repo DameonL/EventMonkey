@@ -16,8 +16,8 @@ import {
   createGuildScheduledEvent,
 } from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
-import { deleteEvent, saveEvent } from "../EventsUnderConstruction";
-import { getEmbedSubmissionCollector } from "../Listeners";
+import EventsUnderConstruction from "../EventsUnderConstruction";
+import Listeners from "../Listeners";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/TimeUtilities";
 
@@ -176,8 +176,8 @@ const eventCreationButtonHandlers: {
       embeds: [],
       components: [],
     });
-    saveEvent(event);
-    getEmbedSubmissionCollector(event, message)?.stop();
+    EventsUnderConstruction.saveEvent(event);
+    Listeners.getEmbedSubmissionCollector(event, message)?.stop();
   },
   finish: async (
     event: EventMonkeyEvent,
@@ -235,9 +235,9 @@ const eventCreationButtonHandlers: {
         components: [],
       });
 
-      saveEvent(event);
+      EventsUnderConstruction.saveEvent(event);
     } finally {
-      getEmbedSubmissionCollector(event, message)?.stop();
+      Listeners.getEmbedSubmissionCollector(event, message)?.stop();
     }
 
     await message.edit({
@@ -246,7 +246,7 @@ const eventCreationButtonHandlers: {
       components: [],
     });
 
-    deleteEvent(submissionInteraction.user.id);
+    EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
   },
   cancel: async (
     event: EventMonkeyEvent,
@@ -268,8 +268,8 @@ const eventCreationButtonHandlers: {
       await event.scheduledEvent.delete();
     }
 
-    deleteEvent(submissionInteraction.user.id);
-    getEmbedSubmissionCollector(event, message)?.stop();
+    EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
+    Listeners.getEmbedSubmissionCollector(event, message)?.stop();
   },
 };
 

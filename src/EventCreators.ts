@@ -9,7 +9,7 @@ import { attendanceButtons } from "./Content/Component/attendanceButtons";
 import { attendees } from "./Content/Embed/attendees";
 import { createEventEmbed } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
-import { listenForButtonsInThread } from "./Listeners";
+import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export async function createGuildScheduledEvent(
@@ -87,7 +87,7 @@ export async function createForumChannelEvent(
     threadChannel.messages.cache.at(0)?.pin();
   }
 
-  await listenForButtonsInThread(threadChannel);
+  await Listeners.listenForButtonsInThread(threadChannel);
 
   return threadChannel;
 }

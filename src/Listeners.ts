@@ -13,7 +13,14 @@ import Configuration from "./Configuration";
 import { EventMonkeyEvent } from "./EventMonkey";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
-export async function listenForButtons() {
+export default {
+  listenForButtons,
+  listenForButtonsInChannel,
+  listenForButtonsInThread,
+  getEmbedSubmissionCollector
+}
+
+async function listenForButtons() {
   const configuration = Configuration.current;
 
   if (!configuration.discordClient) return;
@@ -32,7 +39,7 @@ export async function listenForButtons() {
   }
 }
 
-export async function listenForButtonsInChannel(
+async function listenForButtonsInChannel(
   channel: ForumChannel | TextChannel
 ) {
   for (const thread of channel.threads.cache.values()) {
@@ -40,7 +47,7 @@ export async function listenForButtonsInChannel(
   }
 }
 
-export async function listenForButtonsInThread(thread: ThreadChannel) {
+async function listenForButtonsInThread(thread: ThreadChannel) {
   const configuration = Configuration.current;
 
   const collector = thread.createMessageComponentCollector({
@@ -62,7 +69,7 @@ export async function listenForButtonsInThread(thread: ThreadChannel) {
   });
 }
 
-export function getEmbedSubmissionCollector(
+function getEmbedSubmissionCollector(
   event: EventMonkeyEvent,
   message: Message
 ): InteractionCollector<ButtonInteraction> {

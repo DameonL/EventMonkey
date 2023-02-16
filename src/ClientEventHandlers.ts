@@ -9,7 +9,13 @@ import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/TimeUtilities";
 
-export async function eventStarted(
+export default {
+  eventStarted,
+  eventCompleted,
+  userShowedInterest
+}
+
+async function eventStarted(
   oldEvent: GuildScheduledEvent | null,
   event: GuildScheduledEvent
 ) {
@@ -73,7 +79,7 @@ export async function eventStarted(
   }
 }
 
-export async function eventCompleted(
+async function eventCompleted(
   oldEvent: GuildScheduledEvent | null,
   event: GuildScheduledEvent
 ) {
@@ -130,7 +136,7 @@ export async function eventCompleted(
   }
 }
 
-export async function userShowedInterest(
+async function userShowedInterest(
   guildScheduledEvent: GuildScheduledEvent<GuildScheduledEventStatus>,
   user: User
 ) {
