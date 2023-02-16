@@ -1,14 +1,16 @@
 import { ChannelType, GuildScheduledEventStatus } from "discord.js";
+import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
 import {
   createForumChannelEvent,
   createGuildScheduledEvent,
 } from "../EventCreators";
-import { configuration } from "../EventMonkey";
 import { getNextRecurrence } from "../Recurrence";
 import { resolveChannelString } from "./resolveChannelString";
 
 export async function restartRecurringEvents() {
+  const configuration = Configuration.current;
+
   if (!configuration.discordClient) return;
 
   const now = Date.now();

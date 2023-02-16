@@ -6,10 +6,11 @@ import {
   ModalBuilder,
   TextInputStyle,
 } from "discord.js";
-import { configuration, EventMonkeyEvent } from "../../EventMonkey";
+import Configuration from "../../Configuration";
+import { EventMonkeyEvent } from "../../EventMonkey";
 import { saveEvent } from "../../EventsUnderConstruction";
 import { getEmbedSubmissionCollector } from "../../Listeners";
-import Time from "../../Utility/Time";
+import Time from "../../Utility/TimeUtilities";
 import submission from "../Embed/submission";
 import {
   deserializeModal,
@@ -26,7 +27,7 @@ export async function eventModal(
 
   await interactionToReply.showModal(modal);
   const modalSubmission = await interactionToReply.awaitModalSubmit({
-    time: configuration.editingTimeout,
+    time: Configuration.current.editingTimeout,
     filter: (submitInteraction, collected) => {
       if (
         submitInteraction.user.id === interactionToReply.user.id &&
@@ -105,7 +106,7 @@ export async function eventModal(
   let submissionEmbed = submission(
     event,
     "",
-    configuration.discordClient?.user?.id ?? ""
+    Configuration.current.discordClient?.user?.id ?? ""
   );
   await modalSubmission.reply(submissionEmbed);
   const replyMessage = await modalSubmission.fetchReply();

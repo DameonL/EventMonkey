@@ -16,7 +16,7 @@ import {
   EventRecurrence,
   serializeRecurrence,
 } from "../../Recurrence";
-import Time from "../../Utility/Time";
+import Time from "../../Utility/TimeUtilities";
 
 export function createEventEmbed(event: EventMonkeyEvent): EmbedBuilder {
   const previewEmbed = new EmbedBuilder().setTitle(

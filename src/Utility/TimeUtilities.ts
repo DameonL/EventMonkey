@@ -1,5 +1,3 @@
-import { configuration } from "../EventMonkey";
-
 export default {
   toMilliseconds: {
     days,
@@ -38,7 +36,7 @@ function getTimeFromString(text: string): Date {
   return output;
 }
 
-function getTimeString(date: Date): string {
+function getTimeString(date: Date, timeZone?: string): string {
   return date
     .toLocaleString("en-us", {
       day: "2-digit",
@@ -46,9 +44,7 @@ function getTimeString(date: Date): string {
       year: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: configuration.timeZone
-        ? configuration.timeZone
-        : Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
       timeZoneName: "short",
     })
     .replace(",", "")

@@ -6,10 +6,10 @@ import {
   GuildTextThreadManager,
   ThreadChannel,
 } from "discord.js";
+import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
-import { configuration } from "../EventMonkey";
 import { resolveChannelString } from "./resolveChannelString";
-import Time from "./Time";
+import Time from "./TimeUtilities";
 
 interface ChannelWithThreads {
   threads:
@@ -25,10 +25,10 @@ export default {
 }
 
 async function closeAllOutdatedThreads() {
-  if (!configuration.discordClient) return;
+  if (!Configuration.current.discordClient) return;
 
-  for (const [guildId, guild] of configuration.discordClient.guilds.cache) {
-    for (const { name, channel } of configuration.eventTypes) {
+  for (const [guildId, guild] of Configuration.current.discordClient.guilds.cache) {
+    for (const { name, channel } of Configuration.current.eventTypes) {
       const resolvedChannel = await resolveChannelString(channel, guild);
       if (
         resolvedChannel.type === ChannelType.GuildText ||
@@ -79,7 +79,7 @@ async function closeEventThread(
         : lastMessage.createdAt;
   }
 
-  const closeThreadsAfter = configuration.closeThreadsAfter ?? Time.toMilliseconds.days(1);
+  const closeThreadsAfter = Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1);
   if (
     threadAge &&
     new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter
@@ -111,7 +111,7 @@ async function getThreadFromEventDescription(
   );
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
-    const thread = await configuration.discordClient?.channels.fetch(threadId);
+    const thread = await Configuration.current.discordClient?.channels.fetch(threadId);
     if (thread && thread.type === ChannelType.PublicThread) {
       return thread;
     }

@@ -4,18 +4,18 @@ import {
   GuildScheduledEvent,
   GuildScheduledEventStatus,
 } from "discord.js";
+import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
-import { configuration } from "../EventMonkey";
 import { getAttendeeTags } from "./Attendees";
 import { resolveChannelString } from "./resolveChannelString";
 import Threads from "./Threads";
-import Time from "./Time";
+import Time from "./TimeUtilities";
 
 export default async function performAnnouncements() {
-  if (!configuration.discordClient) return;
+  if (!Configuration.current.discordClient) return;
 
   try {
-    for (const guild of configuration.discordClient.guilds.cache.values()) {
+    for (const guild of Configuration.current.discordClient.guilds.cache.values()) {
       for (const event of await (
         await guild.scheduledEvents.fetch()
       ).values()) {
@@ -33,7 +33,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
 
-  const eventType = configuration.eventTypes.find(
+  const eventType = Configuration.current.eventTypes.find(
     (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
   );
   if (

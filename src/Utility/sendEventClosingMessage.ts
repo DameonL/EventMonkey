@@ -1,9 +1,7 @@
 import { EmbedBuilder, GuildScheduledEventStatus, ThreadChannel } from "discord.js";
-import { configuration } from "../EventMonkey";
+import Configuration from "../Configuration";
 import { getAttendeeTags } from "./Attendees";
-import Time from "./Time";
-
-const { toMilliseconds } = Time;
+import Time from "./TimeUtilities";
 
 export async function sendEventClosingMessage(
   thread: ThreadChannel,
@@ -12,14 +10,14 @@ export async function sendEventClosingMessage(
     | GuildScheduledEventStatus.Completed
 ) {
   const completed = status === GuildScheduledEventStatus.Completed;
-  let nextTime = (configuration.closeThreadsAfter ?? toMilliseconds.days(1)) / toMilliseconds.days(1);
+  let nextTime = (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.days(1);
   let timeUnit = "day";
   if (nextTime <= 1) {
-    nextTime = (configuration.closeThreadsAfter ?? toMilliseconds.days(1)) / toMilliseconds.hours(1);
+    nextTime = (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.hours(1);
     timeUnit = "hour";
   }
   if (nextTime <= 1) {
-    nextTime = (configuration.closeThreadsAfter ?? toMilliseconds.days(1)) / toMilliseconds.minutes(1);
+    nextTime = (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.minutes(1);
     timeUnit = "minute";
   }
 

@@ -22,4 +22,3 @@ export interface EventMonkeyConfiguration {
     denied?: string[]
   };
 }
-

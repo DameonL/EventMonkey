@@ -19,37 +19,27 @@ import performAnnouncements from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
-import Time from "./Utility/Time";
+import Time from "./Utility/TimeUtilities";
+import Configuration from "./Configuration";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
-export { configuration };
-
-let configuration: EventMonkeyConfiguration;
 
 export default {
   commands: { create: eventCommand, edit: editEventCommand }, 
-  getDefaultConfiguration,
+  defaultConfiguration: Configuration.defaultConfiguration,
   configure,
 };
 
-function getDefaultConfiguration(): EventMonkeyConfiguration {
-  return {
-    commandName: "event",
-    eventTypes: [],
-    editingTimeout: Time.toMilliseconds.minutes(30),
-  };
-}
-
 async function configure(newConfiguration: EventMonkeyConfiguration) {
-  const cachedClient = configuration?.discordClient;
-  configuration = newConfiguration;
+  const cachedClient = Configuration.current.discordClient;
+  Configuration.current = newConfiguration;
 
-  if (configuration.eventTypes.length === 0) {
+  if (Configuration.current.eventTypes.length === 0) {
     throw new Error(
       "You must define at least one event type in the configuration."
     );
   }
 
-  const client = configuration.discordClient;
+  const client = Configuration.current.discordClient;
   if (client && client !== cachedClient) {
     listenForButtons();
     client.on(

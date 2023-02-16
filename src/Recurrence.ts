@@ -1,4 +1,4 @@
-import Time from "./Utility/Time";
+import Time from "./Utility/TimeUtilities";
 
 export interface EventRecurrence {
   firstStartTime: Date;

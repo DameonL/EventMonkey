@@ -19,7 +19,7 @@ import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import { deleteEvent, saveEvent } from "../EventsUnderConstruction";
 import { getEmbedSubmissionCollector } from "../Listeners";
 import Threads from "../Utility/Threads";
-import Time from "../Utility/Time";
+import Time from "../Utility/TimeUtilities";
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (

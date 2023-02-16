@@ -1,30 +1,30 @@
 import { ChannelType, EmbedBuilder, GuildScheduledEvent, GuildScheduledEventStatus, User } from "discord.js";
+import Configuration from "./Configuration";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import { createForumChannelEvent, createGuildScheduledEvent } from "./EventCreators";
-import { configuration } from "./EventMonkey";
 import { getNextRecurrence } from "./Recurrence";
 import { getAttendeeTags } from "./Utility/Attendees";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
-import Time from "./Utility/Time";
+import Time from "./Utility/TimeUtilities";
 
 export async function eventStarted(
   oldEvent: GuildScheduledEvent | null,
   event: GuildScheduledEvent
 ) {
   if (!event.description || !event.scheduledStartAt) return;
-  if (!configuration.discordClient) return;
+  if (!Configuration.current.discordClient) return;
 
   const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
   const monkeyEvent = await deseralizeEventEmbed(
     thread,
-    configuration.discordClient
+    Configuration.current.discordClient
   );
   var idString = `Event ID: ${monkeyEvent.id}`;
 
-  const eventType = configuration.eventTypes.find(
+  const eventType = Configuration.current.eventTypes.find(
     (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
   );
   if (!eventType || !eventType.announcement || !eventType.announcement.onStart)

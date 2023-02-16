@@ -1,22 +1,23 @@
 import { ChannelType, ChatInputCommandInteraction, GuildMemberRoleManager, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, SlashCommandBuilder, ThreadChannel } from "discord.js";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import { eventModal } from "./Content/Modal/eventModal";
-import { configuration, EventMonkeyEvent } from "./EventMonkey";
+import { EventMonkeyEvent } from "./EventMonkey";
 import { getEvent, saveEvent } from "./EventsUnderConstruction";
 import Submission from "./Content/Embed/submission";
 import { getEmbedSubmissionCollector } from "./Listeners";
+import Configuration from "./Configuration";
 
 export const eventCommand = {
   builder: () => {
     const builder = new SlashCommandBuilder()
-      .setName(configuration.commandName)
+      .setName(Configuration.current.commandName)
       .setDescription("Create an event");
 
-    if (configuration.eventTypes.length > 1) {
+    if (Configuration.current.eventTypes.length > 1) {
       builder.addStringOption((option) => {
         option.setName("type").setDescription("The type of event to schedule");
         option.addChoices(
-          ...configuration.eventTypes.map((eventType) => {
+          ...Configuration.current.eventTypes.map((eventType) => {
             return { name: eventType.name, value: eventType.channel };
           })
         );
@@ -48,8 +49,8 @@ export const eventCommand = {
           },
         ].filter(
           (x) =>
-            !configuration.allowedEntityTypes ||
-            configuration.allowedEntityTypes.includes(x.entityType)
+            !Configuration.current.allowedEntityTypes ||
+            Configuration.current.allowedEntityTypes.includes(x.entityType)
         )
       );
       option.setRequired(true);
@@ -113,7 +114,7 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
 export const editEventCommand = {
   builder: () =>
     new SlashCommandBuilder()
-      .setName(`${configuration.commandName}-edit`)
+      .setName(`${Configuration.current.commandName}-edit`)
       .setDescription("Edit an event")
       .addChannelOption((option) =>
         option
@@ -172,7 +173,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const submissionMessage = Submission(event, "Editing your existing event...", configuration.discordClient?.user?.id ?? "");
+  const submissionMessage = Submission(event, "Editing your existing event...", Configuration.current.discordClient?.user?.id ?? "");
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
   await interaction.reply(submissionMessage);
@@ -188,6 +189,7 @@ function checkRolePermissions(
 ): boolean {
   if (!interaction.member) return false;
 
+  const configuration = Configuration.current;
   let allowed = configuration.roleIds?.allowed == null;
   const memberPermissions = interaction.memberPermissions;
   if (memberPermissions && memberPermissions.has("Administrator")) {

@@ -1,10 +1,21 @@
-import { ButtonInteraction, ChannelType, ForumChannel, InteractionCollector, Message, ModalSubmitInteraction, TextChannel, ThreadChannel } from "discord.js";
-import { configuration, EventMonkeyEvent } from "./EventMonkey";
+import {
+  ButtonInteraction,
+  ChannelType,
+  ForumChannel,
+  InteractionCollector,
+  Message,
+  TextChannel,
+  ThreadChannel,
+} from "discord.js";
 import buttonHandlers from "./ButtonHandlers/EventButtonHandlers";
 import eventCreationButtonHandlers from "./ButtonHandlers/EventCreationButtonHandlers";
+import Configuration from "./Configuration";
+import { EventMonkeyEvent } from "./EventMonkey";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export async function listenForButtons() {
+  const configuration = Configuration.current;
+
   if (!configuration.discordClient) return;
 
   for (const guild of configuration.discordClient.guilds.cache) {
@@ -30,6 +41,8 @@ export async function listenForButtonsInChannel(
 }
 
 export async function listenForButtonsInThread(thread: ThreadChannel) {
+  const configuration = Configuration.current;
+
   const collector = thread.createMessageComponentCollector({
     filter: (submissionInteraction) =>
       (configuration.discordClient?.user &&
@@ -57,16 +70,17 @@ export function getEmbedSubmissionCollector(
     throw new Error("This command needs to be triggered in a channel.");
 
   if (event.submissionCollector) return event.submissionCollector;
+  const configuration = Configuration.current;
 
-  const submissionCollector =
-    message.channel.createMessageComponentCollector({
-      filter: (submissionInteraction) =>
-        submissionInteraction.user.id === event.author.id &&
-        submissionInteraction.customId.startsWith(
-          configuration.discordClient?.user?.id ?? ""
-        ),
-      time: configuration.editingTimeout,
-    }) as InteractionCollector<ButtonInteraction>;
+
+  const submissionCollector = message.channel.createMessageComponentCollector({
+    filter: (submissionInteraction) =>
+      submissionInteraction.user.id === event.author.id &&
+      submissionInteraction.customId.startsWith(
+        configuration.discordClient?.user?.id ?? ""
+      ),
+    time: configuration.editingTimeout,
+  }) as InteractionCollector<ButtonInteraction>;
 
   submissionCollector.on(
     "collect",
@@ -104,4 +118,3 @@ export function getEmbedSubmissionCollector(
 
   return submissionCollector;
 }
-
