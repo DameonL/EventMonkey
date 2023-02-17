@@ -1,77 +1,68 @@
 import { ButtonInteraction } from "discord.js";
+import {
+  attendeesToEmbed,
+  getAttendeesFromMessage,
+} from "../Content/Embed/attendees";
+import { getEventDetailsEmbed } from "../Content/Embed/eventEmbed";
 
 const buttonHandlers: {
-  [handlerName: string]: (
-    interaction: ButtonInteraction
-  ) => void | Promise<void>;
+  [handlerName: string]: (interaction: ButtonInteraction) => Promise<void>;
 } = {
-  attending: (interaction: ButtonInteraction) => {
-    const attendingEmbed = interaction.message.embeds[1];
-    const attendingField = attendingEmbed.fields.find(
-      (x) => x.name === "Attending"
-    );
-    if (!attendingField) throw new Error("Unable to find attending field.");
-    const userString = interaction.user.toString();
+  attending: async (interaction: ButtonInteraction) => {
+    if (interaction.deferred) return;
 
-    let attendees = attendingField.value;
-    if (attendees.includes(userString)) {
-      interaction.reply({
+    await interaction.deferReply({ ephemeral: true });
+    let attendees = getAttendeesFromMessage(interaction.message);
+    if (attendees.includes(interaction.user.id)) {
+      interaction.editReply({
         content: "It looks like you're already attending!",
-        ephemeral: true,
       });
       return;
     }
 
-    attendees = `${attendees}\n${userString}`;
-    attendingField.value = attendees;
-    interaction.reply({
-      content: "Congratulations, you're going!",
-      ephemeral: true,
+    attendees.push(interaction.user.id);
+
+    const newAttendingEmbed = attendeesToEmbed(attendees);
+    await interaction.message.edit({
+      embeds: [interaction.message.embeds[0], newAttendingEmbed],
     });
-    interaction.message.edit({
-      embeds: [interaction.message.embeds[0], attendingEmbed],
+
+    await interaction.editReply({
+      content: "Congratulations, you're going!",
     });
   },
-  notAttending: (interaction: ButtonInteraction) => {
-    const eventEmbed = interaction.message.embeds[0];
-    const attendingEmbed = interaction.message.embeds[1];
-    const attendingField = attendingEmbed.fields.find(
-      (x) => x.name === "Attending"
-    );
-    if (!attendingField) throw new Error("Unable to find attending field.");
+  notAttending: async (interaction: ButtonInteraction) => {
+    if (interaction.deferred) return;
+    
+    await interaction.deferReply({ ephemeral: true });
+    const eventEmbed = await getEventDetailsEmbed(interaction.message);
+    let attendees = getAttendeesFromMessage(interaction.message);
 
     const eventAuthorId = eventEmbed.author?.name.match(
       /(?<=\().*(?=\)$)/i
     )?.[0] as string;
     if (eventAuthorId === interaction.user.id) {
-      interaction.reply({
+      await interaction.editReply({
         content: `Hey, you can't leave your own event! If you want to cancel your event, use the edit event command, and hit the red "Cancel" button.`,
-        ephemeral: true,
       });
       return;
     }
 
-    const userString = interaction.user.username;
-
-    let attendees = attendingField.value;
-    if (!attendees.includes(userString)) {
-      interaction.reply({
+    if (!attendees.includes(interaction.user.id)) {
+      await interaction.editReply({
         content: "Sorry, I don't see that you're attending!",
-        ephemeral: true,
       });
       return;
     }
 
-    const attendeeArray = attendees.split("\n");
-    attendeeArray.splice(attendeeArray.indexOf(userString), 1);
+    while (attendees.includes(interaction.user.id) && attendees.length > 1) {
+      attendees.splice(attendees.indexOf(interaction.user.id), 1);
+    }
 
-    attendees = attendeeArray.join("\n");
-    attendingField.value = attendees;
-
-    interaction.reply({ content: "Sorry you can't make it!", ephemeral: true });
-    interaction.message.edit({
-      embeds: [interaction.message.embeds[0], attendingEmbed],
+    await interaction.message.edit({
+      embeds: [interaction.message.embeds[0], attendeesToEmbed(attendees)],
     });
+    await interaction.editReply({ content: "Sorry you can't make it!" });
   },
 };
 

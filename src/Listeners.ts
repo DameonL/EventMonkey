@@ -1,9 +1,11 @@
 import {
   ButtonInteraction,
   ChannelType,
+  ChatInputCommandInteraction,
   ForumChannel,
   InteractionCollector,
   Message,
+  ModalSubmitInteraction,
   TextChannel,
   ThreadChannel,
 } from "discord.js";
@@ -17,8 +19,8 @@ export default {
   listenForButtons,
   listenForButtonsInChannel,
   listenForButtonsInThread,
-  getEmbedSubmissionCollector
-}
+  getEmbedSubmissionCollector,
+};
 
 async function listenForButtons() {
   const configuration = Configuration.current;
@@ -39,46 +41,45 @@ async function listenForButtons() {
   }
 }
 
-async function listenForButtonsInChannel(
-  channel: ForumChannel | TextChannel
-) {
+async function listenForButtonsInChannel(channel: ForumChannel | TextChannel) {
   for (const thread of channel.threads.cache.values()) {
     if (!thread.archived) await listenForButtonsInThread(thread);
   }
 }
 
+// TODO: This is being triggered when event creation command buttons are being hit in the thread. Need to improve the filter.
 async function listenForButtonsInThread(thread: ThreadChannel) {
   const configuration = Configuration.current;
 
   const collector = thread.createMessageComponentCollector({
     filter: (submissionInteraction) =>
-      (configuration.discordClient?.user &&
-        submissionInteraction.customId.startsWith(
-          configuration.discordClient.user.id
-        )) == true,
+      configuration.discordClient?.user != null &&
+      submissionInteraction.customId.startsWith(
+        configuration.discordClient.user.id
+      ),
   }) as InteractionCollector<ButtonInteraction>;
 
-  collector.on("collect", (interaction: ButtonInteraction) => {
+  collector.on("collect", async (interaction: ButtonInteraction) => {
     const buttonId = interaction.customId.match(/(?<=_button_).*$/i)?.[0];
     if (!buttonId) throw new Error("Unable to get button ID from customId");
 
     const handler = buttonHandlers[buttonId];
     if (!handler) throw new Error(`No handler for button ID ${buttonId}`);
 
-    handler(interaction);
+    await handler(interaction);
   });
 }
 
 function getEmbedSubmissionCollector(
   event: EventMonkeyEvent,
-  message: Message
+  message: Message,
+  originalInteraction: ChatInputCommandInteraction | ModalSubmitInteraction
 ): InteractionCollector<ButtonInteraction> {
   if (!message.channel)
     throw new Error("This command needs to be triggered in a channel.");
 
-  if (event.submissionCollector) return event.submissionCollector;
+  if (event.submissionCollector) event.submissionCollector.stop();
   const configuration = Configuration.current;
-
 
   const submissionCollector = message.channel.createMessageComponentCollector({
     filter: (submissionInteraction) =>
@@ -105,7 +106,7 @@ function getEmbedSubmissionCollector(
         await handler(
           event,
           submissionInteraction,
-          message,
+          originalInteraction,
           configuration.discordClient
         );
       }
