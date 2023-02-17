@@ -15,6 +15,7 @@ export interface EventMonkeyEvent {
   name: string;
   description: string;
   image: string;
+  attendees: string[];
   entityMetadata: { location: string };
   channel?: VoiceBasedChannel;
   scheduledStartTime: Date;
