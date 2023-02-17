@@ -19,6 +19,22 @@ import {
   serializeToModal,
 } from "./SerializedModal";
 
+const deserializationConfig: ModalDeserializationConfig = {
+  validators: {
+    scheduledStartTime: (fieldValue: string) =>
+      /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue)
+        ? undefined
+        : "Invalid date format.",
+    duration: (fieldValue: string) =>
+      isNaN(Number(fieldValue)) ? "Invalid duration" : undefined,
+  },
+  customDeserializers: {
+    scheduledStartTime: (fieldValue: string) =>
+      new Date(Date.parse(fieldValue)),
+    duration: (fieldValue: string) => Number(fieldValue),
+  },
+};
+
 export async function eventModal(
   event: EventMonkeyEvent,
   interactionToReply: ChatInputCommandInteraction | ButtonInteraction
@@ -39,22 +55,6 @@ export async function eventModal(
       return false;
     },
   });
-
-  const deserializationConfig: ModalDeserializationConfig = {
-    validators: {
-      scheduledStartTime: (fieldValue: string) =>
-        /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue)
-          ? undefined
-          : "Invalid date format.",
-      duration: (fieldValue: string) =>
-        isNaN(Number(fieldValue)) ? "Invalid duration" : undefined,
-    },
-    customDeserializers: {
-      scheduledStartTime: (fieldValue: string) =>
-        new Date(Date.parse(fieldValue)),
-      duration: (fieldValue: string) => Number(fieldValue),
-    },
-  };
 
   try {
     deserializeModal<EventMonkeyEvent>(
@@ -108,11 +108,12 @@ export async function eventModal(
     "",
     Configuration.current.discordClient?.user?.id ?? ""
   );
+
   await modalSubmission.reply(submissionEmbed);
   const replyMessage = await modalSubmission.fetchReply();
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
-  event.submissionCollector = Listeners.getEmbedSubmissionCollector(event, replyMessage);
+  event.submissionCollector = Listeners.getEmbedSubmissionCollector(event, replyMessage, modalSubmission);
 }
 
 export function eventEditModal(event: EventMonkeyEvent) {
