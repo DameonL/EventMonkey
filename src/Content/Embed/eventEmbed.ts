@@ -2,10 +2,12 @@ import {
   APIEmbedField,
   ChannelType,
   Client,
+  Embed,
   EmbedBuilder,
   GuildScheduledEvent,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
+  Message,
   TextChannel,
   ThreadChannel,
   VoiceBasedChannel,
@@ -17,42 +19,21 @@ import {
   serializeRecurrence,
 } from "../../Recurrence";
 import Time from "../../Utility/TimeUtilities";
+import { getAttendeesFromMessage } from "./attendees";
 
-export function createEventEmbed(event: EventMonkeyEvent): EmbedBuilder {
-  const previewEmbed = new EmbedBuilder().setTitle(
-    `${Time.getTimeString(event.scheduledStartTime)} - ${event.name}`
-  );
+export function eventEmbed(event: EventMonkeyEvent): EmbedBuilder {
+  const previewEmbed = new EmbedBuilder();
+  previewEmbed.setTitle("Event Details");
   if (event.image !== "") {
     previewEmbed.setThumbnail(event.image);
   }
+
   previewEmbed.setDescription(event.description);
-  const fields: APIEmbedField[] = [];
-  fields.push({
-    name:
-      event.entityType === GuildScheduledEventEntityType.External
-        ? "Location"
-        : "Channel",
-    value: event.entityMetadata.location,
-    inline: true,
-  });
-  fields.push({
-    name: "Duration",
-    value: `${event.duration} hour${event.duration > 1 ? "s" : ""}`,
-    inline: true,
-  });
 
-  if (event.recurrence) {
-    fields.push({
-      name: "Frequency",
-      value: serializeRecurrence(event.recurrence),
-    });
-  }
   if (event.scheduledEvent) {
-    fields.push({ name: "Event Link", value: event.scheduledEvent.url });
+    previewEmbed.setURL(event.scheduledEvent.url);
   }
 
-  fields.push({ name: "Event ID", value: event.id });
-  previewEmbed.addFields(fields);
   previewEmbed.setAuthor({
     name: `${event.author.username} (${event.author.id})`,
     iconURL: event.author.avatarURL() ?? "",
@@ -62,6 +43,31 @@ export function createEventEmbed(event: EventMonkeyEvent): EmbedBuilder {
     previewEmbed.setImage(event.image);
   }
 
+  const fields: APIEmbedField[] = [
+    {
+      name:
+        event.entityType === GuildScheduledEventEntityType.External
+          ? "Location"
+          : "Channel",
+      value: event.entityMetadata.location,
+      inline: true,
+    },
+    {
+      name: "Duration",
+      value: `${event.duration} hour${event.duration > 1 ? "s" : ""}`,
+      inline: true,
+    },
+  ];
+
+  if (event.recurrence) {
+    fields.push({
+      name: "Frequency",
+      value: serializeRecurrence(event.recurrence),
+    });
+  }
+  fields.push({ name: "Event ID", value: event.id });
+
+  previewEmbed.addFields(fields);
   return previewEmbed;
 }
 
@@ -69,7 +75,10 @@ export async function deseralizeEventEmbed(
   thread: ThreadChannel,
   client: Client
 ): Promise<EventMonkeyEvent> {
-  const embed = await getPreviewEmbed(thread);
+  const detailsMessage = await getEventDetailsMessage(thread);
+  if (!detailsMessage) throw new Error(`Thread is not an event thread.`);
+
+  const embed = await getEventDetailsEmbed(detailsMessage);
 
   const id = embed.fields.find((x) => x.name === "Event ID")?.value;
   if (!id) throw new Error("Unable to get ID from embed.");
@@ -110,25 +119,29 @@ export async function deseralizeEventEmbed(
       ? GuildScheduledEventEntityType.StageInstance
       : GuildScheduledEventEntityType.Voice;
 
-  const eventLink = embed.fields.find((x) => x.name === "Event Link");
-  const eventId = eventLink?.value.match(
+  const eventId = embed.url?.match(
     /(?<=https:\/\/discord.com\/events\/.*\/).*/i
   )?.[0];
-  if (!eventId) throw new Error("Unable to deserialize event ID.");
 
   let scheduledEvent: GuildScheduledEvent | undefined = undefined;
-  for (const [guildId, guild] of client.guilds.cache.entries()) {
-    try {
-      scheduledEvent = await guild.scheduledEvents.fetch(eventId);
-    } catch {
-      continue;
+  if (eventId) {
+    for (const [guildId, guild] of client.guilds.cache.entries()) {
+      try {
+        scheduledEvent = await guild.scheduledEvents.fetch(eventId);
+      } catch {
+        continue;
+      }
     }
-  }
+    }
+
   let recurrence: EventRecurrence | undefined = undefined;
   const frequencyField = embed.fields.find((x) => x.name === "Frequency");
   recurrence = frequencyField
     ? deserializeRecurrence(frequencyField.value)
     : undefined;
+
+
+  const attendees = getAttendeesFromMessage(detailsMessage);
 
   const output = {
     name,
@@ -145,16 +158,28 @@ export async function deseralizeEventEmbed(
     scheduledEvent,
     id,
     recurrence,
+    attendees
   };
 
   return output;
 }
 
-async function getPreviewEmbed(thread: ThreadChannel) {
-  const pinnedMessages = await thread.messages.fetchPinned();
-  const embed = pinnedMessages.at(pinnedMessages.values.length - 1)?.embeds[0];
-  if (!embed) throw new Error("Unable to find event embed for thread.");
+export async function getEventDetailsEmbed(message: Message) {
+  const embed = message.embeds?.find(x => x.title === "Event Details");
+
+  if (!embed) {
+    throw new Error(
+      `Unable to find event embed on message.\n${JSON.stringify(message)}`
+    );
+  }
   return embed;
+}
+
+export async function getEventDetailsMessage(thread: ThreadChannel) {
+  const pinnedMessages = await thread.messages.fetchPinned();
+  return pinnedMessages.find((value, key) =>
+    value.embeds.find((embed) => embed.title === "Event Details")
+  );
 }
 
 export function getEventNameFromString(text: string): string {
