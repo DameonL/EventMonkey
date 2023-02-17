@@ -1,14 +1,54 @@
-import { EmbedBuilder } from "discord.js";
-import { EventMonkeyEvent } from "../../EventMonkeyEvent";
+import { APIEmbedField, EmbedBuilder, Message, ThreadChannel } from "discord.js";
+import { getEventDetailsMessage } from "./eventEmbed";
 
-export function attendees(event: EventMonkeyEvent): EmbedBuilder {
-  const attendeesEmbed = new EmbedBuilder().setTitle("Attendees");
-  attendeesEmbed.addFields([
-    {
-      name: "Attending",
-      value: event.author.toString(),
-    },
-  ]);
-  
-  return attendeesEmbed;
+export function getAttendeesFromMessage(eventMessage: Message): string[] {
+  const attendees: string[] = [];
+  for (const field of eventMessage.embeds[1].fields) {
+    attendees.push(...field.value.replace(/[<@>]/g, "").split("\n"));
+  }
+
+  return attendees;
+}
+
+export function attendeesToEmbed(attendees: string[]) {
+  const builder = new EmbedBuilder().setTitle("Attendees");
+  const attendeeArrays: string[][] = [[]];
+  let charCount = 0;
+  let currentArray = 0;
+  for (const attendee of attendees) {
+    charCount += attendee.length + 5; // Accounting for \n, and characters added by tag
+    if (charCount >= 1024) {
+      charCount = 0;
+      currentArray++;
+      attendeeArrays[currentArray] = [];
+    }
+
+    attendeeArrays[currentArray].push(attendee);
+  }
+
+  // TODO: Handle edge case when the attendee list grows over 25 fields. Make more embeds?
+  const embedFields: APIEmbedField[] = [];
+  let currentStart = 0;
+  for (let i = 0; i < attendeeArrays.length; i++) {
+    const array = attendeeArrays[i];
+    const end = currentStart + array.length;
+    embedFields.push({
+      name: `${currentStart + 1} - ${end}`,
+      value: array.map((x) => `<@${x}>`).join("\n"),
+      inline: true,
+    });
+    currentStart = end;
+  }
+
+  builder.addFields(embedFields);
+  return builder;
+}
+
+export async function attendeeTags(thread: ThreadChannel) {
+  const detailsMessage = await getEventDetailsMessage(thread);
+  if (!detailsMessage) return "";
+
+  const attendees = getAttendeesFromMessage(detailsMessage);
+  const tags = attendees.map(x => `<@${x}>`).join(" ");
+  return tags;
 }

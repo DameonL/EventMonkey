@@ -1,9 +1,9 @@
 import { ChannelType, EmbedBuilder, GuildScheduledEvent, GuildScheduledEventStatus, User } from "discord.js";
 import Configuration from "./Configuration";
+import { attendeeTags } from "./Content/Embed/attendees";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import { createForumChannelEvent, createGuildScheduledEvent } from "./EventCreators";
 import { getNextRecurrence } from "./Recurrence";
-import { getAttendeeTags } from "./Utility/Attendees";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
@@ -37,7 +37,7 @@ async function eventStarted(
     return;
 
   const message = {
-    content: (await getAttendeeTags(thread)) ?? "",
+    content: await attendeeTags(thread),
     embeds: [
       new EmbedBuilder({
         title: "Event Starting",

@@ -5,8 +5,8 @@ import {
   GuildScheduledEventStatus,
 } from "discord.js";
 import Configuration from "../Configuration";
+import { attendeeTags } from "../Content/Embed/attendees";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
-import { getAttendeeTags } from "./Attendees";
 import { resolveChannelString } from "./resolveChannelString";
 import Threads from "./Threads";
 import Time from "./TimeUtilities";
@@ -55,7 +55,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
 
   var idString = `Event ID: ${monkeyEvent.id}`;
   const announcementMessage = {
-    content: (await getAttendeeTags(thread)) ?? "",
+    content: (await attendeeTags(thread)) ?? "",
     embeds: [
       new EmbedBuilder({
         title: "Event Reminder",

@@ -1,6 +1,6 @@
 import { EmbedBuilder, GuildScheduledEventStatus, ThreadChannel } from "discord.js";
 import Configuration from "../Configuration";
-import { getAttendeeTags } from "./Attendees";
+import { attendeeTags } from "../Content/Embed/attendees";
 import Time from "./TimeUtilities";
 
 export async function sendEventClosingMessage(
@@ -25,7 +25,7 @@ export async function sendEventClosingMessage(
   if (nextTime > 1) timeUnit += "s";
 
   const closeMessage = await thread.send({
-    content: (await getAttendeeTags(thread)) ?? "",
+    content: (await attendeeTags(thread)) ?? "",
     embeds: [
       new EmbedBuilder()
         .setTitle(`Event is ${completed ? "Over" : "Canceled"}`)
