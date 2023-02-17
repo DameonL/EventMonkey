@@ -6,7 +6,7 @@ import Time from "./Utility/TimeUtilities";
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
   return {
-    commandName: "event",
+    commandName: "eventmonkey",
     eventTypes: [
       {
         name: "Meetup",
