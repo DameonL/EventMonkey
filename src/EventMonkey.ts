@@ -22,19 +22,44 @@ import Configuration from "./Configuration";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 export default {
-  commands: { create: eventCommand, edit: editEventCommand }, 
+  commands: { create: eventCommand, edit: editEventCommand },
   defaultConfiguration: Configuration.defaultConfiguration,
   configure,
   registerCommands,
 };
 
 async function registerCommands() {
-  if (!Configuration.current.discordClient?.user?.id) {
-    throw new Error(`discordClient in the configuration must be set before commands can be registered.`);
+  if (!Configuration.current.discordClient?.application?.id) {
+    throw new Error(
+      `discordClient in the configuration must be set before commands can be registered.`
+    );
   }
 
-  const rest = new REST({ version: "10" });
-  await rest.put(Routes.applicationCommands(Configuration.current.discordClient?.user?.id), { body: [eventCommand.builder(), editEventCommand.builder()]})
+  const builtCommand = eventCommand.builder();
+  const builtEditCommand = editEventCommand.builder();
+  await Configuration.current.discordClient.rest.put(
+    Routes.applicationCommands(
+      Configuration.current.discordClient.application?.id
+    ),
+    {
+      body: [builtCommand.toJSON(), builtEditCommand.toJSON()],
+    }
+  );
+
+  Configuration.current.discordClient.on(
+    Events.InteractionCreate,
+    (interaction) => {
+      if (!interaction.isChatInputCommand()) return;
+
+      if (interaction.commandName === Configuration.current.commandName) {
+        eventCommand.execute(interaction);
+      } else if (
+        interaction.commandName === `${Configuration.current.commandName}-edit`
+      ) {
+        editEventCommand.execute(interaction);
+      }
+    }
+  );
 }
 
 async function configure(newConfiguration: EventMonkeyConfiguration) {
@@ -66,7 +91,10 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     );
 
-    client.on(Events.GuildScheduledEventUserAdd, ClientEventHandlers.userShowedInterest);
+    client.on(
+      Events.GuildScheduledEventUserAdd,
+      ClientEventHandlers.userShowedInterest
+    );
     client.on(
       Events.GuildScheduledEventUpdate,
       (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
@@ -86,7 +114,10 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
 }
 
 function startRecurringTasks() {
-  setInterval(EventsUnderConstruction.maintainEvents, Time.toMilliseconds.hours(1));
+  setInterval(
+    EventsUnderConstruction.maintainEvents,
+    Time.toMilliseconds.hours(1)
+  );
   setInterval(Threads.closeAllOutdatedThreads, Time.toMilliseconds.minutes(30));
   setInterval(performAnnouncements, Time.toMilliseconds.minutes(1));
 }
