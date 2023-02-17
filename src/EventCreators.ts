@@ -6,8 +6,8 @@ import {
   ThreadChannel,
 } from "discord.js";
 import { attendanceButtons } from "./Content/Component/attendanceButtons";
-import { attendees } from "./Content/Embed/attendees";
-import { createEventEmbed } from "./Content/Embed/eventEmbed";
+import { attendeesToEmbed } from "./Content/Embed/attendees";
+import { eventEmbed } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
@@ -67,7 +67,7 @@ export async function createForumChannelEvent(
     event.author.username
   }`;
   const threadMessage = {
-    embeds: [createEventEmbed(event), attendees(event)],
+    embeds: [eventEmbed(event), attendeesToEmbed(event.attendees)],
     components: [attendanceButtons(event, client.user?.id ?? "")],
   };
 
