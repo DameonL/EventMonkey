@@ -6,7 +6,7 @@ import {
   MessageActionRowComponentBuilder,
 } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import { createEventEmbed } from "./eventEmbed";
+import { eventEmbed } from "./eventEmbed";
 
 export default function submission(
   event: EventMonkeyEvent,
@@ -37,7 +37,7 @@ export default function submission(
   ]);
 
   return {
-    embeds: [submissionEmbed, createEventEmbed(event)],
+    embeds: [submissionEmbed, eventEmbed(event)],
     components: [
       buttonRow,
       new ActionRowBuilder<ButtonBuilder>().addComponents(
