@@ -1,13 +1,18 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
   ButtonInteraction,
+  ButtonStyle,
+  ChatInputCommandInteraction,
   Client,
+  EmbedBuilder,
   GuildScheduledEvent,
-  Message,
   ModalSubmitInteraction,
   PermissionsBitField,
   TextInputModalData,
   ThreadChannel,
 } from "discord.js";
+import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import Submission from "../Content/Embed/submission";
 import { editRecurrence } from "../Content/Modal/editRecurrence";
 import { eventModal } from "../Content/Modal/eventModal";
@@ -25,24 +30,19 @@ const eventCreationButtonHandlers: {
   [handlerName: string]: (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    message: Message,
+    originalInteraction: ChatInputCommandInteraction | ModalSubmitInteraction,
     client: Client
   ) => void;
 } = {
-  edit: async (
-    event: EventMonkeyEvent,
-    submissionInteraction: ButtonInteraction,
-    message: Message,
-    client: Client
-  ) => {
-    await message.delete();
+  edit: async (event, submissionInteraction, originalInteraction, client) => {
+    await submissionInteraction.message.delete();
     await eventModal(event, submissionInteraction);
   },
   makeRecurring: async (
-    event: EventMonkeyEvent,
-    submissionInteraction: ButtonInteraction,
-    message: Message,
-    client: Client
+    event,
+    submissionInteraction,
+    originalInteraction,
+    client
   ) => {
     event.recurrence = {
       firstStartTime: event.scheduledStartTime,
@@ -110,24 +110,21 @@ const eventCreationButtonHandlers: {
     recurrence[unit] = frequency;
 
     event.recurrence = recurrence;
-    await submission.reply({
-      content: `Event will recur every ${frequency} ${unit}`,
-      ephemeral: true,
-    });
     const submissionEmbed = Submission(
       event,
-      "Image added!",
+      `Event will recur every ${frequency} ${unit}`,
       client?.user?.id ?? ""
     );
-    await message.edit(submissionEmbed);
+    await originalInteraction.editReply(submissionEmbed);
+    await submissionInteraction.deferUpdate();
   },
   addImage: async (
-    event: EventMonkeyEvent,
-    submissionInteraction: ButtonInteraction,
-    message: Message,
-    client: Client
+    event,
+    submissionInteraction,
+    originalInteraction,
+    client
   ) => {
-    await message.edit({
+    await originalInteraction.editReply({
       content: "Adding image...",
       embeds: [],
       components: [],
@@ -149,7 +146,7 @@ const eventCreationButtonHandlers: {
       imageResponse.edit("Sorry, you took too long! Please try again.");
       setTimeout(() => imageResponse.delete(), Time.toMilliseconds.minutes(1));
       const submissionEmbed = Submission(event, "", client?.user?.id ?? "");
-      await message.edit(submissionEmbed);
+      await originalInteraction.editReply(submissionEmbed);
       return;
     }
 
@@ -162,30 +159,24 @@ const eventCreationButtonHandlers: {
         "Image added!",
         client?.user?.id ?? ""
       );
-      await message.edit(submissionEmbed);
+      await originalInteraction.editReply(submissionEmbed);
     }
   },
-  save: async (
-    event: EventMonkeyEvent,
-    submissionInteraction: ButtonInteraction,
-    message: Message,
-    client: Client
-  ) => {
+  save: async (event, submissionInteraction, originalInteraction, client) => {
     await submissionInteraction.update({
-      content: `Saved for later! You can continue from where you left off with "/meetup create". Don't wait too long, or you will have to start over again!`,
+      content: `Saved for later! You can continue from where you left off. Don't wait too long, or you will have to start over again!`,
       embeds: [],
       components: [],
     });
     EventsUnderConstruction.saveEvent(event);
-    Listeners.getEmbedSubmissionCollector(event, message)?.stop();
+    Listeners.getEmbedSubmissionCollector(
+      event,
+      submissionInteraction.message,
+      originalInteraction
+    )?.stop();
   },
-  finish: async (
-    event: EventMonkeyEvent,
-    submissionInteraction: ButtonInteraction,
-    message: Message,
-    client: Client
-  ) => {
-    if (!message.guild) return;
+  finish: async (event, submissionInteraction, originalInteraction, client) => {
+    if (!submissionInteraction.message.guild) return;
 
     if (!submissionInteraction.deferred) submissionInteraction.deferUpdate();
 
@@ -193,18 +184,23 @@ const eventCreationButtonHandlers: {
       event.scheduledStartTime.valueOf() - new Date().valueOf() <
       Time.toMilliseconds.minutes(30)
     ) {
-      const member = await message.guild.members.fetch(event.author.id);
+      const member = await submissionInteraction.message.guild.members.fetch(
+        event.author.id
+      );
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        await message.edit({
+        await submissionInteraction.reply({
           content:
             "Sorry, your start time needs to be more than 30 minutes from now!",
+          ephemeral: true,
         });
 
         return;
       }
     }
 
-    await message.edit({
+    event.attendees.push(submissionInteraction.user.id);
+
+    await originalInteraction.editReply({
       content: "Creating event...",
       embeds: [],
       components: [],
@@ -212,14 +208,14 @@ const eventCreationButtonHandlers: {
 
     const forumThread = await createForumChannelEvent(
       event,
-      message.guild,
+      submissionInteraction.message.guild,
       client
     );
 
     try {
       const guildScheduledEvent = await createGuildScheduledEvent(
         event,
-        message.guild,
+        submissionInteraction.message.guild,
         forumThread
       );
 
@@ -228,19 +224,24 @@ const eventCreationButtonHandlers: {
       }
     } catch (error) {
       console.error(error);
-      console.log(event);
-      await message.edit({
+      console.error(event);
+      await originalInteraction.editReply({
         content: `Sorry, something went wrong!`,
         embeds: [],
         components: [],
       });
 
       EventsUnderConstruction.saveEvent(event);
+      return;
     } finally {
-      Listeners.getEmbedSubmissionCollector(event, message)?.stop();
+      Listeners.getEmbedSubmissionCollector(
+        event,
+        submissionInteraction.message,
+        originalInteraction
+      )?.stop();
     }
 
-    await message.edit({
+    await originalInteraction.editReply({
       content: "Event created successfully!",
       embeds: [],
       components: [],
@@ -248,47 +249,89 @@ const eventCreationButtonHandlers: {
 
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
   },
-  cancel: async (
-    event: EventMonkeyEvent,
-    submissionInteraction: ButtonInteraction,
-    message: Message,
-    client: Client
-  ) => {
-    await message.edit({
+  cancel: async (event, submissionInteraction, originalInteraction, client) => {
+    if (event.threadChannel) {
+      const yesNoButtons = new ActionRowBuilder<ButtonBuilder>();
+      yesNoButtons.addComponents(
+        new ButtonBuilder()
+          .setLabel("CANCEL EVENT")
+          .setStyle(ButtonStyle.Danger)
+          .setCustomId(`${submissionInteraction.id}_cancelEvent`),
+        new ButtonBuilder()
+          .setLabel("Nevermind")
+          .setStyle(ButtonStyle.Success)
+          .setCustomId(`${submissionInteraction.id}_nevermind`)
+      );
+      const response = await submissionInteraction.reply({
+        content:
+          "Are you sure? This will cancel your event! If you just want to cancel editing, you can just dismiss the message.",
+        ephemeral: true,
+        components: [yesNoButtons],
+      });
+      let collected;
+      try {
+        collected = await response.awaitMessageComponent({
+          filter: (interaction) =>
+            interaction.customId.startsWith(`${submissionInteraction.id}_`),
+          time: Time.toMilliseconds.minutes(1),
+        });
+      } catch {}
+      if (!collected) return;
+
+      await collected.deferUpdate();
+      if (collected.customId.endsWith("_cancelEvent")) {
+        await originalInteraction.editReply({
+          content: "Cancelled event.",
+          embeds: [],
+          components: [],
+        });
+
+        await submissionInteraction.deleteReply();
+
+        if (event.threadChannel && event.scheduledEvent) {
+          await Threads.closeEventThread(
+            event.threadChannel,
+            event.scheduledEvent
+          );
+        }
+
+        if (event.scheduledEvent) {
+          await event.scheduledEvent.delete();
+        }
+      } else {
+        await submissionInteraction.deleteReply();
+      }
+
+      return;
+    }
+
+    await originalInteraction.editReply({
       content: "Cancelled event creation.",
       embeds: [],
       components: [],
     });
 
-    if (event.threadChannel && event.scheduledEvent) {
-      await Threads.closeEventThread(event.threadChannel, event.scheduledEvent);
-    }
-
-    if (event.scheduledEvent) {
-      await event.scheduledEvent.delete();
-    }
-
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
-    Listeners.getEmbedSubmissionCollector(event, message)?.stop();
+    Listeners.getEmbedSubmissionCollector(
+      event,
+      submissionInteraction.message,
+      originalInteraction
+    )?.stop();
   },
 };
 
-export default eventCreationButtonHandlers;
 export async function updateScheduledEventUrl(
   guildScheduledEvent: GuildScheduledEvent,
-  forumThread: ThreadChannel
+  thread: ThreadChannel
 ) {
-  const eventMessage = forumThread.messages.cache.at(0);
+  const eventMessage = await getEventDetailsMessage(thread);
   if (eventMessage) {
-    const embeds = [...eventMessage.embeds];
-    let embedField = embeds[0].fields.find((x) => x.name === "Event Link");
-    if (!embedField) {
-      embedField = { name: "Event Link", value: guildScheduledEvent.url };
-      embeds[0].fields.push(embedField);
-    } else {
-      embedField.value = guildScheduledEvent.url;
-    }
-
+    const embeds: any[] = [...eventMessage.embeds];
+    embeds[0] = new EmbedBuilder(embeds[0].data).setURL(
+      guildScheduledEvent.url
+    );
     await eventMessage.edit({ embeds });
   }
 }
+
+export default eventCreationButtonHandlers;
