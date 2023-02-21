@@ -94,8 +94,8 @@ async function eventCompleted(
         const now = Date.now();
         let nextStartDate: Date;
         do {
-          eventMonkeyEvent.recurrence.timesHeld++;
           nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
+          eventMonkeyEvent.recurrence.timesHeld++;
         }
         while (nextStartDate.valueOf() < now);
         

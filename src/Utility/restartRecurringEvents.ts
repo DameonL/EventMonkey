@@ -50,10 +50,10 @@ export async function restartRecurringEvents() {
               GuildScheduledEventStatus.Completed)
         ) {
           while (eventMonkeyEvent.scheduledStartTime.valueOf() < now) {
-            eventMonkeyEvent.recurrence.timesHeld++;
             eventMonkeyEvent.scheduledStartTime = getNextRecurrence(
               eventMonkeyEvent.recurrence
             );
+            eventMonkeyEvent.recurrence.timesHeld++;
           }
           eventMonkeyEvent.scheduledEvent = undefined;
           eventMonkeyEvent.scheduledEvent = await createGuildScheduledEvent(
