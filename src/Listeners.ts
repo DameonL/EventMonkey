@@ -66,6 +66,7 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
     const handler = buttonHandlers[buttonId];
     if (!handler) throw new Error(`No handler for button ID ${buttonId}`);
 
+    await interaction.deferReply({ ephemeral: true });
     await handler(interaction);
   });
 }

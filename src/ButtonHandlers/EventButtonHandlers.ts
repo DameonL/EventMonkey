@@ -9,9 +9,6 @@ const buttonHandlers: {
   [handlerName: string]: (interaction: ButtonInteraction) => Promise<void>;
 } = {
   attending: async (interaction: ButtonInteraction) => {
-    if (interaction.deferred) return;
-
-    await interaction.deferReply({ ephemeral: true });
     let attendees = getAttendeesFromMessage(interaction.message);
     if (attendees.includes(interaction.user.id)) {
       interaction.editReply({
@@ -32,9 +29,6 @@ const buttonHandlers: {
     });
   },
   notAttending: async (interaction: ButtonInteraction) => {
-    if (interaction.deferred) return;
-    
-    await interaction.deferReply({ ephemeral: true });
     const eventEmbed = await getEventDetailsEmbed(interaction.message);
     let attendees = getAttendeesFromMessage(interaction.message);
 
