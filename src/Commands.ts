@@ -9,11 +9,12 @@ import {
 } from "discord.js";
 import Configuration from "./Configuration";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
-import Submission from "./Content/Embed/submission";
+import editEventMessage from "./Content/Embed/editEventMessage";
 import { eventModal } from "./Content/Modal/eventModal";
 import { EventMonkeyEvent } from "./EventMonkey";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 import Listeners from "./Listeners";
+import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export const eventCommand = {
   builder: getEventCommandBuilder,
@@ -30,45 +31,13 @@ function getEventCommandBuilder() {
       option.setName("type").setDescription("The type of event to schedule");
       option.addChoices(
         ...Configuration.current.eventTypes.map((eventType) => {
-          return { name: eventType.name, value: eventType.channel };
+          return { name: eventType.name, value: eventType.name };
         })
       );
       option.setRequired(true);
       return option;
     });
   }
-
-  builder.addStringOption((option) => {
-    option
-      .setName("location")
-      .setDescription("The type of location the event will be at");
-    option.addChoices(
-      ...[
-        {
-          name: "External",
-          value: GuildScheduledEventEntityType.External.toString(),
-          entityType: GuildScheduledEventEntityType.External,
-        },
-        {
-          name: "Voice",
-          value: GuildScheduledEventEntityType.Voice.toString(),
-          entityType: GuildScheduledEventEntityType.Voice,
-        },
-        {
-          name: "Stage",
-          value: GuildScheduledEventEntityType.StageInstance.toString(),
-          entityType: GuildScheduledEventEntityType.StageInstance,
-        },
-      ].filter(
-        (x) =>
-          !Configuration.current.allowedEntityTypes ||
-          Configuration.current.allowedEntityTypes.includes(x.entityType)
-      )
-    );
-    option.setRequired(true);
-    return option;
-  });
-
   return builder;
 }
 
@@ -86,10 +55,27 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const forumChannelId = interaction.options.getString("type") ?? Configuration.current.eventTypes[0].channel;
-  const entityType = Number(
-    interaction.options.getString("location")
-  ) as GuildScheduledEventEntityType;
+  await interaction.deferReply({ ephemeral: true });
+  const eventTypeName =
+    interaction.options.getString("type") ??
+    Configuration.current.eventTypes[0].name;
+  const eventType = Configuration.current.eventTypes.find(
+    (x) => x.name === eventTypeName
+  );
+  if (!eventType) throw new Error();
+
+  const entityType = eventType.voiceChannel
+    ? GuildScheduledEventEntityType.Voice
+    : eventType.stageChannel
+    ? GuildScheduledEventEntityType.StageInstance
+    : GuildScheduledEventEntityType.External;
+  const voiceOrForumChannel = entityType === GuildScheduledEventEntityType.External ? undefined : await resolveChannelString(
+    (entityType === GuildScheduledEventEntityType.Voice ? eventType.voiceChannel : eventType.stageChannel) as string,
+    interaction.guild
+  );
+  const discussionChannelId = (
+    await resolveChannelString(eventType.discussionChannel, interaction.guild)
+  ).id;
   const defaultStartTime = new Date();
   defaultStartTime.setDate(defaultStartTime.getDate() + 1);
   const defaultDuration = 1;
@@ -106,11 +92,11 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
       location:
         entityType === GuildScheduledEventEntityType.External
           ? "Meetup Location"
-          : "Channel Name",
+          : voiceOrForumChannel?.id ?? "",
     },
     privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
     id: crypto.randomUUID(),
-    forumChannelId,
+    discussionChannelId,
     author: interaction.user,
     entityType,
     attendees: [],
@@ -118,8 +104,10 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
 
   newEvent.entityType = entityType;
   EventsUnderConstruction.saveEvent(newEvent);
-
-  await eventModal(newEvent, interaction);
+  var newEventMessage = await editEventMessage(newEvent, "", interaction.guild, interaction.client.application.id);
+  await interaction.editReply(newEventMessage);
+  const replyMessage = await interaction.fetchReply();
+  newEvent.submissionCollector = Listeners.getEmbedSubmissionCollector(newEvent, replyMessage, interaction);
 }
 
 export const editEventCommand = {
@@ -129,26 +117,21 @@ export const editEventCommand = {
 
 function getEditEventCommandBuilder() {
   return new SlashCommandBuilder()
-  .setName(`${Configuration.current.commandName}-edit`)
-  .setDescription("Edit an event")
-  .addChannelOption((option) =>
-    option
-      .setName("thread")
-      .setRequired(true)
-      .setDescription("The thread for the event you want to edit.")
-      .addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread)
-  );
+    .setName(`${Configuration.current.commandName}-edit`)
+    .setDescription("Edit an event")
+    .addChannelOption((option) =>
+      option
+        .setName("thread")
+        .setRequired(true)
+        .setDescription("The thread for the event you want to edit.")
+        .addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread)
+    );
 }
 
 async function executeEditCommand(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild || !interaction.channel) return;
   const channel = interaction.options.getChannel("thread") as ThreadChannel;
   if (!checkRolePermissions(interaction)) {
-    interaction.reply({
-      content: "Sorry, you lack permission to use this command.",
-      ephemeral: true,
-    });
-
     return;
   }
 
@@ -184,16 +167,21 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const submissionMessage = Submission(
+  const submissionMessage = await editEventMessage(
     event,
     "Editing your existing event...",
+    interaction.guild,
     Configuration.current.discordClient?.user?.id ?? ""
   );
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
   await interaction.reply(submissionMessage);
   const message = await interaction.fetchReply();
-  event.submissionCollector = Listeners.getEmbedSubmissionCollector(event, message, interaction);
+  event.submissionCollector = Listeners.getEmbedSubmissionCollector(
+    event,
+    message,
+    interaction
+  );
 }
 
 function checkRolePermissions(
@@ -204,15 +192,19 @@ function checkRolePermissions(
   const configuration = Configuration.current;
   let allowed = configuration.roles?.allowed == null;
   const memberPermissions = interaction.memberPermissions;
-  if (memberPermissions && memberPermissions.has("Administrator")) {
+  /*  if (memberPermissions && memberPermissions.has("Administrator")) {
     return true;
   }
-
+*/
   if (memberPermissions) {
     const userRoles = interaction.member.roles as GuildMemberRoleManager;
     if (configuration.roles?.allowed) {
       for (const role of configuration.roles.allowed) {
-        if (userRoles.cache.find((value, key) => key === role || value.name === role)) {
+        if (
+          userRoles.cache.find(
+            (value, key) => key === role || value.name === role
+          )
+        ) {
           allowed = true;
           break;
         }
@@ -221,7 +213,11 @@ function checkRolePermissions(
 
     if (configuration.roles?.denied) {
       for (const role of configuration.roles.denied) {
-        if (userRoles.cache.find((value, key) => key === role || value.name === role)) {
+        if (
+          userRoles.cache.find(
+            (value, key) => key === role || value.name === role
+          )
+        ) {
           allowed = false;
           break;
         }

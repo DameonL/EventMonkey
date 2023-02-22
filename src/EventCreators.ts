@@ -28,7 +28,7 @@ export async function createGuildScheduledEvent(
   }\nHosted by: ${eventToSubmit.author.toString()}`;
   eventToSubmit.name = `${eventToSubmit.name} hosted by ${eventToSubmit.author.username}`;
   if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
-    eventToSubmit.channelId = eventToSubmit.entityMetadata.location;
+    eventToSubmit.channel = eventToSubmit.entityMetadata.location;
     delete eventToSubmit.entityMetadata;
   }
 
@@ -46,19 +46,23 @@ export async function createForumChannelEvent(
 ) {
   const scheduledEndTime = new Date(event.scheduledStartTime);
   scheduledEndTime.setHours(scheduledEndTime.getHours() + event.duration);
-  const targetChannel = await resolveChannelString(event.forumChannelId, guild);
-
-  if (
-    targetChannel.type !== ChannelType.GuildForum &&
-    targetChannel.type !== ChannelType.GuildText
-  )
-    throw new Error(
-      `Channel with ID ${event.forumChannelId} is of type ${targetChannel.type}, but expected a forum channel!`
-    );
+  const targetChannel = await resolveChannelString(
+    event.discussionChannelId,
+    guild
+  );
 
   if (!targetChannel)
     throw new Error(
-      `Unable to resolve ID ${event.forumChannelId} to a channel.`
+      `Unable to resolve ID ${event.discussionChannelId} to a channel.`
+    );
+
+  if (
+    targetChannel.type !== ChannelType.GuildForum &&
+    targetChannel.type !== ChannelType.GuildText &&
+    targetChannel.type !== ChannelType.GuildAnnouncement
+  )
+    throw new Error(
+      `Channel with ID ${event.discussionChannelId} is of type ${targetChannel.type}. The discussion channel needs to be able to have threads.`
     );
 
   const threadName = `${event.scheduledStartTime
@@ -67,7 +71,7 @@ export async function createForumChannelEvent(
     event.author.username
   }`;
   const threadMessage = {
-    embeds: [eventEmbed(event), attendeesToEmbed(event.attendees)],
+    embeds: [await eventEmbed(event, guild), attendeesToEmbed(event.attendees)],
     components: [attendanceButtons(event, client.user?.id ?? "")],
   };
 

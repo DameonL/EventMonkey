@@ -31,7 +31,7 @@ async function eventStarted(
   var idString = `Event ID: ${monkeyEvent.id}`;
 
   const eventType = Configuration.current.eventTypes.find(
-    (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
+    (x) => x.discussionChannel === thread.parent?.id || x.discussionChannel === thread.parent?.name
   );
   if (!eventType || !eventType.announcement || !eventType.announcement.onStart)
     return;

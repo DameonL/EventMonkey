@@ -3,22 +3,18 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
-  MessageActionRowComponentBuilder,
+  Guild,
+  InteractionReplyOptions,
 } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
 import { eventEmbed } from "./eventEmbed";
 
-export default function submission(
+export default async function editEventMessage(
   event: EventMonkeyEvent,
   content: string,
+  guild: Guild,
   clientId: string
-): {
-  embeds: EmbedBuilder[];
-  components: ActionRowBuilder<MessageActionRowComponentBuilder>[];
-  ephemeral: boolean;
-  fetchReply: boolean;
-  content: string;
-} {
+): Promise<InteractionReplyOptions> {
   const submissionEmbed = new EmbedBuilder().setTitle("Creating an event...");
   const prefix = `${clientId}_${event.id}_button`;
   const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([
@@ -37,7 +33,7 @@ export default function submission(
   ]);
 
   return {
-    embeds: [submissionEmbed, eventEmbed(event)],
+    embeds: [submissionEmbed, await eventEmbed(event, guild)],
     components: [
       buttonRow,
       new ActionRowBuilder<ButtonBuilder>().addComponents(

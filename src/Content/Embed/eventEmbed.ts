@@ -2,12 +2,13 @@ import {
   APIEmbedField,
   ChannelType,
   Client,
-  Embed,
   EmbedBuilder,
+  Guild,
   GuildScheduledEvent,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   Message,
+  StageChannel,
   TextChannel,
   ThreadChannel,
   VoiceBasedChannel,
@@ -18,10 +19,14 @@ import {
   EventRecurrence,
   serializeRecurrence,
 } from "../../Recurrence";
+import { resolveChannelString } from "../../Utility/resolveChannelString";
 import Time from "../../Utility/TimeUtilities";
 import { getAttendeesFromMessage } from "./attendees";
 
-export function eventEmbed(event: EventMonkeyEvent): EmbedBuilder {
+export async function eventEmbed(
+  event: EventMonkeyEvent,
+  guild: Guild
+): Promise<EmbedBuilder> {
   const previewEmbed = new EmbedBuilder();
   previewEmbed.setTitle("Event Details");
   if (event.image !== "") {
@@ -43,13 +48,15 @@ export function eventEmbed(event: EventMonkeyEvent): EmbedBuilder {
     previewEmbed.setImage(event.image);
   }
 
+  const location =
+    event.entityType === GuildScheduledEventEntityType.External
+      ? event.entityMetadata.location
+      : (await resolveChannelString(event.entityMetadata.location, guild)).toString();
+
   const fields: APIEmbedField[] = [
     {
-      name:
-        event.entityType === GuildScheduledEventEntityType.External
-          ? "Location"
-          : "Channel",
-      value: event.entityMetadata.location,
+      name: "Location",
+      value: location,
       inline: true,
     },
     {
@@ -105,12 +112,12 @@ export async function deseralizeEventEmbed(
       .replace(" hour", "") ?? 1
   );
   const location = embed.fields.find((x) => x.name === "Location")?.value;
-  const channelLink = embed.fields.find((x) => x.name === "Channel")?.value;
-  const channelId = channelLink
-    ? channelLink?.match(/(?<=https:\/\/discord.com\/channels\/\d+\/)\d+/i)?.[0]
-    : undefined;
-  const channel = channelId
-    ? (client.channels.cache.get(channelId) as TextChannel | VoiceBasedChannel)
+  const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
+  const channel = locationChannel
+    ? (client.channels.cache.get(locationChannel) as
+        | TextChannel
+        | VoiceBasedChannel
+        | StageChannel)
     : undefined;
   const entityType =
     channel == undefined
@@ -132,7 +139,7 @@ export async function deseralizeEventEmbed(
         continue;
       }
     }
-    }
+  }
 
   let recurrence: EventRecurrence | undefined = undefined;
   const frequencyField = embed.fields.find((x) => x.name === "Frequency");
@@ -140,10 +147,9 @@ export async function deseralizeEventEmbed(
     ? deserializeRecurrence(frequencyField.value)
     : undefined;
 
-
   const attendees = getAttendeesFromMessage(detailsMessage);
 
-  const output = {
+  const output: any = {
     name,
     scheduledStartTime,
     author,
@@ -151,21 +157,21 @@ export async function deseralizeEventEmbed(
     image,
     privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
     duration: duration,
-    forumChannelId: thread.parentId ?? "",
-    entityMetadata: { location: location ?? channel?.name ?? "" },
+    discussionChannelId: thread.parentId ?? "",
+    entityMetadata: { location: channel ? channel.id : location },
     entityType,
     threadChannel: thread,
     scheduledEvent,
     id,
     recurrence,
-    attendees
+    attendees,
   };
 
   return output;
 }
 
 export async function getEventDetailsEmbed(message: Message) {
-  const embed = message.embeds?.find(x => x.title === "Event Details");
+  const embed = message.embeds?.find((x) => x.title === "Event Details");
 
   if (!embed) {
     throw new Error(

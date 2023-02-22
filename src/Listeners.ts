@@ -29,7 +29,7 @@ async function listenForButtons() {
 
   for (const guild of configuration.discordClient.guilds.cache) {
     for (const eventType of configuration.eventTypes) {
-      const channel = await resolveChannelString(eventType.channel, guild[1]);
+      const channel = await resolveChannelString(eventType.discussionChannel, guild[1]);
       if (
         channel &&
         (channel.type === ChannelType.GuildForum ||

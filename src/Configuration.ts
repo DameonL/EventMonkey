@@ -10,7 +10,7 @@ function defaultConfiguration(): EventMonkeyConfiguration {
     eventTypes: [
       {
         name: "Meetup",
-        channel: "meetups",
+        discussionChannel: "meetups",
         announcement: {
           onStart: true,
         },

@@ -28,8 +28,8 @@ async function closeAllOutdatedThreads() {
   if (!Configuration.current.discordClient) return;
 
   for (const [guildId, guild] of Configuration.current.discordClient.guilds.cache) {
-    for (const { name, channel } of Configuration.current.eventTypes) {
-      const resolvedChannel = await resolveChannelString(channel, guild);
+    for (const { name, discussionChannel } of Configuration.current.eventTypes) {
+      const resolvedChannel = await resolveChannelString(discussionChannel, guild);
       if (
         resolvedChannel.type === ChannelType.GuildText ||
         resolvedChannel.type === ChannelType.GuildForum

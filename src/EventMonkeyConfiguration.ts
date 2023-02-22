@@ -4,21 +4,26 @@ export interface EventMonkeyConfiguration {
   commandName: string;
   discordClient?: Client;
   editingTimeout: number;
-  eventTypes: {
-    name: string;
-    channel: string;
-    announcement?: {
-      channel?: string | string[];
-      beforeStart?: number;
-      onStart?: boolean;
-      message?: string;
-    }
-  }[];
+  eventTypes: EventMonkeyEventType[];
   timeZone?: string;
   closeThreadsAfter?: number;
-  allowedEntityTypes?: GuildScheduledEventEntityType[];
   roles?: {
     allowed?: string[],
     denied?: string[]
   };
+}
+
+export interface EventMonkeyEventType {
+  name: string;
+  discussionChannel: string;
+  voiceChannel?: string;
+  stageChannel?: string;
+  announcement?: EventAnnouncement
+}
+
+export interface EventAnnouncement {
+  channel?: string | string[];
+  beforeStart?: number;
+  onStart?: boolean;
+  message?: string;
 }

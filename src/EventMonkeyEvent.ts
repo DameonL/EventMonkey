@@ -24,7 +24,7 @@ export interface EventMonkeyEvent {
   privacyLevel: GuildScheduledEventPrivacyLevel;
   id: string;
   submissionCollector?: InteractionCollector<ButtonInteraction>;
-  forumChannelId: string;
+  discussionChannelId: string;
   entityType: GuildScheduledEventEntityType;
   threadChannel?: ThreadChannel;
   scheduledEvent?: GuildScheduledEvent;

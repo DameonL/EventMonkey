@@ -34,7 +34,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   if (!thread) return;
 
   const eventType = Configuration.current.eventTypes.find(
-    (x) => x.channel === thread.parent?.id || x.channel === thread.parent?.name
+    (x) => x.discussionChannel === thread.parent?.id || x.discussionChannel === thread.parent?.name
   );
   if (
     !eventType ||

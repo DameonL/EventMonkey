@@ -20,7 +20,7 @@ export async function restartRecurringEvents() {
   ] of await configuration.discordClient.guilds.fetch()) {
     const guild = await guildAuth.fetch();
     for (const eventType of configuration.eventTypes) {
-      const channel = await resolveChannelString(eventType.channel, guild);
+      const channel = await resolveChannelString(eventType.discussionChannel, guild);
       if (
         channel.type !== ChannelType.GuildText &&
         channel.type !== ChannelType.GuildForum

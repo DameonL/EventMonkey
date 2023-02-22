@@ -6,19 +6,20 @@ import {
   ChatInputCommandInteraction,
   Client,
   EmbedBuilder,
+  Guild,
   GuildScheduledEvent,
   ModalSubmitInteraction,
   PermissionsBitField,
   TextInputModalData,
-  ThreadChannel,
+  ThreadChannel
 } from "discord.js";
+import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
-import Submission from "../Content/Embed/submission";
 import { editRecurrence } from "../Content/Modal/editRecurrence";
 import { eventModal } from "../Content/Modal/eventModal";
 import {
   createForumChannelEvent,
-  createGuildScheduledEvent,
+  createGuildScheduledEvent
 } from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
@@ -35,7 +36,6 @@ const eventCreationButtonHandlers: {
   ) => void;
 } = {
   edit: async (event, submissionInteraction, originalInteraction, client) => {
-    await submissionInteraction.message.delete();
     await eventModal(event, submissionInteraction);
   },
   makeRecurring: async (
@@ -44,6 +44,8 @@ const eventCreationButtonHandlers: {
     originalInteraction,
     client
   ) => {
+    if (!submissionInteraction.guild) return;
+
     event.recurrence = {
       firstStartTime: event.scheduledStartTime,
       timesHeld: 0,
@@ -110,9 +112,10 @@ const eventCreationButtonHandlers: {
     recurrence[unit] = frequency;
 
     event.recurrence = recurrence;
-    const submissionEmbed = Submission(
+    const submissionEmbed = await editEventMessage(
       event,
       `Event will recur every ${frequency} ${unit}`,
+      submissionInteraction.guild,
       client?.user?.id ?? ""
     );
     await originalInteraction.editReply(submissionEmbed);
@@ -137,7 +140,8 @@ const eventCreationButtonHandlers: {
 
     let replies = await imageResponse.channel.awaitMessages({
       filter: (replyInteraction) =>
-        replyInteraction.reference?.messageId === imageResponse.id,
+        replyInteraction.reference?.messageId === imageResponse.id &&
+        replyInteraction.author.id === originalInteraction.user.id,
       time: Time.toMilliseconds.minutes(10),
       max: 1,
     });
@@ -145,7 +149,12 @@ const eventCreationButtonHandlers: {
     if (!replies.at(0)) {
       imageResponse.edit("Sorry, you took too long! Please try again.");
       setTimeout(() => imageResponse.delete(), Time.toMilliseconds.minutes(1));
-      const submissionEmbed = Submission(event, "", client?.user?.id ?? "");
+      const submissionEmbed = await editEventMessage(
+        event,
+        "",
+        originalInteraction.guild as Guild,
+        client?.user?.id ?? ""
+      );
       await originalInteraction.editReply(submissionEmbed);
       return;
     }
@@ -154,9 +163,10 @@ const eventCreationButtonHandlers: {
       event.image = replies.at(0)?.attachments.at(0)?.url as string;
       await replies.at(0)?.delete();
       await imageResponse.delete();
-      const submissionEmbed = Submission(
+      const submissionEmbed = await editEventMessage(
         event,
         "Image added!",
+        originalInteraction.guild as Guild,
         client?.user?.id ?? ""
       );
       await originalInteraction.editReply(submissionEmbed);
@@ -178,7 +188,7 @@ const eventCreationButtonHandlers: {
   finish: async (event, submissionInteraction, originalInteraction, client) => {
     if (!submissionInteraction.message.guild) return;
 
-    if (!submissionInteraction.deferred) submissionInteraction.deferUpdate();
+    if (!submissionInteraction.deferred) await submissionInteraction.deferUpdate();
 
     if (
       event.scheduledStartTime.valueOf() - new Date().valueOf() <
@@ -198,7 +208,8 @@ const eventCreationButtonHandlers: {
       }
     }
 
-    event.attendees.push(submissionInteraction.user.id);
+    if (!event.attendees.includes(submissionInteraction.user.id))
+      event.attendees.push(submissionInteraction.user.id);
 
     await originalInteraction.editReply({
       content: "Creating event...",

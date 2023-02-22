@@ -1,7 +1,7 @@
 import {
   ButtonInteraction,
-  ChannelType,
   ChatInputCommandInteraction,
+  Guild,
   GuildScheduledEventEntityType,
   ModalBuilder,
   TextInputStyle,
@@ -11,7 +11,7 @@ import { EventMonkeyEvent } from "../../EventMonkey";
 import EventsUnderConstruction from "../../EventsUnderConstruction";
 import Listeners from "../../Listeners";
 import Time from "../../Utility/TimeUtilities";
-import submission from "../Embed/submission";
+import editEventMessage from "../Embed/editEventMessage";
 import {
   deserializeModal,
   ModalDeserializationConfig,
@@ -72,40 +72,10 @@ export async function eventModal(
     return;
   }
 
-  if (event.entityType !== GuildScheduledEventEntityType.External) {
-    let matchingChannel = modalSubmission.guild?.channels.cache.find(
-      (x) =>
-        x.name.toLowerCase() === event.entityMetadata.location.toLowerCase()
-    );
-    if (!matchingChannel) {
-      await modalSubmission.reply({
-        content: `Couldn't find a channel named "${event.entityMetadata.location}".`,
-        ephemeral: true,
-      });
-
-      EventsUnderConstruction.saveEvent(event);
-      return;
-    }
-    if (
-      matchingChannel.type !== ChannelType.GuildVoice &&
-      matchingChannel.type !== ChannelType.GuildStageVoice
-    ) {
-      await modalSubmission.reply({
-        content: `The channel must be a Voice or Stage channel.`,
-        ephemeral: true,
-      });
-
-      EventsUnderConstruction.saveEvent(event);
-      return;
-    }
-
-    event.channel = matchingChannel;
-    event.entityMetadata.location = matchingChannel.url;
-  }
-
-  let submissionEmbed = submission(
+  let submissionEmbed = await editEventMessage(
     event,
     "",
+    interactionToReply.guild as Guild,
     Configuration.current.discordClient?.user?.id ?? ""
   );
 
@@ -113,7 +83,11 @@ export async function eventModal(
   const replyMessage = await modalSubmission.fetchReply();
   event.submissionCollector?.stop();
   event.submissionCollector = undefined;
-  event.submissionCollector = Listeners.getEmbedSubmissionCollector(event, replyMessage, modalSubmission);
+  event.submissionCollector = Listeners.getEmbedSubmissionCollector(
+    event,
+    replyMessage,
+    modalSubmission
+  );
 }
 
 export function eventEditModal(event: EventMonkeyEvent) {
@@ -121,19 +95,21 @@ export function eventEditModal(event: EventMonkeyEvent) {
   modal.setTitle("Create a New Meetup");
   modal.setCustomId(event.id);
 
-  const serializationObject = {
+  const serializationObject: any = {
     name: event.name,
     description: event.description,
-    "entityMetadata.location": event.entityMetadata.location,
     scheduledStartTime: event.scheduledStartTime,
     duration: event.duration,
   };
+
+  if (event.entityType === GuildScheduledEventEntityType.External) {
+    serializationObject["entityMetadata.location"] =
+      event.entityMetadata.location;
+  }
+
   const serializationConfig: ModalSerializationConfig = {
     labels: {
-      "entityMetadata.location":
-        event.entityType === GuildScheduledEventEntityType.External
-          ? "Location"
-          : "Channel",
+      "entityMetadata.location": "Location",
       scheduledStartTime: "Scheduled Start Time",
     },
     formatters: {
