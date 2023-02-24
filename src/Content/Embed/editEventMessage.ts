@@ -4,9 +4,10 @@ import {
   ButtonStyle,
   EmbedBuilder,
   Guild,
-  InteractionReplyOptions,
+  MessageCreateOptions,
 } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
+import TimeUtilities from "../../Utility/TimeUtilities";
 import { eventEmbed } from "./eventEmbed";
 
 export default async function editEventMessage(
@@ -14,8 +15,10 @@ export default async function editEventMessage(
   content: string,
   guild: Guild,
   clientId: string
-): Promise<InteractionReplyOptions> {
-  const submissionEmbed = new EmbedBuilder().setTitle("Creating an event...");
+): Promise<MessageCreateOptions> {
+  const submissionEmbed = new EmbedBuilder().setTitle(
+    `${event.name} - ${TimeUtilities.getTimeString(event.scheduledStartTime)}`
+  );
   const prefix = `${clientId}_${event.id}_button`;
   const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([
     new ButtonBuilder()
@@ -51,8 +54,6 @@ export default async function editEventMessage(
           .setStyle(ButtonStyle.Danger)
       ),
     ],
-    ephemeral: true,
-    fetchReply: true,
     content,
   };
 }
