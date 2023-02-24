@@ -37,16 +37,17 @@ const deserializationConfig: ModalDeserializationConfig = {
 
 export async function eventModal(
   event: EventMonkeyEvent,
-  interactionToReply: ChatInputCommandInteraction | ButtonInteraction
+  interaction: ButtonInteraction | ChatInputCommandInteraction,
+  originalInteraction: ChatInputCommandInteraction
 ) {
   const modal = eventEditModal(event);
 
-  await interactionToReply.showModal(modal);
-  const modalSubmission = await interactionToReply.awaitModalSubmit({
+  await interaction.showModal(modal);
+  const modalSubmission = await interaction.awaitModalSubmit({
     time: Configuration.current.editingTimeout,
     filter: (submitInteraction, collected) => {
       if (
-        submitInteraction.user.id === interactionToReply.user.id &&
+        submitInteraction.user.id === interaction.user.id &&
         submitInteraction.customId === event.id
       ) {
         return true;
@@ -55,7 +56,9 @@ export async function eventModal(
       return false;
     },
   });
+  await modalSubmission.deferUpdate();
 
+  const startTime = event.scheduledStartTime;
   try {
     deserializeModal<EventMonkeyEvent>(
       modalSubmission.fields.fields.entries(),
@@ -72,22 +75,20 @@ export async function eventModal(
     return;
   }
 
+  // If the scheduled time has changed, we need to update recurrence settings.
+  if (event.recurrence && event.scheduledStartTime.valueOf() !== startTime.valueOf()) {
+    event.recurrence.firstStartTime = event.scheduledStartTime;
+    event.recurrence.timesHeld = 0;
+  }
+
   let submissionEmbed = await editEventMessage(
     event,
     "",
-    interactionToReply.guild as Guild,
+    interaction.guild as Guild,
     Configuration.current.discordClient?.user?.id ?? ""
   );
 
-  await modalSubmission.reply(submissionEmbed);
-  const replyMessage = await modalSubmission.fetchReply();
-  event.submissionCollector?.stop();
-  event.submissionCollector = undefined;
-  event.submissionCollector = Listeners.getEmbedSubmissionCollector(
-    event,
-    replyMessage,
-    modalSubmission
-  );
+  await originalInteraction.editReply(submissionEmbed);
 }
 
 export function eventEditModal(event: EventMonkeyEvent) {
