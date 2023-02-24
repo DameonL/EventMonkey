@@ -4,13 +4,14 @@ import {
   GuildMemberRoleManager,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
+  MessageFlags,
   SlashCommandBuilder,
+  SlashCommandSubcommandBuilder,
   ThreadChannel,
 } from "discord.js";
 import Configuration from "./Configuration";
-import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import editEventMessage from "./Content/Embed/editEventMessage";
-import { eventModal } from "./Content/Modal/eventModal";
+import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkey";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 import Listeners from "./Listeners";
@@ -26,8 +27,11 @@ function getEventCommandBuilder() {
     .setName(Configuration.current.commandName)
     .setDescription("Create an event");
 
+  const createSubCommand = new SlashCommandSubcommandBuilder()
+    .setName("create")
+    .setDescription("Create a new event");
   if (Configuration.current.eventTypes.length > 1) {
-    builder.addStringOption((option) => {
+    createSubCommand.addStringOption((option) => {
       option.setName("type").setDescription("The type of event to schedule");
       option.addChoices(
         ...Configuration.current.eventTypes.map((eventType) => {
@@ -38,6 +42,21 @@ function getEventCommandBuilder() {
       return option;
     });
   }
+
+  const editSubCommand = new SlashCommandSubcommandBuilder()
+    .setName("edit")
+    .setDescription("Edit an existing event");
+  editSubCommand.addChannelOption((x) =>
+    x
+      .setName("thread")
+      .setDescription("The name of the event thread")
+      .addChannelTypes(ChannelType.PublicThread)
+      .setRequired(true)
+  );
+
+  builder.addSubcommand(createSubCommand);
+  builder.addSubcommand(editSubCommand);
+
   return builder;
 }
 
@@ -55,6 +74,11 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
+  if (interaction.options.getSubcommand() === "edit") {
+    await executeEditCommand(interaction);
+    return;
+  }
+
   await interaction.deferReply({ ephemeral: true });
   const eventTypeName =
     interaction.options.getString("type") ??
@@ -69,10 +93,15 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     : eventType.stageChannel
     ? GuildScheduledEventEntityType.StageInstance
     : GuildScheduledEventEntityType.External;
-  const voiceOrForumChannel = entityType === GuildScheduledEventEntityType.External ? undefined : await resolveChannelString(
-    (entityType === GuildScheduledEventEntityType.Voice ? eventType.voiceChannel : eventType.stageChannel) as string,
-    interaction.guild
-  );
+  const voiceOrForumChannel =
+    entityType === GuildScheduledEventEntityType.External
+      ? undefined
+      : await resolveChannelString(
+          (entityType === GuildScheduledEventEntityType.Voice
+            ? eventType.voiceChannel
+            : eventType.stageChannel) as string,
+          interaction.guild
+        );
   const discussionChannelId = (
     await resolveChannelString(eventType.discussionChannel, interaction.guild)
   ).id;
@@ -104,28 +133,19 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
 
   newEvent.entityType = entityType;
   EventsUnderConstruction.saveEvent(newEvent);
-  var newEventMessage = await editEventMessage(newEvent, "", interaction.guild, interaction.client.application.id);
+  var newEventMessage = await editEventMessage(
+    newEvent,
+    "",
+    interaction.guild,
+    interaction.client.application.id
+  );
   await interaction.editReply(newEventMessage);
   const replyMessage = await interaction.fetchReply();
-  newEvent.submissionCollector = Listeners.getEmbedSubmissionCollector(newEvent, replyMessage, interaction);
-}
-
-export const editEventCommand = {
-  builder: getEditEventCommandBuilder,
-  execute: executeEditCommand,
-};
-
-function getEditEventCommandBuilder() {
-  return new SlashCommandBuilder()
-    .setName(`${Configuration.current.commandName}-edit`)
-    .setDescription("Edit an event")
-    .addChannelOption((option) =>
-      option
-        .setName("thread")
-        .setRequired(true)
-        .setDescription("The thread for the event you want to edit.")
-        .addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread)
-    );
+  newEvent.submissionCollector = Listeners.getEmbedSubmissionCollector(
+    newEvent,
+    replyMessage,
+    interaction
+  );
 }
 
 async function executeEditCommand(interaction: ChatInputCommandInteraction) {
@@ -173,9 +193,10 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     interaction.guild,
     Configuration.current.discordClient?.user?.id ?? ""
   );
-  event.submissionCollector?.stop();
-  event.submissionCollector = undefined;
-  await interaction.reply(submissionMessage);
+  await interaction.reply({
+    ...submissionMessage,
+    flags: MessageFlags.Ephemeral,
+  });
   const message = await interaction.fetchReply();
   event.submissionCollector = Listeners.getEmbedSubmissionCollector(
     event,

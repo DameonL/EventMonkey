@@ -2,7 +2,6 @@ import {
   Events,
   GuildScheduledEvent,
   GuildScheduledEventStatus,
-  REST,
   Routes,
 } from "discord.js";
 
@@ -11,18 +10,18 @@ import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 
 import ClientEventHandlers from "./ClientEventHandlers";
-import { editEventCommand, eventCommand } from "./Commands";
+import { eventCommand } from "./Commands";
+import Configuration from "./Configuration";
 import Listeners from "./Listeners";
 import performAnnouncements from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/TimeUtilities";
-import Configuration from "./Configuration";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 export default {
-  commands: { create: eventCommand, edit: editEventCommand },
+  command: eventCommand,
   defaultConfiguration: Configuration.defaultConfiguration,
   configure,
   registerCommands,
@@ -36,13 +35,12 @@ async function registerCommands() {
   }
 
   const builtCommand = eventCommand.builder();
-  const builtEditCommand = editEventCommand.builder();
   await Configuration.current.discordClient.rest.put(
     Routes.applicationCommands(
       Configuration.current.discordClient.application?.id
     ),
     {
-      body: [builtCommand.toJSON(), builtEditCommand.toJSON()],
+      body: [builtCommand.toJSON()],
     }
   );
 
@@ -51,12 +49,12 @@ async function registerCommands() {
     (interaction) => {
       if (!interaction.isChatInputCommand()) return;
 
-      if (interaction.commandName === Configuration.current.commandName) {
-        eventCommand.execute(interaction);
-      } else if (
-        interaction.commandName === `${Configuration.current.commandName}-edit`
+      if (
+        interaction.applicationId ===
+          Configuration.current.discordClient?.application?.id &&
+        interaction.commandName === Configuration.current.commandName
       ) {
-        editEventCommand.execute(interaction);
+        eventCommand.execute(interaction);
       }
     }
   );
