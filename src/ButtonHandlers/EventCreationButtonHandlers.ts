@@ -8,10 +8,9 @@ import {
   EmbedBuilder,
   Guild,
   GuildScheduledEvent,
-  ModalSubmitInteraction,
   PermissionsBitField,
   TextInputModalData,
-  ThreadChannel
+  ThreadChannel,
 } from "discord.js";
 import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
@@ -19,7 +18,7 @@ import { editRecurrence } from "../Content/Modal/editRecurrence";
 import { eventModal } from "../Content/Modal/eventModal";
 import {
   createForumChannelEvent,
-  createGuildScheduledEvent
+  createGuildScheduledEvent,
 } from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
@@ -31,12 +30,12 @@ const eventCreationButtonHandlers: {
   [handlerName: string]: (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    originalInteraction: ChatInputCommandInteraction | ModalSubmitInteraction,
+    originalInteraction: ChatInputCommandInteraction,
     client: Client
   ) => void;
 } = {
   edit: async (event, submissionInteraction, originalInteraction, client) => {
-    await eventModal(event, submissionInteraction);
+    await eventModal(event, submissionInteraction, originalInteraction);
   },
   makeRecurring: async (
     event,
@@ -65,6 +64,8 @@ const eventCreationButtonHandlers: {
         return false;
       },
     });
+
+    await submission.deferUpdate();
     var unitField = submission.fields.getField(
       `${event.id}_unit`
     ) as TextInputModalData;
@@ -119,7 +120,6 @@ const eventCreationButtonHandlers: {
       client?.user?.id ?? ""
     );
     await originalInteraction.editReply(submissionEmbed);
-    await submissionInteraction.deferUpdate();
   },
   addImage: async (
     event,
@@ -173,7 +173,7 @@ const eventCreationButtonHandlers: {
     }
   },
   save: async (event, submissionInteraction, originalInteraction, client) => {
-    await submissionInteraction.update({
+    await originalInteraction.editReply({
       content: `Saved for later! You can continue from where you left off. Don't wait too long, or you will have to start over again!`,
       embeds: [],
       components: [],
@@ -187,8 +187,7 @@ const eventCreationButtonHandlers: {
   },
   finish: async (event, submissionInteraction, originalInteraction, client) => {
     if (!submissionInteraction.message.guild) return;
-
-    if (!submissionInteraction.deferred) await submissionInteraction.deferUpdate();
+    await submissionInteraction.deferUpdate();
 
     if (
       event.scheduledStartTime.valueOf() - new Date().valueOf() <
@@ -198,10 +197,9 @@ const eventCreationButtonHandlers: {
         event.author.id
       );
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        await submissionInteraction.reply({
+        await submissionInteraction.update({
           content:
             "Sorry, your start time needs to be more than 30 minutes from now!",
-          ephemeral: true,
         });
 
         return;
