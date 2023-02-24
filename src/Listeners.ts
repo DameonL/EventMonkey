@@ -5,7 +5,6 @@ import {
   ForumChannel,
   InteractionCollector,
   Message,
-  ModalSubmitInteraction,
   TextChannel,
   ThreadChannel,
 } from "discord.js";
@@ -29,7 +28,10 @@ async function listenForButtons() {
 
   for (const guild of configuration.discordClient.guilds.cache) {
     for (const eventType of configuration.eventTypes) {
-      const channel = await resolveChannelString(eventType.discussionChannel, guild[1]);
+      const channel = await resolveChannelString(
+        eventType.discussionChannel,
+        guild[1]
+      );
       if (
         channel &&
         (channel.type === ChannelType.GuildForum ||
@@ -74,7 +76,7 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
 function getEmbedSubmissionCollector(
   event: EventMonkeyEvent,
   message: Message,
-  originalInteraction: ChatInputCommandInteraction | ModalSubmitInteraction
+  originalInteraction: ChatInputCommandInteraction
 ): InteractionCollector<ButtonInteraction> {
   if (!message.channel)
     throw new Error("This command needs to be triggered in a channel.");
