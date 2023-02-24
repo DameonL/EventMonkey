@@ -1,5 +1,4 @@
 import {
-  ChannelType,
   Client,
   Guild,
   GuildScheduledEventEntityType,
@@ -53,16 +52,12 @@ export async function createForumChannelEvent(
 
   if (!targetChannel)
     throw new Error(
-      `Unable to resolve ID ${event.discussionChannelId} to a channel.`
+      `Unable to resolve ID "${event.discussionChannelId}" to a channel.`
     );
 
-  if (
-    targetChannel.type !== ChannelType.GuildForum &&
-    targetChannel.type !== ChannelType.GuildText &&
-    targetChannel.type !== ChannelType.GuildAnnouncement
-  )
+  if (!("threads" in targetChannel))
     throw new Error(
-      `Channel with ID ${event.discussionChannelId} is of type ${targetChannel.type}. The discussion channel needs to be able to have threads.`
+      `Channel with ID ${event.discussionChannelId} is of type "${targetChannel.type}". The discussion channel needs to be able to have threads.`
     );
 
   const threadName = `${event.scheduledStartTime
