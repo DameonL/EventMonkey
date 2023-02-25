@@ -1,12 +1,13 @@
 {
   "name": "eventmonkey",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "description": "Discord package to add event scheduling to bots",
   "main": "EventMonkey.js",
   "repository": {"url": "https://github.com/DameonL/eventMonkey.git"},
   "author": "Dameon Laird",
   "license": "Creative Commons Zero v1.0 Universal",
   "dependencies": {
-    "discord.js": "^14.7.1"
+    "discord.js": "^14.7.1",
+    "uuid": "^9.0.0"
   }
 }
