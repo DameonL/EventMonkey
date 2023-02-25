@@ -4,6 +4,7 @@ import {
   GuildScheduledEventEntityType,
   ThreadChannel,
 } from "discord.js";
+import Configuration from "./Configuration";
 import { attendanceButtons } from "./Content/Component/attendanceButtons";
 import { attendeesToEmbed } from "./Content/Embed/attendees";
 import { eventEmbed } from "./Content/Embed/eventEmbed";
@@ -17,7 +18,14 @@ export async function createGuildScheduledEvent(
   thread: ThreadChannel
 ) {
   const eventToSubmit = { ...event } as any;
-  const scheduledEndTime = new Date(eventToSubmit.scheduledStartTime);
+  const scheduledStartTime = new Date(eventToSubmit.scheduledStartTime);
+  if (Configuration.current.timeZone) {
+    scheduledStartTime.setHours(
+      scheduledStartTime.getHours() + Configuration.current.timeZone.utcOffset
+    );
+  }
+  
+  const scheduledEndTime = new Date(scheduledStartTime);
   scheduledEndTime.setHours(
     scheduledEndTime.getHours() + eventToSubmit.duration
   );

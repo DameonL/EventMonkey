@@ -93,6 +93,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       Events.GuildScheduledEventUserAdd,
       ClientEventHandlers.userShowedInterest
     );
+
     client.on(
       Events.GuildScheduledEventUpdate,
       (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {

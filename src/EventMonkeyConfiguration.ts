@@ -5,11 +5,14 @@ export interface EventMonkeyConfiguration {
   discordClient?: Client;
   editingTimeout: number;
   eventTypes: EventMonkeyEventType[];
-  timeZone?: string;
+  timeZone?: {
+    name: string;
+    utcOffset: number;
+  };
   closeThreadsAfter?: number;
   roles?: {
-    allowed?: string[],
-    denied?: string[]
+    allowed?: string[];
+    denied?: string[];
   };
 }
 
@@ -18,7 +21,7 @@ export interface EventMonkeyEventType {
   discussionChannel: string;
   voiceChannel?: string;
   stageChannel?: string;
-  announcement?: EventAnnouncement
+  announcement?: EventAnnouncement;
 }
 
 export interface EventAnnouncement {

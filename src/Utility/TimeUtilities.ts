@@ -1,3 +1,5 @@
+import Configuration from "../Configuration";
+
 export default {
   toMilliseconds: {
     days,
@@ -36,17 +38,17 @@ function getTimeFromString(text: string): Date {
   return output;
 }
 
-function getTimeString(date: Date, timeZone?: string): string {
-  return date
+function getTimeString(date: Date): string {
+  return `${date
     .toLocaleString("en-us", {
       day: "2-digit",
       month: "2-digit",
       year: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      timeZoneName: "short",
     })
     .replace(",", "")
-    .replace(" ", " ");
+    .replace(" ", " ")} ${
+    Configuration.current.timeZone ? Configuration.current.timeZone.name : ""
+  }`;
 }
