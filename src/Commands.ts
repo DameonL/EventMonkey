@@ -16,6 +16,7 @@ import { EventMonkeyEvent } from "./EventMonkey";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
+import { v4 as uuidv4 } from 'uuid';
 
 export const eventCommand = {
   builder: getEventCommandBuilder,
@@ -106,6 +107,10 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     await resolveChannelString(eventType.discussionChannel, interaction.guild)
   ).id;
   const defaultStartTime = new Date();
+  if (Configuration.current.timeZone) {
+    defaultStartTime.setHours(defaultStartTime.getHours() + Configuration.current.timeZone.utcOffset);
+  }
+
   defaultStartTime.setDate(defaultStartTime.getDate() + 1);
   const defaultDuration = 1;
 
@@ -124,7 +129,7 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
           : voiceOrForumChannel?.id ?? "",
     },
     privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     discussionChannelId,
     author: interaction.user,
     entityType,
