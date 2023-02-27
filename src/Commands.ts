@@ -5,6 +5,7 @@ import {
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   MessageFlags,
+  PermissionsBitField,
   SlashCommandBuilder,
   SlashCommandSubcommandBuilder,
   ThreadChannel,
@@ -222,10 +223,13 @@ function checkRolePermissions(
   const configuration = Configuration.current;
   let allowed = configuration.roles?.allowed == null;
   const memberPermissions = interaction.memberPermissions;
-  /*  if (memberPermissions && memberPermissions.has("Administrator")) {
+  if (
+    memberPermissions &&
+    memberPermissions.has(PermissionsBitField.Flags.Administrator)
+  ) {
     return true;
   }
-*/
+
   if (memberPermissions) {
     const userRoles = interaction.member.roles as GuildMemberRoleManager;
     if (configuration.roles?.allowed) {
