@@ -33,10 +33,10 @@ const deserializationConfig: ModalDeserializationConfig = {
       const output = new Date(Date.parse(fieldValue));
       if (Configuration.current.timeZone) {
         output.setHours(
-          output.getHours() + Configuration.current.timeZone?.utcOffset
+          output.getHours() + Configuration.current.timeZone.offset
         );
       }
-      
+
       return output;
     },
     duration: (fieldValue: string) => Number(fieldValue),

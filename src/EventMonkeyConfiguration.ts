@@ -1,13 +1,13 @@
-import { Client, GuildScheduledEventEntityType } from "discord.js";
+import { Client } from "discord.js";
 
 export interface EventMonkeyConfiguration {
   commandName: string;
   discordClient?: Client;
   editingTimeout: number;
   eventTypes: EventMonkeyEventType[];
-  timeZone?: {
+  timeZone: {
     name: string;
-    utcOffset: number;
+    offset: number;
   };
   closeThreadsAfter?: number;
   roles?: {

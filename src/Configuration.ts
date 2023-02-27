@@ -15,6 +15,10 @@ function defaultConfiguration(): EventMonkeyConfiguration {
         },
       },
     ],
+    timeZone: {
+      name: "PST",
+      offset: 0
+    },
     editingTimeout: 108000, // Default of 30 minutes
   };
 }

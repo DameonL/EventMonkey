@@ -12,6 +12,7 @@ import {
   TextInputModalData,
   ThreadChannel,
 } from "discord.js";
+import Configuration from "../Configuration";
 import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import { editRecurrence } from "../Content/Modal/editRecurrence";
@@ -192,7 +193,7 @@ const eventCreationButtonHandlers: {
     await submissionInteraction.deferUpdate();
 
     if (
-      event.scheduledStartTime.valueOf() - new Date().valueOf() <
+      event.scheduledStartTime.valueOf() - new Date().valueOf() + Time.toMilliseconds.hours(Configuration.current.timeZone.offset) <
       Time.toMilliseconds.minutes(30)
     ) {
       const member = await submissionInteraction.message.guild.members.fetch(

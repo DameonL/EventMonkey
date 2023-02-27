@@ -21,7 +21,7 @@ export async function createGuildScheduledEvent(
   const scheduledStartTime = new Date(eventToSubmit.scheduledStartTime);
   if (Configuration.current.timeZone) {
     scheduledStartTime.setHours(
-      scheduledStartTime.getHours() + Configuration.current.timeZone.utcOffset
+      scheduledStartTime.getHours() + Configuration.current.timeZone.offset
     );
   }
   
