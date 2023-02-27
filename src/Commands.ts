@@ -9,6 +9,7 @@ import {
   SlashCommandSubcommandBuilder,
   ThreadChannel,
 } from "discord.js";
+import { v4 as uuidv4 } from "uuid";
 import Configuration from "./Configuration";
 import editEventMessage from "./Content/Embed/editEventMessage";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
@@ -16,7 +17,6 @@ import { EventMonkeyEvent } from "./EventMonkey";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
-import { v4 as uuidv4 } from 'uuid';
 import TimeUtilities from "./Utility/TimeUtilities";
 
 export const eventCommand = {
@@ -108,7 +108,9 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     await resolveChannelString(eventType.discussionChannel, interaction.guild)
   ).id;
   const defaultStartTime = new Date();
-  defaultStartTime.setHours(defaultStartTime.getHours() + Configuration.current.timeZone.offset);
+  defaultStartTime.setHours(
+    defaultStartTime.getHours() + Configuration.current.timeZone.offset
+  );
   defaultStartTime.setDate(defaultStartTime.getDate() + 1);
   const defaultDuration = 1;
 
@@ -171,7 +173,11 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
 
   if (
     event.threadChannel &&
-    event.scheduledStartTime.valueOf() < new Date().valueOf() + TimeUtilities.toMilliseconds.hours(Configuration.current.timeZone.offset)
+    event.scheduledStartTime.valueOf() <
+      Date.now() +
+        TimeUtilities.toMilliseconds.hours(
+          Configuration.current.timeZone.offset
+        )
   ) {
     interaction.reply({
       content: "You can't edit an event that is in the past.",

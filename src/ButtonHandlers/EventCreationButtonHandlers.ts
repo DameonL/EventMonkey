@@ -193,7 +193,7 @@ const eventCreationButtonHandlers: {
     await submissionInteraction.deferUpdate();
 
     if (
-      event.scheduledStartTime.valueOf() - new Date().valueOf() + Time.toMilliseconds.hours(Configuration.current.timeZone.offset) <
+      event.scheduledStartTime.valueOf() - Date.now() + Time.toMilliseconds.hours(Configuration.current.timeZone.offset) <
       Time.toMilliseconds.minutes(30)
     ) {
       const member = await submissionInteraction.message.guild.members.fetch(
