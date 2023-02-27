@@ -29,8 +29,14 @@ const deserializationConfig: ModalDeserializationConfig = {
       isNaN(Number(fieldValue)) ? "Invalid duration" : undefined,
   },
   customDeserializers: {
-    scheduledStartTime: (fieldValue: string) =>
-      new Date(Date.parse(fieldValue)),
+    scheduledStartTime: (fieldValue: string) => {
+      const output = new Date(Date.parse(fieldValue));
+      if (Configuration.current.timeZone) {
+        output.setHours(
+          output.getHours() + Configuration.current.timeZone?.utcOffset
+        );
+      }
+    },
     duration: (fieldValue: string) => Number(fieldValue),
   },
 };
@@ -76,7 +82,10 @@ export async function eventModal(
   }
 
   // If the scheduled time has changed, we need to update recurrence settings.
-  if (event.recurrence && event.scheduledStartTime.valueOf() !== startTime.valueOf()) {
+  if (
+    event.recurrence &&
+    event.scheduledStartTime.valueOf() !== startTime.valueOf()
+  ) {
     event.recurrence.firstStartTime = event.scheduledStartTime;
     event.recurrence.timesHeld = 0;
   }
