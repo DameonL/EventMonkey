@@ -1,8 +1,17 @@
-import { ChannelType, EmbedBuilder, GuildScheduledEvent, GuildScheduledEventStatus, User } from "discord.js";
+import {
+  ChannelType,
+  EmbedBuilder,
+  GuildScheduledEvent,
+  GuildScheduledEventStatus,
+  User,
+} from "discord.js";
 import Configuration from "./Configuration";
 import { attendeeTags } from "./Content/Embed/attendees";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
-import { createForumChannelEvent, createGuildScheduledEvent } from "./EventCreators";
+import {
+  createForumChannelEvent,
+  createGuildScheduledEvent,
+} from "./EventCreators";
 import { getNextRecurrence } from "./Recurrence";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
@@ -12,8 +21,8 @@ import Time from "./Utility/TimeUtilities";
 export default {
   eventStarted,
   eventCompleted,
-  userShowedInterest
-}
+  userShowedInterest,
+};
 
 async function eventStarted(
   oldEvent: GuildScheduledEvent | null,
@@ -31,7 +40,9 @@ async function eventStarted(
   var idString = `Event ID: ${monkeyEvent.id}`;
 
   const eventType = Configuration.current.eventTypes.find(
-    (x) => x.discussionChannel === thread.parent?.id || x.discussionChannel === thread.parent?.name
+    (x) =>
+      x.discussionChannel === thread.parent?.id ||
+      x.discussionChannel === thread.parent?.name
   );
   if (!eventType || !eventType.announcement || !eventType.announcement.onStart)
     return;
@@ -86,19 +97,22 @@ async function eventCompleted(
   if (!event.guild || !event.description) return;
 
   try {
-    const thread = await Threads.getThreadFromEventDescription(event.description);
+    const thread = await Threads.getThreadFromEventDescription(
+      event.description
+    );
     if (thread && !thread.archived) {
       const eventMonkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
       if (eventMonkeyEvent.recurrence) {
-        const now = Date.now();
+        const now =
+          Date.now() +
+          Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
         let nextStartDate: Date;
         do {
           nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
           eventMonkeyEvent.recurrence.timesHeld++;
-        }
-        while (nextStartDate.valueOf() < now);
-        
+        } while (nextStartDate.valueOf() < now);
+
         eventMonkeyEvent.scheduledStartTime = nextStartDate;
         eventMonkeyEvent.scheduledEndTime = new Date(nextStartDate);
         eventMonkeyEvent.scheduledEndTime.setHours(
@@ -122,7 +136,9 @@ async function eventCompleted(
             new EmbedBuilder()
               .setTitle("Event is over")
               .setDescription(
-                `We'll see you next time at ${Time.getTimeString(nextStartDate)}!`
+                `We'll see you next time at ${Time.getTimeString(
+                  nextStartDate
+                )}!`
               ),
           ],
         });

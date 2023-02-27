@@ -34,7 +34,9 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   if (!thread) return;
 
   const eventType = Configuration.current.eventTypes.find(
-    (x) => x.discussionChannel === thread.parent?.id || x.discussionChannel === thread.parent?.name
+    (x) =>
+      x.discussionChannel === thread.parent?.id ||
+      x.discussionChannel === thread.parent?.name
   );
   if (
     !eventType ||
@@ -43,7 +45,10 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   )
     return;
 
-  const timeBeforeStart = event.scheduledStartAt.valueOf() - Date.now();
+  const timeBeforeStart =
+    event.scheduledStartAt.valueOf() -
+    Date.now() +
+    Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
   if (
     timeBeforeStart < 0 ||
     timeBeforeStart > eventType.announcement.beforeStart ||
