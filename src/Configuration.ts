@@ -1,7 +1,6 @@
 import {
   EventMonkeyConfiguration,
 } from "./EventMonkeyConfiguration";
-import Time from "./Utility/TimeUtilities";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
@@ -16,7 +15,7 @@ function defaultConfiguration(): EventMonkeyConfiguration {
         },
       },
     ],
-    editingTimeout: Time.toMilliseconds.minutes(30),
+    editingTimeout: 108000, // Default of 30 minutes
   };
 }
 

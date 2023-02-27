@@ -11,23 +11,23 @@ export default {
   getTimeString,
 };
 
-function days(numberOfDays: number) {
+export function days(numberOfDays: number) {
   return hours(24) * numberOfDays;
 }
 
-function hours(numberOfHours: number) {
+export function hours(numberOfHours: number) {
   return minutes(60) * numberOfHours;
 }
 
-function minutes(numberOfMinutes: number) {
+export function minutes(numberOfMinutes: number) {
   return seconds(60) * numberOfMinutes;
 }
 
-function seconds(numberOfSeconds: number) {
+export function seconds(numberOfSeconds: number) {
   return 1000 * numberOfSeconds;
 }
 
-function getTimeFromString(text: string): Date {
+export function getTimeFromString(text: string): Date {
   const matches = text.match(
     /(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,? \d\d?:\d\d\s(AM|PM)( [a-z]{3})?)/i
   );
@@ -38,7 +38,7 @@ function getTimeFromString(text: string): Date {
   return output;
 }
 
-function getTimeString(date: Date): string {
+export function getTimeString(date: Date): string {
   return `${date
     .toLocaleString("en-us", {
       day: "2-digit",
