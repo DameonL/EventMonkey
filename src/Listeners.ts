@@ -84,6 +84,8 @@ function getEmbedSubmissionCollector(
   if (event.submissionCollector) event.submissionCollector.stop();
   const configuration = Configuration.current;
 
+  if (!("createMessageComponentCollector" in message.channel)) throw new Error("This can only be used on text channels.");
+
   const submissionCollector = message.channel.createMessageComponentCollector({
     filter: (submissionInteraction) =>
       submissionInteraction.user.id === event.author.id &&

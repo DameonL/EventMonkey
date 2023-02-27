@@ -138,6 +138,8 @@ const eventCreationButtonHandlers: {
       fetchReply: true,
     });
 
+    if (!("awaitMessages" in imageResponse.channel)) return;
+
     let replies = await imageResponse.channel.awaitMessages({
       filter: (replyInteraction) =>
         replyInteraction.reference?.messageId === imageResponse.id &&
