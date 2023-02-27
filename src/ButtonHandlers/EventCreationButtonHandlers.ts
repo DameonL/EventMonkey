@@ -224,14 +224,6 @@ const eventCreationButtonHandlers: {
       client
     );
 
-    const scheduledEvent = { ...event };
-    const adjustedStart = new Date(scheduledEvent.scheduledStartTime);
-    adjustedStart.setHours(adjustedStart.getHours() + Configuration.current.timeZone.offset);
-    const adjustedEnd = new Date(adjustedStart);
-    adjustedEnd.setHours(adjustedStart.getHours() + event.duration);
-    scheduledEvent.scheduledStartTime = adjustedStart;
-    scheduledEvent.scheduledEndTime = adjustedEnd;
-
     try {
       const guildScheduledEvent = await createGuildScheduledEvent(
         event,

@@ -19,16 +19,15 @@ export async function createGuildScheduledEvent(
 ) {
   const eventToSubmit = { ...event } as any;
   const scheduledStartTime = new Date(eventToSubmit.scheduledStartTime);
-  if (Configuration.current.timeZone) {
-    scheduledStartTime.setHours(
-      scheduledStartTime.getHours() + Configuration.current.timeZone.offset
-    );
-  }
-  
+  scheduledStartTime.setHours(
+    scheduledStartTime.getHours() + Configuration.current.timeZone.offset
+  );
+
   const scheduledEndTime = new Date(scheduledStartTime);
   scheduledEndTime.setHours(
     scheduledEndTime.getHours() + eventToSubmit.duration
   );
+  eventToSubmit.scheduledStartTime = scheduledStartTime;
   eventToSubmit.scheduledEndTime = scheduledEndTime;
   eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${
     thread.url
