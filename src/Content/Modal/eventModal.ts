@@ -36,6 +36,8 @@ const deserializationConfig: ModalDeserializationConfig = {
           output.getHours() + Configuration.current.timeZone?.utcOffset
         );
       }
+      
+      return output;
     },
     duration: (fieldValue: string) => Number(fieldValue),
   },
