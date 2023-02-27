@@ -29,7 +29,7 @@ export function seconds(numberOfSeconds: number) {
 
 export function getTimeFromString(text: string): Date {
   const matches = text.match(
-    /(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,? \d\d?:\d\d\s(AM|PM)( [a-z]{3})?)/i
+    /(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,?\s+\d\d?:\d\d\s+(AM|PM)(\s+[a-z]{3})?)/i
   );
   if (!matches || !matches.groups)
     throw new Error("Unable to parse date from string.");
