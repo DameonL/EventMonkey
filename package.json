@@ -1,6 +1,6 @@
 {
   "name": "eventmonkey",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Discord package to add event scheduling to bots",
   "repository": {
     "url": "https://github.com/DameonL/eventMonkey.git"
@@ -10,8 +10,8 @@
   "main": "dist/EventMonkey.js",
   "scripts": {
     "dev": "nodemon --watch src --watch package.json --watch package.dist.json --ext ts,js,json --exec \"npm run build\"",
-    "build": "tsc && copy-files-from-to",
-    "deploy": "npm run build && cd dist && npm publish"
+    "build": "rimraf dist && tsc && copy-files-from-to",
+    "deploy": "rimraf dist && npm run build && cd dist && npm publish"
   },
   "copyFiles": [
     {
@@ -38,6 +38,7 @@
     "@types/uuid": "^9.0.1",
     "copy-files-from-to": "^3.8.0",
     "nodemon": "^2.0.20",
+    "rimraf": "^4.1.2",
     "typescript": "^4.9.5"
   }
 }
