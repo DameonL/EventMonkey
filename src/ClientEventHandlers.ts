@@ -110,6 +110,7 @@ async function eventCompleted(
         let nextStartDate: Date;
         do {
           nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
+          eventMonkeyEvent.scheduledEndTime = new Date(nextStartDate);
           eventMonkeyEvent.recurrence.timesHeld++;
           if (now - nextStartDate.valueOf() < Time.toMilliseconds.minutes(5)) {
             nextStartDate.setMinutes(nextStartDate.getMinutes() + 5);
@@ -117,7 +118,6 @@ async function eventCompleted(
         } while (nextStartDate.valueOf() < now);
 
         eventMonkeyEvent.scheduledStartTime = nextStartDate;
-        eventMonkeyEvent.scheduledEndTime = new Date(nextStartDate);
         eventMonkeyEvent.scheduledEndTime.setHours(
           eventMonkeyEvent.scheduledEndTime.getHours() +
             eventMonkeyEvent.duration
