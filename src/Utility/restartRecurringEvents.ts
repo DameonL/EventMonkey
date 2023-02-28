@@ -13,7 +13,7 @@ export async function restartRecurringEvents() {
 
   if (!configuration.discordClient) return;
 
-  const now = Date.now();
+  const now = Date.now() + configuration.timeZone.offset;
   for (const [
     guildName,
     guildAuth,
