@@ -47,7 +47,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
 
   const timeBeforeStart =
     event.scheduledStartAt.valueOf() -
-    Date.now() +
+    new Date().valueOf() +
     Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
   if (
     timeBeforeStart < 0 ||
@@ -59,22 +59,18 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   const monkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
   var idString = `Event ID: ${monkeyEvent.id}`;
-  const announcementMessage = {
-    content: (await attendeeTags(thread)) ?? "",
-    embeds: [
-      new EmbedBuilder({
-        title: "Event Reminder",
-        description: `The event "${
-          monkeyEvent.name
-        }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
-          timeBeforeStart / Time.toMilliseconds.minutes(1)
-        )} minutes!\nEvent link: ${event.url}`,
-        footer: {
-          text: idString,
-        },
-      }),
-    ],
-  };
+  const attendees = (await attendeeTags(thread)) ?? "";
+  const announcementEmbed = new EmbedBuilder({
+    title: "Event Reminder",
+    description: `The event "${
+      monkeyEvent.name
+    }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
+      timeBeforeStart / Time.toMilliseconds.minutes(1)
+    )} minutes!\nEvent link: ${event.url}`,
+    footer: {
+      text: idString,
+    },
+  });
 
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
     x.embeds.find(
@@ -82,7 +78,8 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     )
   );
 
-  if (!threadAnnouncement) thread.send(announcementMessage);
+  if (!threadAnnouncement)
+    thread.send({ content: attendees, embeds: [announcementEmbed] });
 
   const announcementChannels = Array.isArray(eventType.announcement.channel)
     ? eventType.announcement.channel
@@ -110,7 +107,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     );
 
     if (!existingAnnouncement) {
-      announcementChannel.send(announcementMessage);
+      announcementChannel.send({ embeds: [announcementEmbed] });
     }
   }
 }
