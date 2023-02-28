@@ -1,54 +1,55 @@
 #### eventMonkey is a database-free package that provides any Discord bot with the ability to schedule events that use Discord's GuildScheduledEvent API as well as a discussion thread.
 
 ### Features:
+
 - RSVP List
 - Thread auto-management (archives and locks the thread after it becomes inactive)
 - Recurring events - Events can be set up to recur hourly, daily, weekly, or monthly
 - Notifications - Notifications can appear before events and when they start
 
 ### Getting Started:
-To start eventMonkey, you call the `configure` function. If the configuration has a `discordClient` defined, eventMonkey will begin running regular maintenance tasks. At this point, you can call the `registerCommands` function. If you would prefer to handle registration yourself, you can retrieve a `SlashCommandBuilder` using `commands.create.builder()` and `commands.edit.builder()`.
+
+To start eventMonkey, you call the `configure` function. If the configuration has a `discordClient` defined, eventMonkey will begin running regular maintenance tasks. At this point, you can call the `registerCommands` function. If you would prefer to handle registration yourself, you can retrieve a `SlashCommandBuilder` using `command.builder()`, and handle execution with the `command.execute` function.
 
 ```js
-  // Barebones bot configuration
-  import eventMonkey from "eventmonkey";
-  import { Client } from "discord.js";
+// Barebones bot configuration
+import eventMonkey from "eventmonkey";
+import { Client } from "discord.js";
 
-  const discordClient = new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.GuildPresences,
-      GatewayIntentBits.GuildMembers,
-      GatewayIntentBits.GuildMessageReactions,
-      GatewayIntentBits.GuildScheduledEvents,
-      GatewayIntentBits.MessageContent,
-    ]
-  });
+const discordClient = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildScheduledEvents,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
-  await discordClient.login(process.env.botToken);
-  const configuration = {
-    ...eventMonkey.defaultConfiguration(),
-    discordClient,
-    eventTypes: [
-      {
-        name: "Meetup",
-        channel: "meetups",
-        announcement: {
-          onStart: true,
-        },
-      }
-    ]
-  };
+await discordClient.login(process.env.botToken);
+const configuration = {
+  ...eventMonkey.defaultConfiguration(),
+  discordClient,
+  eventTypes: [
+    {
+      name: "Meetup",
+      discussionChannel: "meetups",
+      announcement: {
+        onStart: true,
+      },
+    },
+  ],
+};
 
-  eventMonkey.configure(configuration);
-  eventMonkey.registerCommands();
+eventMonkey.configure(configuration);
+eventMonkey.registerCommands();
 ```
 
 ### Configuration:
-Before any of the commands are built, you must call `configure()` with a valid EventMonkeyConfiguration. The `discordClient` on the configuration may be null at this point, but must be provided before any of the commands can be used. A basic default configuration object can be acquired by calling `defaultConfiguration()`. At a minimum, you must specify a `commandName`, `editingTimeout`, and at least one `EventType`.
 
-The edit command is always commandName + "-edit".
+Before the command is built with `command.builder()`, you must call `configure()` with a valid EventMonkeyConfiguration. The `discordClient` on the configuration may be null at this point, but must be provided before any of the commands can be used. A basic default configuration object can be acquired by calling `defaultConfiguration()`. At a minimum, you must specify a `commandName`, `editingTimeout`, a `timeZone` definition, and at least one `EventType`.
 
 `EventTypes` should correspond to a channel in every guild the bot is connected to. The `EventType.channel` can be either a channel name, or a specific channel ID.
 
@@ -69,6 +70,16 @@ A simple configuration would look like this:
           onStart: true,
         },
       },
+      {
+        name: "Hangout",
+        discussionChannel: "hangouts",
+        voiceChannel: "Hangout"
+      },
+      {
+        name: "Lecture",
+        discussionChannel: "lectures",
+        stageChannel: "Lecture",
+      },
       { name: "Happening", channel: "happenings" },
     ],
     editingTimeout: minutesToMilliseconds(30),
@@ -77,5 +88,9 @@ A simple configuration would look like this:
       allowed: ["event-creator"],
       denied: [],
     },
+    timeZone: {
+      name: "PST",
+      offset: -8
+    }
   };
 ```
