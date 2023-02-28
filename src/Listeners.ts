@@ -120,7 +120,7 @@ function getEmbedSubmissionCollector(
 
   submissionCollector.on("end", (collected, reason) => {
     if (reason === "time") {
-      message.edit({
+      originalInteraction.editReply({
         content:
           "Sorry, your event editing timed out! You can continue from where you left off when ready.",
         embeds: [],
