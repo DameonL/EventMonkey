@@ -46,9 +46,8 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     return;
 
   const timeBeforeStart =
-    event.scheduledStartAt.valueOf() -
-    new Date().valueOf() +
-    Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
+    event.scheduledStartAt.valueOf() - new Date().valueOf();
+
   if (
     timeBeforeStart < 0 ||
     timeBeforeStart > eventType.announcement.beforeStart ||
