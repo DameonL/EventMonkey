@@ -99,6 +99,9 @@ export async function eventModal(
   );
 
   await originalInteraction.editReply(submissionEmbed);
+  await modalSubmission.deleteReply();
+
+  return event;
 }
 
 export function eventEditModal(event: EventMonkeyEvent) {
