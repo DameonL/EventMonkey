@@ -1,4 +1,5 @@
 import {
+  APIEmbedField,
   ChannelType,
   EmbedBuilder,
   GuildScheduledEvent,
@@ -58,18 +59,23 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   const monkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
   var idString = `Event ID: ${monkeyEvent.id}`;
-  const attendees = (await attendeeTags(thread)) ?? "";
   const announcementEmbed = new EmbedBuilder({
     title: "Event Reminder",
     description: `The event "${
       monkeyEvent.name
     }" hosted by ${monkeyEvent.author.toString()} will be starting in ${Math.round(
       timeBeforeStart / Time.toMilliseconds.minutes(1)
-    )} minutes!\nEvent link: ${event.url}`,
+    )} minutes!`,
     footer: {
       text: idString,
     },
-  });
+  }).setThumbnail(monkeyEvent.image);
+
+  const announcementFields: APIEmbedField[] = [{ name: "Event Link", value: event.toString()}];
+  if (event.channel) announcementFields.push({name: "Channel", value: event.channel.toString()});
+  else announcementFields.push({ name: "Location", value: event.entityMetadata?.location ?? "" });
+
+  announcementEmbed.addFields(announcementFields)
 
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
     x.embeds.find(
@@ -78,7 +84,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   );
 
   if (!threadAnnouncement)
-    thread.send({ content: attendees, embeds: [announcementEmbed] });
+    thread.send({ embeds: [announcementEmbed] });
 
   const announcementChannels = Array.isArray(eventType.announcement.channel)
     ? eventType.announcement.channel
