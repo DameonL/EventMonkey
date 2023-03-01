@@ -6,7 +6,7 @@ import {
   User,
 } from "discord.js";
 import Configuration from "./Configuration";
-import { attendeeTags } from "./Content/Embed/attendees";
+import eventAnnouncement from "./Content/Embed/eventAnnouncement";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import EventCreators from "./EventCreators";
 import { getNextRecurrence } from "./Recurrence";
@@ -45,20 +45,7 @@ async function eventStarted(
     return;
 
   const message = {
-    content: await attendeeTags(thread),
-    embeds: [
-      new EmbedBuilder({
-        title: "Event Starting",
-        description: `The event "${
-          monkeyEvent.name
-        }" hosted by ${monkeyEvent.author.toString()} is starting now!\nEvent link: ${
-          event.url
-        }`,
-        footer: {
-          text: idString,
-        },
-      }),
-    ],
+    embeds: [eventAnnouncement(monkeyEvent)],
   };
 
   thread.send(message);
@@ -117,22 +104,25 @@ async function eventCompleted(
           nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
         }
 
-        eventMonkeyEvent.scheduledEndTime = new Date(getNextRecurrence(eventMonkeyEvent.recurrence));
         eventMonkeyEvent.scheduledStartTime = nextStartDate;
+        eventMonkeyEvent.scheduledEndTime = new Date(
+          getNextRecurrence(eventMonkeyEvent.recurrence)
+        );
         eventMonkeyEvent.scheduledEndTime.setHours(
           eventMonkeyEvent.scheduledEndTime.getHours() +
             eventMonkeyEvent.duration
         );
         eventMonkeyEvent.scheduledEvent = undefined;
-        eventMonkeyEvent.scheduledEvent = await EventCreators.createGuildScheduledEvent(
-          eventMonkeyEvent,
-          event.guild,
-          thread
-        );
+        eventMonkeyEvent.scheduledEvent =
+          await EventCreators.createGuildScheduledEvent(
+            eventMonkeyEvent,
+            event.guild,
+            thread
+          );
 
         await EventCreators.createThreadChannelEvent(
           eventMonkeyEvent,
-          event.guild,
+          event.guild
         );
         await thread.send({
           embeds: [

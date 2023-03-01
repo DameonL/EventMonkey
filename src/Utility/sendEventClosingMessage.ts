@@ -1,6 +1,9 @@
-import { EmbedBuilder, GuildScheduledEventStatus, ThreadChannel } from "discord.js";
+import {
+  EmbedBuilder,
+  GuildScheduledEventStatus,
+  ThreadChannel,
+} from "discord.js";
 import Configuration from "../Configuration";
-import { attendeeTags } from "../Content/Embed/attendees";
 import Time from "./TimeUtilities";
 
 export async function sendEventClosingMessage(
@@ -10,14 +13,20 @@ export async function sendEventClosingMessage(
     | GuildScheduledEventStatus.Completed
 ) {
   const completed = status === GuildScheduledEventStatus.Completed;
-  let nextTime = (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.days(1);
+  let nextTime =
+    (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) /
+    Time.toMilliseconds.days(1);
   let timeUnit = "day";
   if (nextTime <= 1) {
-    nextTime = (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.hours(1);
+    nextTime =
+      (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) /
+      Time.toMilliseconds.hours(1);
     timeUnit = "hour";
   }
   if (nextTime <= 1) {
-    nextTime = (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.minutes(1);
+    nextTime =
+      (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) /
+      Time.toMilliseconds.minutes(1);
     timeUnit = "minute";
   }
 
@@ -25,7 +34,6 @@ export async function sendEventClosingMessage(
   if (nextTime > 1) timeUnit += "s";
 
   const closeMessage = await thread.send({
-    content: (await attendeeTags(thread)) ?? "",
     embeds: [
       new EmbedBuilder()
         .setTitle(`Event is ${completed ? "Over" : "Canceled"}`)
@@ -38,4 +46,3 @@ export async function sendEventClosingMessage(
   });
   await closeMessage.pin();
 }
-

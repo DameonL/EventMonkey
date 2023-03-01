@@ -1,4 +1,9 @@
-import { APIEmbedField, EmbedBuilder, Message, ThreadChannel } from "discord.js";
+import {
+  APIEmbedField,
+  EmbedBuilder,
+  Message,
+  ThreadChannel,
+} from "discord.js";
 import { getEventDetailsMessage } from "./eventEmbed";
 
 export function getAttendeesFromMessage(eventMessage: Message): string[] {
@@ -48,6 +53,6 @@ export async function attendeeTags(thread: ThreadChannel) {
   if (!detailsMessage) return "";
 
   const attendees = getAttendeesFromMessage(detailsMessage);
-  const tags = attendees.map(x => `<@${x}>`).join(" ");
+  const tags = attendees.map((x) => `<@${x}>`).join(" ");
   return tags;
 }

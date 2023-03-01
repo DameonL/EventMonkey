@@ -1,6 +1,6 @@
 {
   "name": "eventmonkey",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "description": "Discord package to add event scheduling to bots",
   "main": "EventMonkey.js",
   "repository": {"url": "https://github.com/DameonL/eventMonkey.git"},
