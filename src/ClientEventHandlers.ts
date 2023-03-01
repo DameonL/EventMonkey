@@ -104,20 +104,23 @@ async function eventCompleted(
       const eventMonkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
       if (eventMonkeyEvent.recurrence) {
-        eventMonkeyEvent.recurrence.timesHeld++;
         const now =
           Date.now() +
           Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
-        let nextStartDate: Date;
-        do {
-          nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
-          eventMonkeyEvent.scheduledEndTime = new Date(nextStartDate);
+        let nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
+
+        while (nextStartDate.valueOf() < now) {
           const delta = now - nextStartDate.valueOf();
           if (delta > 0 && delta < Time.toMilliseconds.minutes(5)) {
             nextStartDate.setMinutes(nextStartDate.getMinutes() + 5);
+            break;
           }
-        } while (nextStartDate.valueOf() < now);
 
+          eventMonkeyEvent.recurrence.timesHeld++;
+          nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
+        }
+
+        eventMonkeyEvent.scheduledEndTime = new Date(getNextRecurrence(eventMonkeyEvent.recurrence));
         eventMonkeyEvent.scheduledStartTime = nextStartDate;
         eventMonkeyEvent.scheduledEndTime.setHours(
           eventMonkeyEvent.scheduledEndTime.getHours() +
