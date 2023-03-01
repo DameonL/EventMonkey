@@ -104,6 +104,7 @@ async function eventCompleted(
       const eventMonkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
       if (eventMonkeyEvent.recurrence) {
+        eventMonkeyEvent.recurrence.timesHeld++;
         const now =
           Date.now() +
           Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
@@ -111,7 +112,6 @@ async function eventCompleted(
         do {
           nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
           eventMonkeyEvent.scheduledEndTime = new Date(nextStartDate);
-          eventMonkeyEvent.recurrence.timesHeld++;
           const delta = now - nextStartDate.valueOf();
           if (delta > 0 && delta < Time.toMilliseconds.minutes(5)) {
             nextStartDate.setMinutes(nextStartDate.getMinutes() + 5);
