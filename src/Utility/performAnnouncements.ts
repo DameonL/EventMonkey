@@ -59,7 +59,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
     x.embeds.find(
       (x) =>
-        x.footer?.text === announcementEmbed.data.footer &&
+        x.footer?.text === announcementEmbed.data.footer?.text &&
         x.title === "Event Reminder"
     )
   );
@@ -88,7 +88,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     ).find((x) =>
       x.embeds.find(
         (x) =>
-          x.footer?.text === announcementEmbed.data.footer &&
+        x.footer?.text === announcementEmbed.data.footer?.text &&
           x.title === "Event Reminder"
       )
     );

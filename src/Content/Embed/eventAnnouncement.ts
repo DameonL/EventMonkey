@@ -23,7 +23,7 @@ export default function eventAnnouncement(
   }).setThumbnail(event.image);
 
   const announcementFields: APIEmbedField[] = [
-    { name: "Event Link", value: event.toString() },
+    { name: "Event Link", value: event.scheduledEvent?.toString() ?? event.threadChannel?.toString() ?? "" },
   ];
   if (event.channel)
     announcementFields.push({
