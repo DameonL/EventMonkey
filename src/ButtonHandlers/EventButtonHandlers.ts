@@ -1,4 +1,4 @@
-import { ButtonInteraction } from "discord.js";
+import { ButtonInteraction, ChannelType } from "discord.js";
 import {
   attendeesToEmbed,
   getAttendeesFromMessage,
@@ -27,6 +27,10 @@ const buttonHandlers: {
     await interaction.editReply({
       content: "Congratulations, you're going!",
     });
+
+    if (interaction.message.channel.type === ChannelType.PublicThread) {
+      interaction.message.channel.members.add(interaction.user);
+    }
   },
   notAttending: async (interaction: ButtonInteraction) => {
     const eventEmbed = await getEventDetailsEmbed(interaction.message);
@@ -57,6 +61,9 @@ const buttonHandlers: {
       embeds: [interaction.message.embeds[0], attendeesToEmbed(attendees)],
     });
     await interaction.editReply({ content: "Sorry you can't make it!" });
+    if (interaction.message.channel.type === ChannelType.PublicThread) {
+      interaction.message.channel.members.remove(interaction.user.id);
+    }
   },
 };
 
