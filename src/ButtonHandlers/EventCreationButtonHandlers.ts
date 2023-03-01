@@ -48,14 +48,14 @@ const eventCreationButtonHandlers: {
       timesHeld: 0,
       weeks: 1,
     };
-    const recurrenceModal = editRecurrence(event);
-    recurrenceModal.setCustomId(submissionInteraction.id);
-    await submissionInteraction.showModal(editRecurrence(event));
+
+    const recurrenceModal = editRecurrence(event, submissionInteraction);
+    await submissionInteraction.showModal(recurrenceModal);
     var submission = await submissionInteraction.awaitModalSubmit({
       time: Time.toMilliseconds.minutes(5),
       filter: (submitInteraction, collected) =>
         submitInteraction.user.id === event.author.id &&
-        submitInteraction.customId.startsWith(submissionInteraction.id),
+        submitInteraction.customId === recurrenceModal.data.custom_id,
     });
 
     await submission.deferUpdate();
@@ -109,8 +109,7 @@ const eventCreationButtonHandlers: {
     const submissionEmbed = await editEventMessage(
       event,
       `Event will recur every ${frequency} ${unit}`,
-      submissionInteraction.guild,
-      originalInteraction.id
+      originalInteraction
     );
     await originalInteraction.editReply(submissionEmbed);
   },
@@ -147,8 +146,7 @@ const eventCreationButtonHandlers: {
       const submissionEmbed = await editEventMessage(
         event,
         "",
-        originalInteraction.guild as Guild,
-        originalInteraction.id
+        originalInteraction
       );
       await originalInteraction.editReply(submissionEmbed);
       return;
@@ -161,8 +159,7 @@ const eventCreationButtonHandlers: {
       const submissionEmbed = await editEventMessage(
         event,
         "Image added!",
-        originalInteraction.guild as Guild,
-        originalInteraction.id
+        originalInteraction
       );
       await originalInteraction.editReply(submissionEmbed);
     }

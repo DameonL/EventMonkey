@@ -142,8 +142,7 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   var newEventMessage = await editEventMessage(
     newEvent,
     "",
-    interaction.guild,
-    interaction.id
+    interaction
   );
   await interaction.editReply(newEventMessage);
   const replyMessage = await interaction.fetchReply();
@@ -200,8 +199,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
   const submissionMessage = await editEventMessage(
     event,
     "Editing your existing event...",
-    interaction.guild,
-    interaction.id
+    interaction
   );
   await interaction.reply({
     ...submissionMessage,

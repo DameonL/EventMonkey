@@ -94,8 +94,7 @@ export async function eventModal(
   let submissionEmbed = await editEventMessage(
     event,
     "",
-    interaction.guild as Guild,
-    originalInteraction.id
+    originalInteraction
   );
 
   await originalInteraction.editReply(submissionEmbed);

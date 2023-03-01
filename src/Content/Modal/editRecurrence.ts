@@ -1,5 +1,6 @@
 import {
   ActionRowBuilder,
+  Interaction,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -7,13 +8,13 @@ import {
 import { EventMonkeyEvent } from "../../EventMonkey";
 import { getRecurrenceUnit } from "../../Recurrence";
 
-export function editRecurrence(event: EventMonkeyEvent) {
+export function editRecurrence(event: EventMonkeyEvent, interaction: Interaction) {
   if (!event.recurrence)
     throw new Error("Unable to show modal for nonexistent recurrence.");
 
   const modal = new ModalBuilder();
+  modal.setCustomId(`${interaction.id}_editRecurrence`);
   modal.setTitle("Recurring Event");
-  modal.setCustomId(event.id);
 
   let unit = getRecurrenceUnit(event.recurrence);
   if (!unit) throw new Error("Unable to get unit from EventRecurrence.");
