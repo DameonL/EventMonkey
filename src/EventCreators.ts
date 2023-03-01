@@ -1,18 +1,30 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
   Client,
   Guild,
   GuildScheduledEventEntityType,
+  Message,
   ThreadChannel,
 } from "discord.js";
 import Configuration from "./Configuration";
 import { attendanceButtons } from "./Content/Component/attendanceButtons";
 import { attendeesToEmbed } from "./Content/Embed/attendees";
-import { eventEmbed } from "./Content/Embed/eventEmbed";
+import {
+  eventEmbed,
+  getEventDetailsEmbed,
+  getEventDetailsMessage,
+} from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
-export async function createGuildScheduledEvent(
+export default {
+  createGuildScheduledEvent,
+  createThreadChannelEvent
+}
+
+async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
   guild: Guild,
   thread: ThreadChannel
@@ -45,10 +57,9 @@ export async function createGuildScheduledEvent(
   return scheduledEvent;
 }
 
-export async function createForumChannelEvent(
+async function createThreadChannelEvent(
   event: EventMonkeyEvent,
   guild: Guild,
-  client: Client
 ) {
   const scheduledEndTime = new Date(event.scheduledStartTime);
   scheduledEndTime.setHours(scheduledEndTime.getHours() + event.duration);
@@ -74,26 +85,35 @@ export async function createForumChannelEvent(
   }`;
   const threadMessage = {
     embeds: [await eventEmbed(event, guild), attendeesToEmbed(event.attendees)],
-    components: [attendanceButtons(event, client.user?.id ?? "")],
+    components: new Array<ActionRowBuilder<ButtonBuilder>>(),
   };
 
-  const threadChannel = event.threadChannel
-    ? event.threadChannel
-    : await targetChannel.threads.create({
-        name: threadName,
-        message: threadMessage,
-      });
-
+  let channelMessage: Message | undefined;
   if (event.threadChannel) {
+    channelMessage = await getEventDetailsMessage(event.threadChannel);
+    if (!channelMessage)
+      throw new Error("Unable to get channel message from thread.");
+
+    threadMessage.components = [attendanceButtons(event, channelMessage.id)];
     await event.threadChannel.setName(threadName);
-    (await event.threadChannel.messages.fetchPinned())
-      .at(0)
-      ?.edit(threadMessage);
   } else {
-    threadChannel.messages.cache.at(0)?.pin();
+    const threadChannel = await targetChannel.threads.create({
+      name: threadName,
+      message: threadMessage,
+    });
+    event.threadChannel = threadChannel;
+
+    channelMessage = threadChannel.messages.cache.at(0);
+    if (!channelMessage)
+      throw new Error(
+        "Unable to get channel message from freshly created thread."
+      );
+
+    channelMessage.pin();
   }
+  channelMessage.edit(threadMessage);
 
-  await Listeners.listenForButtonsInThread(threadChannel);
+  await Listeners.listenForButtonsInThread(event.threadChannel);
 
-  return threadChannel;
+  return event.threadChannel;
 }

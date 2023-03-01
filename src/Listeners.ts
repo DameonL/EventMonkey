@@ -11,6 +11,7 @@ import {
 import buttonHandlers from "./ButtonHandlers/EventButtonHandlers";
 import eventCreationButtonHandlers from "./ButtonHandlers/EventCreationButtonHandlers";
 import Configuration from "./Configuration";
+import { getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkey";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
@@ -49,16 +50,13 @@ async function listenForButtonsInChannel(channel: ForumChannel | TextChannel) {
   }
 }
 
-// TODO: This is being triggered when event creation command buttons are being hit in the thread. Need to improve the filter.
 async function listenForButtonsInThread(thread: ThreadChannel) {
-  const configuration = Configuration.current;
+  const eventMessage = await getEventDetailsMessage(thread);
+  if (!eventMessage) return;
 
   const collector = thread.createMessageComponentCollector({
     filter: (submissionInteraction) =>
-      configuration.discordClient?.user != null &&
-      submissionInteraction.customId.startsWith(
-        configuration.discordClient.user.id
-      ),
+      submissionInteraction.customId.startsWith(eventMessage.id),
   }) as InteractionCollector<ButtonInteraction>;
 
   collector.on("collect", async (interaction: ButtonInteraction) => {
@@ -84,13 +82,14 @@ function getEmbedSubmissionCollector(
   if (event.submissionCollector) event.submissionCollector.stop();
   const configuration = Configuration.current;
 
-  if (!("createMessageComponentCollector" in message.channel)) throw new Error("This can only be used on text channels.");
+  if (!("createMessageComponentCollector" in message.channel))
+    throw new Error("This can only be used on text channels.");
 
   const submissionCollector = message.channel.createMessageComponentCollector({
     filter: (submissionInteraction) =>
       submissionInteraction.user.id === event.author.id &&
       submissionInteraction.customId.startsWith(
-        configuration.discordClient?.user?.id ?? ""
+        `${originalInteraction.id}_${event.id}_`
       ),
     time: configuration.editingTimeout,
   }) as InteractionCollector<ButtonInteraction>;
@@ -99,7 +98,7 @@ function getEmbedSubmissionCollector(
     "collect",
     async (submissionInteraction: ButtonInteraction) => {
       const handlerName = submissionInteraction.customId.replace(
-        `${configuration.discordClient?.user?.id}_${event.id}_button_`,
+        `${originalInteraction.id}_${event.id}_button_`,
         ""
       );
       const handler = eventCreationButtonHandlers[handlerName];

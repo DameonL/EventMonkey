@@ -17,10 +17,7 @@ import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import { editRecurrence } from "../Content/Modal/editRecurrence";
 import { eventModal } from "../Content/Modal/eventModal";
-import {
-  createForumChannelEvent,
-  createGuildScheduledEvent,
-} from "../EventCreators";
+import EventCreators from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
 import Listeners from "../Listeners";
@@ -51,19 +48,14 @@ const eventCreationButtonHandlers: {
       timesHeld: 0,
       weeks: 1,
     };
+    const recurrenceModal = editRecurrence(event);
+    recurrenceModal.setCustomId(submissionInteraction.id);
     await submissionInteraction.showModal(editRecurrence(event));
     var submission = await submissionInteraction.awaitModalSubmit({
       time: Time.toMilliseconds.minutes(5),
-      filter: (submitInteraction, collected) => {
-        if (
-          submitInteraction.user.id === event.author.id &&
-          submitInteraction.customId === event.id
-        ) {
-          return true;
-        }
-
-        return false;
-      },
+      filter: (submitInteraction, collected) =>
+        submitInteraction.user.id === event.author.id &&
+        submitInteraction.customId.startsWith(submissionInteraction.id),
     });
 
     await submission.deferUpdate();
@@ -118,7 +110,7 @@ const eventCreationButtonHandlers: {
       event,
       `Event will recur every ${frequency} ${unit}`,
       submissionInteraction.guild,
-      client?.user?.id ?? ""
+      originalInteraction.id
     );
     await originalInteraction.editReply(submissionEmbed);
   },
@@ -156,7 +148,7 @@ const eventCreationButtonHandlers: {
         event,
         "",
         originalInteraction.guild as Guild,
-        client?.user?.id ?? ""
+        originalInteraction.id
       );
       await originalInteraction.editReply(submissionEmbed);
       return;
@@ -170,7 +162,7 @@ const eventCreationButtonHandlers: {
         event,
         "Image added!",
         originalInteraction.guild as Guild,
-        client?.user?.id ?? ""
+        originalInteraction.id
       );
       await originalInteraction.editReply(submissionEmbed);
     }
@@ -193,7 +185,9 @@ const eventCreationButtonHandlers: {
     await submissionInteraction.deferUpdate();
 
     if (
-      event.scheduledStartTime.valueOf() - Date.now() + Time.toMilliseconds.hours(Configuration.current.timeZone.offset) <
+      event.scheduledStartTime.valueOf() -
+        Date.now() +
+        Time.toMilliseconds.hours(Configuration.current.timeZone.offset) <
       Time.toMilliseconds.minutes(30)
     ) {
       const member = await submissionInteraction.message.guild.members.fetch(
@@ -218,14 +212,13 @@ const eventCreationButtonHandlers: {
       components: [],
     });
 
-    const forumThread = await createForumChannelEvent(
+    const forumThread = await EventCreators.createThreadChannelEvent(
       event,
-      submissionInteraction.message.guild,
-      client
+      submissionInteraction.message.guild
     );
 
     try {
-      const guildScheduledEvent = await createGuildScheduledEvent(
+      const guildScheduledEvent = await EventCreators.createGuildScheduledEvent(
         event,
         submissionInteraction.message.guild,
         forumThread
@@ -262,21 +255,21 @@ const eventCreationButtonHandlers: {
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
   },
   cancel: async (event, submissionInteraction, originalInteraction, client) => {
+    const submissionMessage = submissionInteraction.message;
     if (event.threadChannel) {
-      const yesNoButtons = new ActionRowBuilder<ButtonBuilder>();
-      yesNoButtons.addComponents(
+      const yesNoButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setLabel("CANCEL EVENT")
           .setStyle(ButtonStyle.Danger)
           .setCustomId(`${submissionInteraction.id}_cancelEvent`),
         new ButtonBuilder()
-          .setLabel("Nevermind")
+          .setLabel("Cancel Editing")
           .setStyle(ButtonStyle.Success)
-          .setCustomId(`${submissionInteraction.id}_nevermind`)
+          .setCustomId(`${submissionInteraction.id}_cancelEdit`)
       );
       const response = await submissionInteraction.reply({
         content:
-          "Are you sure? This will cancel your event! If you just want to cancel editing, you can just dismiss the message.",
+          "Do you want to cancel your existing event, or just cancel editing?",
         ephemeral: true,
         components: [yesNoButtons],
       });
@@ -288,17 +281,21 @@ const eventCreationButtonHandlers: {
           time: Time.toMilliseconds.minutes(1),
         });
       } catch {}
-      if (!collected) return;
+      if (!collected) {
+        await submissionInteraction.editReply({
+          content: "Sorry, your response timed out!",
+        });
+        return;
+      }
 
       await collected.deferUpdate();
-      if (collected.customId.endsWith("_cancelEvent")) {
+      await submissionInteraction.deleteReply();
+      if (collected.customId.endsWith(`_cancelEvent`)) {
         await originalInteraction.editReply({
           content: "Cancelled event.",
           embeds: [],
           components: [],
         });
-
-        await submissionInteraction.deleteReply();
 
         if (event.threadChannel && event.scheduledEvent) {
           await Threads.closeEventThread(
@@ -310,11 +307,7 @@ const eventCreationButtonHandlers: {
         if (event.scheduledEvent) {
           await event.scheduledEvent.delete();
         }
-      } else {
-        await submissionInteraction.deleteReply();
       }
-
-      return;
     }
 
     await originalInteraction.editReply({
@@ -326,7 +319,7 @@ const eventCreationButtonHandlers: {
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
     Listeners.getEmbedSubmissionCollector(
       event,
-      submissionInteraction.message,
+      submissionMessage,
       originalInteraction
     )?.stop();
   },

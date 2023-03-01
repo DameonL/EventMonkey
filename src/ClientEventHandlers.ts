@@ -8,10 +8,7 @@ import {
 import Configuration from "./Configuration";
 import { attendeeTags } from "./Content/Embed/attendees";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
-import {
-  createForumChannelEvent,
-  createGuildScheduledEvent,
-} from "./EventCreators";
+import EventCreators from "./EventCreators";
 import { getNextRecurrence } from "./Recurrence";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
@@ -127,16 +124,15 @@ async function eventCompleted(
             eventMonkeyEvent.duration
         );
         eventMonkeyEvent.scheduledEvent = undefined;
-        eventMonkeyEvent.scheduledEvent = await createGuildScheduledEvent(
+        eventMonkeyEvent.scheduledEvent = await EventCreators.createGuildScheduledEvent(
           eventMonkeyEvent,
           event.guild,
           thread
         );
 
-        await createForumChannelEvent(
+        await EventCreators.createThreadChannelEvent(
           eventMonkeyEvent,
           event.guild,
-          event.client
         );
         await thread.send({
           embeds: [

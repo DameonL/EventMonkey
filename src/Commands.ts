@@ -143,7 +143,7 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     newEvent,
     "",
     interaction.guild,
-    interaction.client.application.id
+    interaction.id
   );
   await interaction.editReply(newEventMessage);
   const replyMessage = await interaction.fetchReply();
@@ -201,7 +201,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     event,
     "Editing your existing event...",
     interaction.guild,
-    Configuration.current.discordClient?.user?.id ?? ""
+    interaction.id
   );
   await interaction.reply({
     ...submissionMessage,

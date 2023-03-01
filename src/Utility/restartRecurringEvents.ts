@@ -1,10 +1,7 @@
 import { ChannelType, GuildScheduledEventStatus } from "discord.js";
 import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
-import {
-  createForumChannelEvent,
-  createGuildScheduledEvent,
-} from "../EventCreators";
+import EventCreators from "../EventCreators";
 import { getNextRecurrence } from "../Recurrence";
 import { resolveChannelString } from "./resolveChannelString";
 
@@ -56,15 +53,14 @@ export async function restartRecurringEvents() {
             eventMonkeyEvent.recurrence.timesHeld++;
           }
           eventMonkeyEvent.scheduledEvent = undefined;
-          eventMonkeyEvent.scheduledEvent = await createGuildScheduledEvent(
+          eventMonkeyEvent.scheduledEvent = await EventCreators.createGuildScheduledEvent(
             eventMonkeyEvent,
             guild,
             thread
           );
-          await createForumChannelEvent(
+          await EventCreators.createThreadChannelEvent(
             eventMonkeyEvent,
             guild,
-            configuration.discordClient
           );
         }
       }

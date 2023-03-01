@@ -48,7 +48,7 @@ export async function eventModal(
   interaction: ButtonInteraction | ChatInputCommandInteraction,
   originalInteraction: ChatInputCommandInteraction
 ) {
-  const modal = eventEditModal(event);
+  const modal = eventEditModal(event, interaction.id);
 
   await interaction.showModal(modal);
   const modalSubmission = await interaction.awaitModalSubmit({
@@ -56,7 +56,7 @@ export async function eventModal(
     filter: (submitInteraction, collected) => {
       if (
         submitInteraction.user.id === interaction.user.id &&
-        submitInteraction.customId === event.id
+        submitInteraction.customId === interaction.id
       ) {
         return true;
       }
@@ -95,7 +95,7 @@ export async function eventModal(
     event,
     "",
     interaction.guild as Guild,
-    Configuration.current.discordClient?.user?.id ?? ""
+    originalInteraction.id
   );
 
   await originalInteraction.editReply(submissionEmbed);
@@ -104,10 +104,10 @@ export async function eventModal(
   return event;
 }
 
-export function eventEditModal(event: EventMonkeyEvent) {
+export function eventEditModal(event: EventMonkeyEvent, id: string) {
   const modal = new ModalBuilder();
   modal.setTitle("Create a New Meetup");
-  modal.setCustomId(event.id);
+  modal.setCustomId(id);
 
   const serializationObject: any = {
     name: event.name,

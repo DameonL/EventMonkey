@@ -14,12 +14,12 @@ export default async function editEventMessage(
   event: EventMonkeyEvent,
   content: string,
   guild: Guild,
-  clientId: string
+  id: string
 ): Promise<MessageCreateOptions> {
   const submissionEmbed = new EmbedBuilder().setTitle(
     `${event.name} - ${TimeUtilities.getTimeString(event.scheduledStartTime)}`
   );
-  const prefix = `${clientId}_${event.id}_button`;
+  const prefix = `${id}__button`;
   const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([
     new ButtonBuilder()
       .setLabel("Edit")

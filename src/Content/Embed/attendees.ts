@@ -26,7 +26,6 @@ export function attendeesToEmbed(attendees: string[]) {
     attendeeArrays[currentArray].push(attendee);
   }
 
-  // TODO: Handle edge case when the attendee list grows over 25 fields. Make more embeds?
   const embedFields: APIEmbedField[] = [];
   let currentStart = 0;
   for (let i = 0; i < attendeeArrays.length; i++) {

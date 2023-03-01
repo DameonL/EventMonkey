@@ -3,18 +3,18 @@ import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 
 export function attendanceButtons(
   event: EventMonkeyEvent,
-  clientId: string
+  id: string
 ): ActionRowBuilder<ButtonBuilder> {
   const buttonRow = new ActionRowBuilder<ButtonBuilder>();
   buttonRow.addComponents([
     new ButtonBuilder()
       .setLabel("Attending")
       .setStyle(ButtonStyle.Success)
-      .setCustomId(`${clientId}_${event.id}_button_attending`),
+      .setCustomId(`${id}_${event.id}_button_attending`),
     new ButtonBuilder()
       .setLabel("Not Attending")
       .setStyle(ButtonStyle.Danger)
-      .setCustomId(`${clientId}_${event.id}_button_notAttending`),
+      .setCustomId(`${id}_${event.id}_button_notAttending`),
   ]);
   return buttonRow;
 }
