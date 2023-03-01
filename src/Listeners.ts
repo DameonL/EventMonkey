@@ -2,9 +2,9 @@ import {
   ButtonInteraction,
   ChannelType,
   ChatInputCommandInteraction,
+  ComponentType,
   ForumChannel,
   InteractionCollector,
-  Message,
   TextChannel,
   ThreadChannel,
 } from "discord.js";
@@ -73,32 +73,32 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
 
 function getEmbedSubmissionCollector(
   event: EventMonkeyEvent,
-  message: Message,
-  originalInteraction: ChatInputCommandInteraction
-): InteractionCollector<ButtonInteraction> {
-  if (!message.channel)
-    throw new Error("This command needs to be triggered in a channel.");
-
+  interaction: ChatInputCommandInteraction
+) {
+  if (
+    !interaction.channel ||
+    (interaction.channel.type !== ChannelType.GuildText &&
+      interaction.channel.type !== ChannelType.PublicThread)
+  )
+    return;
   if (event.submissionCollector) event.submissionCollector.stop();
   const configuration = Configuration.current;
 
-  if (!("createMessageComponentCollector" in message.channel))
-    throw new Error("This can only be used on text channels.");
-
-  const submissionCollector = message.channel.createMessageComponentCollector({
-    filter: (submissionInteraction) =>
-      submissionInteraction.user.id === event.author.id &&
-      submissionInteraction.customId.startsWith(
-        `${originalInteraction.id}_${event.id}_`
-      ),
-    time: configuration.editingTimeout,
-  }) as InteractionCollector<ButtonInteraction>;
+  const submissionCollector =
+    interaction.channel.createMessageComponentCollector<ComponentType.Button>({
+      filter: (submissionInteraction) =>
+        submissionInteraction.user.id === event.author.id &&
+        submissionInteraction.customId.startsWith(
+          `${interaction.id}_${event.id}_`
+        ),
+      time: configuration.editingTimeout,
+    });
 
   submissionCollector.on(
     "collect",
     async (submissionInteraction: ButtonInteraction) => {
       const handlerName = submissionInteraction.customId.replace(
-        `${originalInteraction.id}_${event.id}_button_`,
+        `${interaction.id}_${event.id}_button_`,
         ""
       );
       const handler = eventCreationButtonHandlers[handlerName];
@@ -110,7 +110,7 @@ function getEmbedSubmissionCollector(
         await handler(
           event,
           submissionInteraction,
-          originalInteraction,
+          interaction,
           configuration.discordClient
         );
       }
@@ -119,7 +119,7 @@ function getEmbedSubmissionCollector(
 
   submissionCollector.on("end", (collected, reason) => {
     if (reason === "time") {
-      originalInteraction.editReply({
+      interaction.editReply({
         content:
           "Sorry, your event editing timed out! You can continue from where you left off when ready.",
         embeds: [],

@@ -64,7 +64,7 @@ function getEventCommandBuilder() {
 }
 
 async function executeEventCommand(interaction: ChatInputCommandInteraction) {
-  if (!interaction.guild || !interaction.channel) return;
+  if (!interaction.guild || !interaction.channel || !("createMessageComponentCollector" in interaction.channel)) return;
   if (!interaction.member?.roles || !interaction.memberPermissions) {
     interaction.reply({
       content: "This command can only be used in a channel.",
@@ -148,7 +148,6 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   const replyMessage = await interaction.fetchReply();
   newEvent.submissionCollector = Listeners.getEmbedSubmissionCollector(
     newEvent,
-    replyMessage,
     interaction
   );
 }
@@ -208,7 +207,6 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
   const message = await interaction.fetchReply();
   event.submissionCollector = Listeners.getEmbedSubmissionCollector(
     event,
-    message,
     interaction
   );
 }

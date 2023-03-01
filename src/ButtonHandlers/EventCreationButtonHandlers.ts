@@ -173,7 +173,6 @@ const eventCreationButtonHandlers: {
     EventsUnderConstruction.saveEvent(event);
     Listeners.getEmbedSubmissionCollector(
       event,
-      submissionInteraction.message,
       originalInteraction
     )?.stop();
   },
@@ -238,7 +237,6 @@ const eventCreationButtonHandlers: {
     } finally {
       Listeners.getEmbedSubmissionCollector(
         event,
-        submissionInteraction.message,
         originalInteraction
       )?.stop();
     }
@@ -316,7 +314,6 @@ const eventCreationButtonHandlers: {
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
     Listeners.getEmbedSubmissionCollector(
       event,
-      submissionMessage,
       originalInteraction
     )?.stop();
   },
