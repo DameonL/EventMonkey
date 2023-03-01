@@ -64,7 +64,7 @@ export async function eventModal(
       return false;
     },
   });
-  await modalSubmission.deferUpdate();
+  await modalSubmission.deferReply({ ephemeral: true });
 
   const startTime = event.scheduledStartTime;
   try {
@@ -74,9 +74,8 @@ export async function eventModal(
       deserializationConfig
     );
   } catch (error: any) {
-    await modalSubmission.reply({
-      content: error.toString(),
-      ephemeral: true,
+    await modalSubmission.editReply({
+      content: JSON.stringify(error),
     });
 
     EventsUnderConstruction.saveEvent(event);
