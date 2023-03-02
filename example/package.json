@@ -1,8 +1,8 @@
 {
   "name": "eventmonkey_example",
-  "version": "0.0.44",
+  "version": "0.0.1",
   "description": "Example server for eventMonkey",
-  "main": "server.js",
+  "main": "dist/server.js",
   "repository": {
     "url": "https://github.com/DameonL/eventMonkey.git"
   },
@@ -10,6 +10,15 @@
   "license": "Creative Commons Zero v1.0 Universal",
   "dependencies": {
     "discord.js": "^14.7.1",
-    "eventmonkey": "^0.0.44"
+    "dotenv": "^16.0.3",
+    "eventmonkey": "file:../dist"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "nodemon -e ts,js,json --delay 1 --watch src --watch ../dist --exec \"npm run build && npm run start\""
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.21"
   }
 }

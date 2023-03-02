@@ -1,8 +1,7 @@
 import discord from "discord.js";
 import configuration from "./eventMonkeyConfig";
 import eventMonkey from "eventmonkey";
-
-startServer();
+import dotenv from "dotenv";
 
 const client = new discord.Client({
   intents: [
@@ -17,14 +16,21 @@ const client = new discord.Client({
   ],
 });
 
+startServer();
+
 async function startServer() {
+  dotenv.config();
   await client.login(process.env.botToken);
+  console.log("Login success");
 
   client.on(discord.Events.ClientReady, onClientReady);
+  client.on(discord.Events.Raw, (args: any) => { console.log(JSON.stringify(args, undefined, 1)); });
 }
 
 async function onClientReady(client: discord.Client) {
+  console.log("Client ready");
   configuration.discordClient = client;
   await eventMonkey.configure(configuration);
   await eventMonkey.registerCommands();
+  console.log("Commands registered.");
 }

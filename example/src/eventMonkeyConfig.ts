@@ -2,12 +2,12 @@ import eventMonkey, { EventMonkeyConfiguration } from "eventmonkey";
 
 const announcement = {
   channel: "announcements",
-  beforeStart: eventMonkey.time.minutes(30),
+  beforeStart: eventMonkey.time.toMilliseconds.minutes(30),
   onStart: true,
 };
 
 const configuration: EventMonkeyConfiguration = {
-  commandName: "seavent",
+  commandName: "eventmonkey",
   eventTypes: [
     {
       name: "Meetup",
@@ -32,8 +32,8 @@ const configuration: EventMonkeyConfiguration = {
       announcement,
     },
   ],
-  editingTimeout: eventMonkey.time.minutes(30),
-  closeThreadsAfter: eventMonkey.time.days(1),
+  editingTimeout: eventMonkey.time.toMilliseconds.minutes(30),
+  closeThreadsAfter: eventMonkey.time.toMilliseconds.days(1),
   timeZone: {
     name: "PST",
     offset: -8,
