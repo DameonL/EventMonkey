@@ -24,13 +24,6 @@ async function createGuildScheduledEvent(
   thread: ThreadChannel
 ) {
   const eventToSubmit = { ...event } as any;
-  const scheduledStartTime = new Date(eventToSubmit.scheduledStartTime);
-  scheduledStartTime.setHours(scheduledStartTime.getHours());
-
-  const scheduledEndTime = new Date(eventToSubmit.scheduledEndTime);
-  scheduledEndTime.setHours(scheduledEndTime.getHours());
-  eventToSubmit.scheduledStartTime = scheduledStartTime;
-  eventToSubmit.scheduledEndTime = scheduledEndTime;
   eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${
     thread.url
   }\nHosted by: ${eventToSubmit.author.toString()}`;
@@ -38,6 +31,12 @@ async function createGuildScheduledEvent(
   if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
     eventToSubmit.channel = eventToSubmit.entityMetadata.location;
     delete eventToSubmit.entityMetadata;
+  }
+
+  if (!eventToSubmit.scheduledEndTime) {
+    const endTime = new Date(eventToSubmit.scheduledStartTime);
+    endTime.setHours(endTime.getHours() + eventToSubmit.duration);
+    eventToSubmit.scheduledEndTime = endTime;
   }
 
   const scheduledEvent = await (event.scheduledEvent
