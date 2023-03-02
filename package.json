@@ -10,8 +10,8 @@
   "main": "dist/EventMonkey.js",
   "scripts": {
     "dev": "nodemon --watch src --watch package.json --watch package.dist.json --ext ts,js,json --exec \"npm run build\"",
-    "build": "rimraf dist && tsc && copy-files-from-to",
-    "deploy": "rimraf dist && npm run build && cd dist && npm publish"
+    "build": "copy-files-from-to && cd src && tsc",
+    "deploy": "rimraf dist && rimraf dist && npm run build && cd dist && npm publish"
   },
   "copyFiles": [
     {
