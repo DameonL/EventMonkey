@@ -109,10 +109,21 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     );
 
+    startupMaintenanceTasks();
+    startRecurringTasks();
+  }
+}
+
+async function startupMaintenanceTasks() {
+  try {
+    console.log("Performing startup maintenance...")
     await Threads.closeAllOutdatedThreads();
     await restartRecurringEvents();
     await performAnnouncements();
-    startRecurringTasks();
+    console.log("Startup maintenance complete.");
+  } catch (error) {
+    console.log("Error in startup maintenance task:");
+    console.error(error);
   }
 }
 
