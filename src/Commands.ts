@@ -114,7 +114,7 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   ).id;
   const defaultStartTime = new Date();
   defaultStartTime.setHours(
-    defaultStartTime.getHours() + Configuration.current.timeZone.offset
+    defaultStartTime.getHours()
   );
   defaultStartTime.setDate(defaultStartTime.getDate() + 1);
   const defaultDuration = 1;

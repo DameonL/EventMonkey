@@ -1,28 +1,22 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  Client,
   Guild,
   GuildScheduledEventEntityType,
   Message,
   ThreadChannel,
 } from "discord.js";
-import Configuration from "./Configuration";
 import { attendanceButtons } from "./Content/Component/attendanceButtons";
 import { attendeesToEmbed } from "./Content/Embed/attendees";
-import {
-  eventEmbed,
-  getEventDetailsEmbed,
-  getEventDetailsMessage,
-} from "./Content/Embed/eventEmbed";
+import { eventEmbed, getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export default {
   createGuildScheduledEvent,
-  createThreadChannelEvent
-}
+  createThreadChannelEvent,
+};
 
 async function createGuildScheduledEvent(
   event: EventMonkeyEvent,
@@ -31,14 +25,10 @@ async function createGuildScheduledEvent(
 ) {
   const eventToSubmit = { ...event } as any;
   const scheduledStartTime = new Date(eventToSubmit.scheduledStartTime);
-  scheduledStartTime.setHours(
-    scheduledStartTime.getHours() + Configuration.current.timeZone.offset
-  );
+  scheduledStartTime.setHours(scheduledStartTime.getHours());
 
   const scheduledEndTime = new Date(eventToSubmit.scheduledEndTime);
-  scheduledEndTime.setHours(
-    scheduledEndTime.getHours() + Configuration.current.timeZone.offset
-  );
+  scheduledEndTime.setHours(scheduledEndTime.getHours());
   eventToSubmit.scheduledStartTime = scheduledStartTime;
   eventToSubmit.scheduledEndTime = scheduledEndTime;
   eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${
@@ -57,10 +47,7 @@ async function createGuildScheduledEvent(
   return scheduledEvent;
 }
 
-async function createThreadChannelEvent(
-  event: EventMonkeyEvent,
-  guild: Guild,
-) {
+async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
   const scheduledEndTime = new Date(event.scheduledStartTime);
   scheduledEndTime.setHours(scheduledEndTime.getHours() + event.duration);
   const targetChannel = await resolveChannelString(
