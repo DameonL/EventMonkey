@@ -21,15 +21,20 @@ export default {
   closeAllOutdatedThreads,
   closeOutdatedThreadsInChannel,
   closeEventThread,
-  getThreadFromEventDescription
-}
+  getThreadFromEventDescription,
+};
 
 async function closeAllOutdatedThreads() {
   if (!Configuration.current.discordClient) return;
 
-  for (const [guildId, guild] of Configuration.current.discordClient.guilds.cache) {
-    for (const { name, discussionChannel } of Configuration.current.eventTypes) {
-      const resolvedChannel = await resolveChannelString(discussionChannel, guild);
+  for (const [guildId, guild] of Configuration.current.discordClient.guilds
+    .cache) {
+    for (const { name, discussionChannel } of Configuration.current
+      .eventTypes) {
+      const resolvedChannel = await resolveChannelString(
+        discussionChannel,
+        guild
+      );
       if (
         resolvedChannel.type === ChannelType.GuildText ||
         resolvedChannel.type === ChannelType.GuildForum
@@ -40,10 +45,8 @@ async function closeAllOutdatedThreads() {
   }
 }
 
-async function closeOutdatedThreadsInChannel(
-  channel: ChannelWithThreads
-) {
-  const threads = await (await channel.threads.fetchActive()).threads;
+async function closeOutdatedThreadsInChannel(channel: ChannelWithThreads) {
+  const threads = (await channel.threads.fetchActive()).threads;
   const client = channel.threads.client;
 
   for (const [threadName, threadChannel] of threads) {
@@ -79,7 +82,8 @@ async function closeEventThread(
         : lastMessage.createdAt;
   }
 
-  const closeThreadsAfter = Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1);
+  const closeThreadsAfter =
+    Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1);
   if (
     threadAge &&
     new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter
@@ -111,7 +115,9 @@ async function getThreadFromEventDescription(
   );
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
-    const thread = await Configuration.current.discordClient?.channels.fetch(threadId);
+    const thread = await Configuration.current.discordClient?.channels.fetch(
+      threadId
+    );
     if (thread && thread.type === ChannelType.PublicThread) {
       return thread;
     }
