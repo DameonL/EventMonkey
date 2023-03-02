@@ -1,33 +1,29 @@
 import Configuration from "../Configuration";
 
-export default {
-  toMilliseconds: {
-    days,
-    hours,
-    minutes,
-    seconds,
-  },
-  getTimeFromString,
-  getTimeString,
+const toMilliseconds = {
+  days: (numberOfDays: number) => toMilliseconds.hours(24) * numberOfDays,
+  hours: (numberOfHours: number) => toMilliseconds.minutes(60) * numberOfHours,
+  minutes: (numberOfMinutes: number) =>
+    toMilliseconds.seconds(60) * numberOfMinutes,
+  seconds: (numberOfSeconds: number) => 1000 * numberOfSeconds,
 };
 
-export function days(numberOfDays: number) {
-  return hours(24) * numberOfDays;
-}
+const fromMilliseconds = {
+  days: (milliseconds: number) => fromMilliseconds.seconds(milliseconds) / 24,
+  hours: (milliseconds: number) => fromMilliseconds.minutes(milliseconds) / 60,
+  minutes: (milliseconds: number) =>
+    fromMilliseconds.seconds(milliseconds) / 60,
+  seconds: (milliseconds: number) => milliseconds / 1000,
+};
 
-export function hours(numberOfHours: number) {
-  return minutes(60) * numberOfHours;
-}
+export default {
+  getTimeFromString,
+  getTimeString,
+  toMilliseconds,
+  fromMilliseconds,
+};
 
-export function minutes(numberOfMinutes: number) {
-  return seconds(60) * numberOfMinutes;
-}
-
-export function seconds(numberOfSeconds: number) {
-  return 1000 * numberOfSeconds;
-}
-
-export function getTimeFromString(text: string): Date {
+function getTimeFromString(text: string): Date {
   const matches = text.match(
     /(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,?\s+\d\d?:\d\d\s+(AM|PM))/i
   );
@@ -36,15 +32,15 @@ export function getTimeFromString(text: string): Date {
 
   const output = new Date(matches.groups.time);
   output.setHours(
-    output.getHours() + hours(Configuration.current.timeZone.offset)
+    output.getHours() + toMilliseconds.hours(Configuration.current.timeZone.offset)
   );
   return output;
 }
 
-export function getTimeString(date: Date): string {
+function getTimeString(date: Date): string {
   const offsetDate = new Date(date);
   offsetDate.setHours(
-    offsetDate.getHours() - hours(Configuration.current.timeZone.offset)
+    offsetDate.getHours() - toMilliseconds.hours(Configuration.current.timeZone.offset)
   );
 
   return `${date
