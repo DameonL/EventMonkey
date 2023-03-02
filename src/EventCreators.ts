@@ -32,12 +32,12 @@ async function createGuildScheduledEvent(
   const eventToSubmit = { ...event } as any;
   const scheduledStartTime = new Date(eventToSubmit.scheduledStartTime);
   scheduledStartTime.setHours(
-    scheduledStartTime.getHours() - Configuration.current.timeZone.offset
+    scheduledStartTime.getHours() + Configuration.current.timeZone.offset
   );
 
   const scheduledEndTime = new Date(eventToSubmit.scheduledEndTime);
   scheduledEndTime.setHours(
-    scheduledStartTime.getHours() - Configuration.current.timeZone.offset
+    scheduledStartTime.getHours() + Configuration.current.timeZone.offset
   );
   eventToSubmit.scheduledStartTime = scheduledStartTime;
   eventToSubmit.scheduledEndTime = scheduledEndTime;

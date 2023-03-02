@@ -35,10 +35,18 @@ export function getTimeFromString(text: string): Date {
     throw new Error("Unable to parse date from string.");
 
   const output = new Date(matches.groups.time);
+  output.setHours(
+    output.getHours() + hours(Configuration.current.timeZone.offset)
+  );
   return output;
 }
 
 export function getTimeString(date: Date): string {
+  const offsetDate = new Date(date);
+  offsetDate.setHours(
+    offsetDate.getHours() + hours(Configuration.current.timeZone.offset)
+  );
+
   return `${date
     .toLocaleString("en-us", {
       day: "2-digit",

@@ -18,7 +18,6 @@ import { EventMonkeyEvent } from "./EventMonkey";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
-import TimeUtilities from "./Utility/TimeUtilities";
 
 export const eventCommand = {
   builder: getEventCommandBuilder,
@@ -64,7 +63,12 @@ function getEventCommandBuilder() {
 }
 
 async function executeEventCommand(interaction: ChatInputCommandInteraction) {
-  if (!interaction.guild || !interaction.channel || !("createMessageComponentCollector" in interaction.channel)) return;
+  if (
+    !interaction.guild ||
+    !interaction.channel ||
+    !("createMessageComponentCollector" in interaction.channel)
+  )
+    return;
   if (!interaction.member?.roles || !interaction.memberPermissions) {
     interaction.reply({
       content: "This command can only be used in a channel.",
@@ -139,11 +143,7 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
 
   newEvent.entityType = entityType;
   EventsUnderConstruction.saveEvent(newEvent);
-  var newEventMessage = await editEventMessage(
-    newEvent,
-    "",
-    interaction
-  );
+  var newEventMessage = await editEventMessage(newEvent, "", interaction);
   await interaction.editReply(newEventMessage);
   const replyMessage = await interaction.fetchReply();
   newEvent.submissionCollector = Listeners.getEmbedSubmissionCollector(
@@ -170,14 +170,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  if (
-    event.threadChannel &&
-    event.scheduledStartTime.valueOf() <
-      Date.now() +
-        TimeUtilities.toMilliseconds.hours(
-          Configuration.current.timeZone.offset
-        )
-  ) {
+  if (event.threadChannel && event.scheduledStartTime.valueOf() < Date.now()) {
     interaction.reply({
       content: "You can't edit an event that is in the past.",
       ephemeral: true,

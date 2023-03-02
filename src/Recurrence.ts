@@ -48,6 +48,7 @@ export function getNextValidRecurrence(
     Date.now() +
     Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
   let nextStartDate = getNextRecurrence(recurrence);
+  recurrence.timesHeld++;
 
   while (nextStartDate.valueOf() < now) {
     const delta = now - nextStartDate.valueOf();
@@ -56,8 +57,8 @@ export function getNextValidRecurrence(
       break;
     }
 
-    recurrence.timesHeld++;
     nextStartDate = getNextRecurrence(recurrence);
+    recurrence.timesHeld++;
   }
 
   const scheduledEndTime = new Date(getNextRecurrence(recurrence));

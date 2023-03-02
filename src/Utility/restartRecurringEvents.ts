@@ -2,7 +2,7 @@ import { ChannelType, GuildScheduledEventStatus } from "discord.js";
 import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
 import EventCreators from "../EventCreators";
-import { getNextRecurrence, getNextValidRecurrence } from "../Recurrence";
+import { getNextValidRecurrence } from "../Recurrence";
 import { resolveChannelString } from "./resolveChannelString";
 
 export async function restartRecurringEvents() {
@@ -10,7 +10,7 @@ export async function restartRecurringEvents() {
 
   if (!configuration.discordClient) return;
 
-  const now = Date.now() + configuration.timeZone.offset;
+  const now = Date.now();
   for (const [
     guildName,
     guildAuth,
@@ -48,7 +48,11 @@ export async function restartRecurringEvents() {
             eventMonkeyEvent.scheduledEvent.status ===
               GuildScheduledEventStatus.Completed)
         ) {
-          const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(eventMonkeyEvent.recurrence, eventMonkeyEvent.duration);
+          const { scheduledStartTime, scheduledEndTime } =
+            getNextValidRecurrence(
+              eventMonkeyEvent.recurrence,
+              eventMonkeyEvent.duration
+            );
           eventMonkeyEvent.scheduledStartTime = scheduledStartTime;
           eventMonkeyEvent.scheduledEndTime = scheduledEndTime;
           eventMonkeyEvent.scheduledEvent = undefined;

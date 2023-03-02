@@ -1,7 +1,6 @@
 import {
   ButtonInteraction,
   ChatInputCommandInteraction,
-  Guild,
   GuildScheduledEventEntityType,
   ModalBuilder,
   TextInputStyle,
@@ -9,7 +8,6 @@ import {
 import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
 import EventsUnderConstruction from "../../EventsUnderConstruction";
-import Listeners from "../../Listeners";
 import Time from "../../Utility/TimeUtilities";
 import editEventMessage from "../Embed/editEventMessage";
 import {
@@ -30,12 +28,7 @@ const deserializationConfig: ModalDeserializationConfig = {
   },
   customDeserializers: {
     scheduledStartTime: (fieldValue: string) => {
-      const output = new Date(Date.parse(fieldValue));
-      if (Configuration.current.timeZone) {
-        output.setHours(
-          output.getHours() + Configuration.current.timeZone.offset
-        );
-      }
+      const output = Time.getTimeFromString(fieldValue);
 
       return output;
     },
@@ -91,11 +84,7 @@ export async function eventModal(
     event.recurrence.timesHeld = 0;
   }
 
-  let submissionEmbed = await editEventMessage(
-    event,
-    "",
-    originalInteraction
-  );
+  let submissionEmbed = await editEventMessage(event, "", originalInteraction);
 
   await originalInteraction.editReply(submissionEmbed);
   await modalSubmission.deleteReply();

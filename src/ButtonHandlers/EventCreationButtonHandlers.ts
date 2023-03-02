@@ -6,13 +6,11 @@ import {
   ChatInputCommandInteraction,
   Client,
   EmbedBuilder,
-  Guild,
   GuildScheduledEvent,
   PermissionsBitField,
   TextInputModalData,
   ThreadChannel,
 } from "discord.js";
-import Configuration from "../Configuration";
 import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import { editRecurrence } from "../Content/Modal/editRecurrence";
@@ -171,19 +169,14 @@ const eventCreationButtonHandlers: {
       components: [],
     });
     EventsUnderConstruction.saveEvent(event);
-    Listeners.getEmbedSubmissionCollector(
-      event,
-      originalInteraction
-    )?.stop();
+    Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
   },
   finish: async (event, submissionInteraction, originalInteraction, client) => {
     if (!submissionInteraction.message.guild) return;
     await submissionInteraction.deferUpdate();
 
     if (
-      event.scheduledStartTime.valueOf() -
-        Date.now() +
-        Time.toMilliseconds.hours(Configuration.current.timeZone.offset) <
+      event.scheduledStartTime.valueOf() - Date.now() <
       Time.toMilliseconds.minutes(30)
     ) {
       const member = await submissionInteraction.message.guild.members.fetch(
@@ -235,10 +228,7 @@ const eventCreationButtonHandlers: {
       EventsUnderConstruction.saveEvent(event);
       return;
     } finally {
-      Listeners.getEmbedSubmissionCollector(
-        event,
-        originalInteraction
-      )?.stop();
+      Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
     }
 
     await originalInteraction.editReply({
@@ -312,10 +302,7 @@ const eventCreationButtonHandlers: {
     });
 
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
-    Listeners.getEmbedSubmissionCollector(
-      event,
-      originalInteraction
-    )?.stop();
+    Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
   },
 };
 
