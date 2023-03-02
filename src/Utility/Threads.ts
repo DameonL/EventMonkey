@@ -54,7 +54,7 @@ async function closeOutdatedThreadsInChannel(
         threadEvent.scheduledEvent.isCompleted() ||
         threadEvent.scheduledEvent.isCanceled())
     ) {
-      closeEventThread(threadChannel, threadEvent.scheduledEvent);
+      await closeEventThread(threadChannel, threadEvent.scheduledEvent);
     }
   }
 }
