@@ -225,6 +225,8 @@ const eventCreationButtonHandlers: {
         components: [],
       });
 
+      if (forumThread) await forumThread.delete();
+      
       EventsUnderConstruction.saveEvent(event);
       return;
     } finally {
