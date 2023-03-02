@@ -27,11 +27,10 @@ async function startServer() {
   })
   
   dotenv.config();
-  await client.login(process.env.botToken);
-  console.log("Login success");
-
   client.on(discord.Events.ClientReady, onClientReady);
   client.on(discord.Events.Raw, (args: any) => { console.log(JSON.stringify(args, undefined, 1)); });
+  await client.login(process.env.botToken);
+  console.log("Login success");
 }
 
 async function onClientReady(client: discord.Client) {
