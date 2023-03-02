@@ -8,7 +8,7 @@ import {
   MessageCreateOptions,
 } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import TimeUtilities from "../../Utility/TimeUtilities";
+import Time from "../../Utility/Time";
 import { eventEmbed } from "./eventEmbed";
 
 export default async function editEventMessage(
@@ -19,7 +19,7 @@ export default async function editEventMessage(
   if (!originalInteraction.guild) throw new Error("Interaction must be in a guild.");
 
   const submissionEmbed = new EmbedBuilder().setTitle(
-    `${event.name} - ${TimeUtilities.getTimeString(event.scheduledStartTime)}`
+    `${event.name} - ${Time.getTimeString(event.scheduledStartTime)}`
   );
   const prefix = `${originalInteraction.id}_${event.id}_button`;
   const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([

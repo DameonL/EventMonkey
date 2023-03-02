@@ -4,7 +4,7 @@ import {
   ThreadChannel,
 } from "discord.js";
 import Configuration from "../Configuration";
-import Time from "./TimeUtilities";
+import Time from "./Time";
 
 export async function sendEventClosingMessage(
   thread: ThreadChannel,

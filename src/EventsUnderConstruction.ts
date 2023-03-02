@@ -1,5 +1,5 @@
 import { EventMonkeyEvent } from "./EventMonkey";
-import Time from "./Utility/TimeUtilities";
+import Time from "./Utility/Time";
 
 const eventsUnderConstruction: UserEventMap = {};
 

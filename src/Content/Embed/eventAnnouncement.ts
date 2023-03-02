@@ -1,6 +1,6 @@
 import { APIEmbedField, EmbedBuilder } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkeyEvent";
-import Time from "../../Utility/TimeUtilities";
+import Time from "../../Utility/Time";
 
 export default function eventAnnouncement(
   event: EventMonkeyEvent,

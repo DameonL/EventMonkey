@@ -1,5 +1,4 @@
-import Configuration from "./Configuration";
-import Time from "./Utility/TimeUtilities";
+import Time from "./Utility/Time";
 
 export interface EventRecurrence {
   firstStartTime: Date;
@@ -44,9 +43,7 @@ export function getNextValidRecurrence(
   recurrence: EventRecurrence,
   eventDuration: number
 ) {
-  const now =
-    Date.now() +
-    Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
+  const now = Date.now();
   let nextStartDate = getNextRecurrence(recurrence);
   recurrence.timesHeld++;
 

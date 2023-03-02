@@ -20,7 +20,7 @@ import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
 import Listeners from "../Listeners";
 import Threads from "../Utility/Threads";
-import Time from "../Utility/TimeUtilities";
+import Time from "../Utility/Time";
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (

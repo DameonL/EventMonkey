@@ -1,0 +1,15 @@
+{
+  "name": "eventmonkey_example",
+  "version": "0.0.44",
+  "description": "Example server for eventMonkey",
+  "main": "server.js",
+  "repository": {
+    "url": "https://github.com/DameonL/eventMonkey.git"
+  },
+  "author": "Dameon Laird",
+  "license": "Creative Commons Zero v1.0 Universal",
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "eventmonkey": "^0.0.44"
+  }
+}

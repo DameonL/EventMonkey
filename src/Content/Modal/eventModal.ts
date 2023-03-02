@@ -8,7 +8,7 @@ import {
 import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
 import EventsUnderConstruction from "../../EventsUnderConstruction";
-import Time from "../../Utility/TimeUtilities";
+import Time from "../../Utility/Time";
 import editEventMessage from "../Embed/editEventMessage";
 import {
   deserializeModal,

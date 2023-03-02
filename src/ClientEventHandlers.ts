@@ -13,7 +13,7 @@ import { getNextRecurrence, getNextValidRecurrence } from "./Recurrence";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
-import Time from "./Utility/TimeUtilities";
+import Time from "./Utility/Time";
 
 export default {
   eventStarted,

@@ -44,7 +44,7 @@ export function getTimeFromString(text: string): Date {
 export function getTimeString(date: Date): string {
   const offsetDate = new Date(date);
   offsetDate.setHours(
-    offsetDate.getHours() + hours(Configuration.current.timeZone.offset)
+    offsetDate.getHours() - hours(Configuration.current.timeZone.offset)
   );
 
   return `${date

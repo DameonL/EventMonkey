@@ -20,7 +20,7 @@ import {
   serializeRecurrence,
 } from "../../Recurrence";
 import { resolveChannelString } from "../../Utility/resolveChannelString";
-import Time from "../../Utility/TimeUtilities";
+import Time from "../../Utility/Time";
 import { getAttendeesFromMessage } from "./attendees";
 
 export async function eventEmbed(

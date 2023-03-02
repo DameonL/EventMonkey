@@ -17,7 +17,7 @@ import performAnnouncements from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
-import Time from "./Utility/TimeUtilities";
+import Time from "./Utility/Time";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 export default {
@@ -25,6 +25,7 @@ export default {
   defaultConfiguration: Configuration.defaultConfiguration,
   configure,
   registerCommands,
+  time: Time,
 };
 
 async function registerCommands() {

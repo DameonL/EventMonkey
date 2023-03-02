@@ -9,7 +9,7 @@ import {
 import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
 import { resolveChannelString } from "./resolveChannelString";
-import Time from "./TimeUtilities";
+import Time from "./Time";
 
 interface ChannelWithThreads {
   threads:
