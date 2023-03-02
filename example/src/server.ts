@@ -2,6 +2,7 @@ import discord from "discord.js";
 import configuration from "./eventMonkeyConfig";
 import eventMonkey from "eventmonkey";
 import dotenv from "dotenv";
+import express from "express";
 
 const client = new discord.Client({
   intents: [
@@ -19,6 +20,12 @@ const client = new discord.Client({
 startServer();
 
 async function startServer() {
+  const expressServer = express();
+  expressServer.listen(8080);
+  expressServer.get("/", (request, response, next) => {
+    response.send("Eventmonkey is active.");
+  })
+  
   dotenv.config();
   await client.login(process.env.botToken);
   console.log("Login success");
