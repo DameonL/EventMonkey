@@ -62,6 +62,9 @@ async function registerCommands() {
 }
 
 async function configure(newConfiguration: EventMonkeyConfiguration) {
+  const serverOffset = Math.round(new Date().getTimezoneOffset() / 60);
+  newConfiguration.timeZone.offset += serverOffset;
+
   const cachedClient = Configuration.current.discordClient;
   Configuration.current = newConfiguration;
 
@@ -106,9 +109,9 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     );
 
-    Threads.closeAllOutdatedThreads();
-    restartRecurringEvents();
-    performAnnouncements();
+    await Threads.closeAllOutdatedThreads();
+    await restartRecurringEvents();
+    await performAnnouncements();
     startRecurringTasks();
   }
 }
