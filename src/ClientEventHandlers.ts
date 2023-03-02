@@ -9,7 +9,7 @@ import Configuration from "./Configuration";
 import eventAnnouncement from "./Content/Embed/eventAnnouncement";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import EventCreators from "./EventCreators";
-import { getNextRecurrence } from "./Recurrence";
+import { getNextRecurrence, getNextValidRecurrence } from "./Recurrence";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
@@ -88,30 +88,9 @@ async function eventCompleted(
       const eventMonkeyEvent = await deseralizeEventEmbed(thread, event.client);
 
       if (eventMonkeyEvent.recurrence) {
-        const now =
-          Date.now() +
-          Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
-        let nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
-
-        while (nextStartDate.valueOf() < now) {
-          const delta = now - nextStartDate.valueOf();
-          if (delta > 0 && delta < Time.toMilliseconds.minutes(5)) {
-            nextStartDate.setMinutes(nextStartDate.getMinutes() + 5);
-            break;
-          }
-
-          eventMonkeyEvent.recurrence.timesHeld++;
-          nextStartDate = getNextRecurrence(eventMonkeyEvent.recurrence);
-        }
-
-        eventMonkeyEvent.scheduledStartTime = nextStartDate;
-        eventMonkeyEvent.scheduledEndTime = new Date(
-          getNextRecurrence(eventMonkeyEvent.recurrence)
-        );
-        eventMonkeyEvent.scheduledEndTime.setHours(
-          eventMonkeyEvent.scheduledEndTime.getHours() +
-            eventMonkeyEvent.duration
-        );
+        const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(eventMonkeyEvent.recurrence, eventMonkeyEvent.duration)
+        eventMonkeyEvent.scheduledStartTime = scheduledStartTime;
+        eventMonkeyEvent.scheduledEndTime = scheduledEndTime;
         eventMonkeyEvent.scheduledEvent = undefined;
         eventMonkeyEvent.scheduledEvent =
           await EventCreators.createGuildScheduledEvent(
@@ -130,7 +109,7 @@ async function eventCompleted(
               .setTitle("Event is over")
               .setDescription(
                 `We'll see you next time at ${Time.getTimeString(
-                  nextStartDate
+                  scheduledStartTime
                 )}!`
               ),
           ],

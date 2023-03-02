@@ -1,3 +1,4 @@
+import Configuration from "./Configuration";
 import Time from "./Utility/TimeUtilities";
 
 export interface EventRecurrence {
@@ -39,16 +40,42 @@ export function getNextRecurrence(recurrence: EventRecurrence): Date {
   return nextRecurrence;
 }
 
+export function getNextValidRecurrence(
+  recurrence: EventRecurrence,
+  eventDuration: number
+) {
+  const now =
+    Date.now() +
+    Time.toMilliseconds.hours(Configuration.current.timeZone.offset);
+  let nextStartDate = getNextRecurrence(recurrence);
+
+  while (nextStartDate.valueOf() < now) {
+    const delta = now - nextStartDate.valueOf();
+    if (delta > 0 && delta < Time.toMilliseconds.minutes(5)) {
+      nextStartDate.setMinutes(nextStartDate.getMinutes() + 5);
+      break;
+    }
+
+    recurrence.timesHeld++;
+    nextStartDate = getNextRecurrence(recurrence);
+  }
+
+  const scheduledEndTime = new Date(getNextRecurrence(recurrence));
+  scheduledEndTime.setHours(scheduledEndTime.getHours() + eventDuration);
+
+  return { scheduledStartTime: nextStartDate, scheduledEndTime };
+}
+
 export function getRecurrenceUnit(recurrence: EventRecurrence) {
   return recurrence.hours
-  ? "hour"
-  : recurrence.days
-  ? "day"
-  : recurrence.weeks
-  ? "week"
-  : recurrence.months
-  ? "month"
-  : undefined;
+    ? "hour"
+    : recurrence.days
+    ? "day"
+    : recurrence.weeks
+    ? "week"
+    : recurrence.months
+    ? "month"
+    : undefined;
 }
 
 export function serializeRecurrence(recurrence: EventRecurrence) {

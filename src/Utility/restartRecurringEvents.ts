@@ -2,7 +2,7 @@ import { ChannelType, GuildScheduledEventStatus } from "discord.js";
 import Configuration from "../Configuration";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
 import EventCreators from "../EventCreators";
-import { getNextRecurrence } from "../Recurrence";
+import { getNextRecurrence, getNextValidRecurrence } from "../Recurrence";
 import { resolveChannelString } from "./resolveChannelString";
 
 export async function restartRecurringEvents() {
@@ -17,16 +17,18 @@ export async function restartRecurringEvents() {
   ] of await configuration.discordClient.guilds.fetch()) {
     const guild = await guildAuth.fetch();
     for (const eventType of configuration.eventTypes) {
-      const channel = await resolveChannelString(eventType.discussionChannel, guild);
+      const channel = await resolveChannelString(
+        eventType.discussionChannel,
+        guild
+      );
       if (
         channel.type !== ChannelType.GuildText &&
         channel.type !== ChannelType.GuildForum
       )
         continue;
 
-      for (const [threadName, thread] of await (
-        await channel.threads.fetchActive()
-      ).threads) {
+      for (const [threadName, thread] of (await channel.threads.fetchActive())
+        .threads) {
         const threadPins = [...(await thread.messages.fetchPinned())];
         if (threadPins.length === 0) continue;
         if (
@@ -46,22 +48,17 @@ export async function restartRecurringEvents() {
             eventMonkeyEvent.scheduledEvent.status ===
               GuildScheduledEventStatus.Completed)
         ) {
-          while (eventMonkeyEvent.scheduledStartTime.valueOf() < now) {
-            eventMonkeyEvent.scheduledStartTime = getNextRecurrence(
-              eventMonkeyEvent.recurrence
-            );
-            eventMonkeyEvent.recurrence.timesHeld++;
-          }
+          const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(eventMonkeyEvent.recurrence, eventMonkeyEvent.duration);
+          eventMonkeyEvent.scheduledStartTime = scheduledStartTime;
+          eventMonkeyEvent.scheduledEndTime = scheduledEndTime;
           eventMonkeyEvent.scheduledEvent = undefined;
-          eventMonkeyEvent.scheduledEvent = await EventCreators.createGuildScheduledEvent(
-            eventMonkeyEvent,
-            guild,
-            thread
-          );
-          await EventCreators.createThreadChannelEvent(
-            eventMonkeyEvent,
-            guild,
-          );
+          eventMonkeyEvent.scheduledEvent =
+            await EventCreators.createGuildScheduledEvent(
+              eventMonkeyEvent,
+              guild,
+              thread
+            );
+          await EventCreators.createThreadChannelEvent(eventMonkeyEvent, guild);
         }
       }
     }
