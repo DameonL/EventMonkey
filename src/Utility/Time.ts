@@ -23,7 +23,7 @@ export default {
   fromMilliseconds,
 };
 
-function getTimeFromString(text: string): Date {
+function getTimeFromString(text: string, useTimezone: boolean = true): Date {
   const matches = text.match(
     /(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,?\s+\d\d?:\d\d\s+(AM|PM))/i
   );
@@ -31,17 +31,22 @@ function getTimeFromString(text: string): Date {
     throw new Error("Unable to parse date from string.");
 
   const output = new Date(matches.groups.time);
-  output.setHours(
-    output.getHours() + toMilliseconds.hours(Configuration.current.timeZone.offset)
-  );
+  if (useTimezone) {
+    output.setHours(
+      output.getHours() - Configuration.current.timeZone.offset
+    );
+  }
+  
   return output;
 }
 
-function getTimeString(date: Date): string {
+function getTimeString(date: Date, useTimezone: boolean = true): string {
   const offsetDate = new Date(date);
-  offsetDate.setHours(
-    offsetDate.getHours() - toMilliseconds.hours(Configuration.current.timeZone.offset)
-  );
+  if (useTimezone) {
+    offsetDate.setHours(
+      offsetDate.getHours() + Configuration.current.timeZone.offset
+    );
+  }
 
   return `${date
     .toLocaleString("en-us", {
