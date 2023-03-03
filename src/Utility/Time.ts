@@ -48,7 +48,7 @@ function getTimeString(date: Date, useTimezone: boolean = true): string {
     );
   }
 
-  return `${date
+  return `${offsetDate
     .toLocaleString("en-us", {
       day: "2-digit",
       month: "2-digit",
@@ -58,6 +58,6 @@ function getTimeString(date: Date, useTimezone: boolean = true): string {
     })
     .replace(",", "")
     .replace(" ", " ")} ${
-    Configuration.current.timeZone ? Configuration.current.timeZone.name : ""
+    Configuration.current.timeZone.name
   }`;
 }
