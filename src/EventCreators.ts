@@ -25,6 +25,10 @@ async function createGuildScheduledEvent(
   thread: ThreadChannel
 ) {
   const eventToSubmit = { ...event } as any;
+  eventToSubmit.creatorId = eventToSubmit.author.id;
+  delete eventToSubmit.threadChannel;
+  delete eventToSubmit.scheduledEvent;
+
   eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${
     thread.url
   }\nHosted by: ${eventToSubmit.author.toString()}`;
@@ -33,6 +37,7 @@ async function createGuildScheduledEvent(
     eventToSubmit.channel = eventToSubmit.entityMetadata.location;
     delete eventToSubmit.entityMetadata;
   }
+  delete eventToSubmit.author;
 
   if (!eventToSubmit.scheduledEndTime) {
     const endTime = new Date(eventToSubmit.scheduledStartTime);
