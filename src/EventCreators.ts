@@ -25,26 +25,27 @@ async function createGuildScheduledEvent(
     guild: Guild,
     thread: ThreadChannel
 ) {
-    const eventToSubmit = { ...event } as any;
-    eventToSubmit.creatorId = eventToSubmit.author.id;
-    delete eventToSubmit.threadChannel;
-    delete eventToSubmit.scheduledEvent;
-
-    eventToSubmit.description = `${eventToSubmit.description}\nDiscussion: ${
+    const eventToSubmit = {} as any;
+    eventToSubmit.creatorId = event.author.id;
+    eventToSubmit.description = `${event.description}\nDiscussion: ${
         thread.url
-    }\nHosted by: ${eventToSubmit.author.toString()}`;
-    eventToSubmit.name = `${eventToSubmit.name} hosted by ${eventToSubmit.author.username}`;
-    if (eventToSubmit.entityType !== GuildScheduledEventEntityType.External) {
+    }\nHosted by: ${event.author.toString()}`;
+    eventToSubmit.name = `${event.name} hosted by ${event.author.username}`;
+    if (event.entityType !== GuildScheduledEventEntityType.External) {
         eventToSubmit.channel = eventToSubmit.entityMetadata.location;
-        delete eventToSubmit.entityMetadata;
+    } else {
+        eventToSubmit.entityMetadata = event.entityMetadata;
     }
-    delete eventToSubmit.author;
 
-    if (!eventToSubmit.scheduledEndTime) {
+    if (!event.scheduledEndTime) {
         const endTime = new Date(eventToSubmit.scheduledStartTime);
         endTime.setHours(endTime.getHours() + eventToSubmit.duration);
         eventToSubmit.scheduledEndTime = endTime;
+    } else {
+        eventToSubmit.scheduledEndTime = event.scheduledEndTime;
     }
+
+    eventToSubmit.image = event.image;
 
     const scheduledEvent = await (event.scheduledEvent
         ? guild.scheduledEvents.edit(event.scheduledEvent.id, eventToSubmit)
