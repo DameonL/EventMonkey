@@ -189,7 +189,7 @@ export async function getEventDetailsMessage(thread: ThreadChannel) {
 }
 
 export function getEventNameFromString(text: string): string {
-  const matches = text.match(/(AM|PM) - (?<name>.*)(?= hosted by)/i);
+  const matches = text.match(/(AM|PM)(\s+\w+)?\s+-\s+(?<name>.*)(?= hosted by)/i);
   if (!matches || !matches.groups)
     throw new Error("Unable to parse event name from string.");
 
