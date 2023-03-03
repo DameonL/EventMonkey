@@ -38,6 +38,7 @@ async function createGuildScheduledEvent(
         eventToSubmit.entityMetadata = event.entityMetadata;
     }
 
+    eventToSubmit.scheduledStartTime = event.scheduledStartTime;
     if (!event.scheduledEndTime) {
         const endTime = new Date(eventToSubmit.scheduledStartTime);
         endTime.setHours(endTime.getHours() + eventToSubmit.duration);
