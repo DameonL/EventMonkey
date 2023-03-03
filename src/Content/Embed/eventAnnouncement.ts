@@ -15,7 +15,7 @@ export default function eventAnnouncement(
     : `is starting now`;
 
   const announcementEmbed: APIEmbed = {
-    title: "Event Reminder",
+    title: `${timeBeforeStart ? "Upcoming " : ""}Event Reminder - ${Time.getTimeString(event.scheduledStartTime)}`,
     description: `The event "${
       event.name
     }" hosted by ${event.author.toString()} ${startingString}!`,
