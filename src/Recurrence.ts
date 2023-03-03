@@ -45,7 +45,7 @@ export function getNextValidRecurrence(
 ) {
   const now = Date.now();
   let nextStartDate = getNextRecurrence(recurrence);
-  let scheduledEndTime = new Date(nextStartDate);
+  let scheduledEndTime = getNextEndDate(nextStartDate, eventDuration);
   recurrence.timesHeld++;
 
   while (nextStartDate.valueOf() < now) {
@@ -56,13 +56,18 @@ export function getNextValidRecurrence(
     }
 
     nextStartDate = getNextRecurrence(recurrence);
-    scheduledEndTime = new Date(nextStartDate);
-    scheduledEndTime.setHours(scheduledEndTime.getHours() + eventDuration);
+    scheduledEndTime = getNextEndDate(nextStartDate, eventDuration);
 
     recurrence.timesHeld++;
   }
 
   return { scheduledStartTime: nextStartDate, scheduledEndTime };
+}
+
+function getNextEndDate(scheduledStartTime: Date, eventDuration: number) {
+  const nextEnd = new Date(scheduledStartTime);
+  nextEnd.setHours(scheduledStartTime.getHours() + eventDuration);
+  return nextEnd;
 }
 
 export function getRecurrenceUnit(recurrence: EventRecurrence) {
