@@ -104,7 +104,7 @@ export async function deseralizeEventEmbed(
   const scheduledStartTime = Time.getTimeFromString(thread.name);
   const name = getEventNameFromString(thread.name);
 
-  const image = embed.image?.url ?? "";
+  const image = embed.image;
   const duration = Number(
     embed.fields
       .find((x) => x.name === "Duration")
