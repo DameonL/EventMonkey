@@ -12,6 +12,7 @@ import { eventEmbed, getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import Listeners from "./Listeners";
 import { resolveChannelString } from "./Utility/resolveChannelString";
+import Time from "./Utility/Time";
 
 export default {
   createGuildScheduledEvent,
@@ -64,9 +65,7 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
       `Channel with ID ${event.discussionChannelId} is of type "${targetChannel.type}". The discussion channel needs to be able to have threads.`
     );
 
-  const threadName = `${event.scheduledStartTime
-    .toLocaleString()
-    .replace(/(?<=\d?\d:\d\d):\d\d/, " ")} - ${event.name} hosted by ${
+  const threadName = `${Time.getTimeString(event.scheduledStartTime)} - ${event.name} hosted by ${
     event.author.username
   }`;
   const threadMessage = {
