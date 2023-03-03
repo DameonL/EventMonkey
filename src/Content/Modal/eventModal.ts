@@ -28,7 +28,7 @@ const deserializationConfig: ModalDeserializationConfig = {
   },
   customDeserializers: {
     scheduledStartTime: (fieldValue: string) => {
-      const output = Time.getTimeFromString(fieldValue, false);
+      const output = Time.getTimeFromString(fieldValue);
 
       return output;
     },
