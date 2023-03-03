@@ -31,6 +31,7 @@ async function createGuildScheduledEvent(
         thread.url
     }\nHosted by: ${event.author.toString()}`;
     eventToSubmit.name = `${event.name} hosted by ${event.author.username}`;
+    eventToSubmit.entityType = event.entityType;
     if (event.entityType !== GuildScheduledEventEntityType.External) {
         eventToSubmit.channel = eventToSubmit.entityMetadata.location;
     } else {
