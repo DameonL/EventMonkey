@@ -59,12 +59,18 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
     x.embeds.find(
       (x) =>
-        x.footer?.text === announcementEmbed.data.footer?.text &&
+        x.footer?.text === announcementEmbed.footer?.text &&
         x.title === "Event Reminder"
     )
   );
 
-  if (!threadAnnouncement) thread.send({ embeds: [announcementEmbed] });
+  try {
+    if (!threadAnnouncement) thread.send({ embeds: [announcementEmbed] });
+  } catch (error) {
+    console.error("Error sending event announcement to thread:");
+    console.error(error);
+    console.error(announcementEmbed);
+  }
 
   const announcementChannels = Array.isArray(eventType.announcement.channel)
     ? eventType.announcement.channel
@@ -88,13 +94,19 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     ).find((x) =>
       x.embeds.find(
         (x) =>
-        x.footer?.text === announcementEmbed.data.footer?.text &&
+        x.footer?.text === announcementEmbed.footer?.text &&
           x.title === "Event Reminder"
       )
     );
 
     if (!existingAnnouncement) {
-      announcementChannel.send({ embeds: [announcementEmbed] });
+      try {
+        announcementChannel.send({ embeds: [announcementEmbed] });
+      } catch (error) {
+        console.error("Error sending event announcement to channel:");
+        console.error(error);
+        console.error(announcementEmbed);
+      }
     }
   }
 }

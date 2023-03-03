@@ -31,15 +31,20 @@ async function closeAllOutdatedThreads() {
     .cache) {
     for (const { name, discussionChannel } of Configuration.current
       .eventTypes) {
-      const resolvedChannel = await resolveChannelString(
-        discussionChannel,
-        guild
-      );
-      if (
-        resolvedChannel.type === ChannelType.GuildText ||
-        resolvedChannel.type === ChannelType.GuildForum
-      ) {
-        await closeOutdatedThreadsInChannel(resolvedChannel);
+      try {
+        const resolvedChannel = await resolveChannelString(
+          discussionChannel,
+          guild
+        );
+        if (
+          resolvedChannel.type === ChannelType.GuildText ||
+          resolvedChannel.type === ChannelType.GuildForum
+        ) {
+          await closeOutdatedThreadsInChannel(resolvedChannel);
+        }
+      } catch (error) {
+        console.error(error);
+        continue;
       }
     }
   }
@@ -50,14 +55,20 @@ async function closeOutdatedThreadsInChannel(channel: ChannelWithThreads) {
   const client = channel.threads.client;
 
   for (const [threadName, threadChannel] of threads) {
-    const threadEvent = await deseralizeEventEmbed(threadChannel, client);
-    if (
-      threadEvent &&
-      (!threadEvent.scheduledEvent ||
-        threadEvent.scheduledEvent.isCompleted() ||
-        threadEvent.scheduledEvent.isCanceled())
-    ) {
-      await closeEventThread(threadChannel, threadEvent.scheduledEvent);
+    try {
+      const threadEvent = await deseralizeEventEmbed(threadChannel, client);
+      if (
+        threadEvent &&
+        (!threadEvent.scheduledEvent ||
+          threadEvent.scheduledEvent.isCompleted() ||
+          threadEvent.scheduledEvent.isCanceled())
+      ) {
+        await closeEventThread(threadChannel, threadEvent.scheduledEvent);
+      }
+    } catch (error) {
+      console.error("Error closing thread");
+      console.error(error);
+      console.error(threadChannel);
     }
   }
 }

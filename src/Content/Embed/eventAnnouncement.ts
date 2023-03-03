@@ -1,4 +1,4 @@
-import { APIEmbedField, EmbedBuilder } from "discord.js";
+import { APIEmbed, APIEmbedField } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 import Time from "../../Utility/Time";
 
@@ -7,12 +7,14 @@ export default function eventAnnouncement(
   timeBeforeStart?: number
 ) {
   var idString = `Event ID: ${event.id}`;
+
   const startingString = timeBeforeStart
     ? `will be starting in ${Math.round(
         timeBeforeStart / Time.toMilliseconds.minutes(1)
       )} minutes`
     : `is starting now`;
-  const announcementEmbed = new EmbedBuilder({
+
+  const announcementEmbed: APIEmbed = {
     title: "Event Reminder",
     description: `The event "${
       event.name
@@ -20,11 +22,21 @@ export default function eventAnnouncement(
     footer: {
       text: idString,
     },
-  }).setThumbnail(event.image);
+    thumbnail: { url: event.image },
+  };
 
   const announcementFields: APIEmbedField[] = [
-    { name: "Event Link", value: event.scheduledEvent?.toString() ?? event.threadChannel?.toString() ?? "" },
+    {
+      name: "Event Link",
+      value:
+        event.scheduledEvent?.toString() ??
+        event.threadChannel?.toString() ??
+        "",
+    },
   ];
+
+  announcementEmbed.fields = announcementFields;
+
   if (event.channel)
     announcementFields.push({
       name: "Channel",
@@ -35,8 +47,6 @@ export default function eventAnnouncement(
       name: "Location",
       value: event.entityMetadata?.location ?? "",
     });
-
-  announcementEmbed.addFields(announcementFields);
 
   return announcementEmbed;
 }
