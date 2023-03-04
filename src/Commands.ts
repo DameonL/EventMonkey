@@ -145,7 +145,6 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   EventsUnderConstruction.saveEvent(newEvent);
   var newEventMessage = await editEventMessage(newEvent, "", interaction);
   await interaction.editReply(newEventMessage);
-  const replyMessage = await interaction.fetchReply();
   newEvent.submissionCollector = Listeners.getEmbedSubmissionCollector(
     newEvent,
     interaction
