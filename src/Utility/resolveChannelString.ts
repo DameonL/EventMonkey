@@ -9,7 +9,7 @@ export async function resolveChannelString(
     if (channel) return channel;
   }
 
-  const channel = await guild.channels.cache.find((x) => x.name === text);
+  const channel = guild.channels.cache.find((x) => x.name === text);
   if (channel) return channel;
 
   throw new Error(`Unable to resolve channel from string "${text}"`);

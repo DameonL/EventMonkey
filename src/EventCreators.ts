@@ -41,7 +41,7 @@ async function createGuildScheduledEvent(
     eventToSubmit.scheduledStartTime = event.scheduledStartTime;
     if (!event.scheduledEndTime) {
         const endTime = new Date(eventToSubmit.scheduledStartTime);
-        endTime.setHours(endTime.getHours() + eventToSubmit.duration);
+        endTime.setHours(endTime.getHours() + event.duration);
         eventToSubmit.scheduledEndTime = endTime;
     } else {
         eventToSubmit.scheduledEndTime = event.scheduledEndTime;
@@ -84,6 +84,7 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
             attendeesToEmbed(event.attendees),
         ],
         components: new Array<ActionRowBuilder<ButtonBuilder>>(),
+        files: event.image ? [new AttachmentBuilder(event.image)] : undefined,
     };
 
     let channelMessage: Message | undefined;
@@ -101,21 +102,22 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
             const imageAttachment = new AttachmentBuilder(event.image);
             threadMessage.files = [imageAttachment];
         }
+
         const threadChannel = await targetChannel.threads.create({
             name: threadName,
             message: threadMessage,
         });
         event.threadChannel = threadChannel;
 
-        channelMessage = threadChannel.messages.cache.at(0);
+        channelMessage = (await threadChannel.messages.fetch()).at(0);
         if (!channelMessage)
             throw new Error(
                 "Unable to get channel message from freshly created thread."
             );
 
-        channelMessage.pin();
+        await channelMessage.pin();
     }
-    channelMessage.edit(threadMessage);
+    await channelMessage.edit(threadMessage);
 
     await Listeners.listenForButtonsInThread(event.threadChannel);
 

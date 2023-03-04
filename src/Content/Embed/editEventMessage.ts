@@ -60,7 +60,6 @@ export default async function editEventMessage(
                     .setStyle(ButtonStyle.Danger)
             ),
         ],
-        files: event.image ? [new AttachmentBuilder(event.image)] : undefined,
         content,
     };
 }

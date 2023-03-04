@@ -14,6 +14,7 @@ import Configuration from "./Configuration";
 import { getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkey";
 import { resolveChannelString } from "./Utility/resolveChannelString";
+import editEventMessage from "./Content/Embed/editEventMessage";
 
 export default {
   listenForButtons,
@@ -107,12 +108,19 @@ function getEmbedSubmissionCollector(
           throw new Error("Client not set or not connected.");
         }
 
-        await handler(
-          event,
-          submissionInteraction,
-          interaction,
-          configuration.discordClient
-        );
+        try {
+          await handler(
+            event,
+            submissionInteraction,
+            interaction,
+            configuration.discordClient
+          );
+        } catch (error) {
+          console.error(error);
+          await submissionInteraction.editReply("Sorry, but something went wrong! Rest assured, somebody will be punished.");
+          await interaction.editReply(await editEventMessage(event, "Creating an event...", interaction));
+          return;
+        }
       }
     }
   );

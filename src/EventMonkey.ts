@@ -87,7 +87,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
         );
 
         if (thread) {
-          sendEventClosingMessage(thread, GuildScheduledEventStatus.Canceled);
+          await sendEventClosingMessage(thread, GuildScheduledEventStatus.Canceled);
           await Threads.closeEventThread(thread, guildScheduledEvent);
         }
       }
@@ -109,7 +109,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     );
 
-    startupMaintenanceTasks();
+    await startupMaintenanceTasks();
     startRecurringTasks();
   }
 }
