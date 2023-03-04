@@ -8,12 +8,13 @@ import ClientEventHandlers from "./ClientEventHandlers";
 import { eventCommand } from "./Commands";
 import Configuration from "./Configuration";
 import Listeners from "./Listeners";
+import logger from "./Logger";
+import Threads from "./Utility/Threads";
+import Time from "./Utility/Time";
 import performAnnouncements from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
-import Threads from "./Utility/Threads";
-import Time from "./Utility/Time";
-import logger from "./Logger";
+import updateVoiceAndStageEvents from "./Utility/updateVoiceAndStageEvents";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 export default {
@@ -67,6 +68,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       if (!guildScheduledEvent.description) return;
 
       const thread = await Threads.getThreadFromEventDescription(guildScheduledEvent.description);
+      if (!(thread && await client.channels.fetch(thread.id))) return;
 
       if (thread) {
         await sendEventClosingMessage(thread, GuildScheduledEventStatus.Canceled);
@@ -105,4 +107,5 @@ function startRecurringTasks() {
   setInterval(EventsUnderConstruction.maintainEvents, Time.toMilliseconds.hours(1));
   setInterval(Threads.closeAllOutdatedThreads, Time.toMilliseconds.minutes(30));
   setInterval(performAnnouncements, Time.toMilliseconds.minutes(1));
+  setInterval(updateVoiceAndStageEvents, Time.toMilliseconds.minutes(1));
 }
