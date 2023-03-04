@@ -20,13 +20,13 @@ const configuration: EventMonkeyConfiguration = {
       announcement,
     },
     {
-      name: "Hangout",
+      name: "🎤 Hangout",
       discussionChannel: "hangouts",
       voiceChannel: "Hangout",
       announcement,
     },
     {
-      name: "Lecture",
+      name: "🗣 Lecture",
       discussionChannel: "lectures",
       stageChannel: "Lecture",
       announcement,
