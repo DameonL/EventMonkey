@@ -108,6 +108,7 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
             message: threadMessage,
         });
         event.threadChannel = threadChannel;
+        await Listeners.listenForButtonsInThread(threadChannel);
 
         channelMessage = (await threadChannel.messages.fetch()).at(0);
         if (!channelMessage)
@@ -118,8 +119,6 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
         await channelMessage.pin();
     }
     await channelMessage.edit(threadMessage);
-
-    await Listeners.listenForButtonsInThread(event.threadChannel);
 
     return event.threadChannel;
 }

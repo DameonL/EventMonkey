@@ -11,10 +11,10 @@ import {
 import buttonHandlers from "./ButtonHandlers/EventButtonHandlers";
 import eventCreationButtonHandlers from "./ButtonHandlers/EventCreationButtonHandlers";
 import Configuration from "./Configuration";
+import editEventMessage from "./Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkey";
 import { resolveChannelString } from "./Utility/resolveChannelString";
-import editEventMessage from "./Content/Embed/editEventMessage";
 
 export default {
   listenForButtons,
@@ -61,15 +61,19 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
   }) as InteractionCollector<ButtonInteraction>;
 
   collector.on("collect", async (interaction: ButtonInteraction) => {
-    const buttonId = interaction.customId.match(/(?<=_button_).*$/i)?.[0];
-    if (!buttonId) throw new Error("Unable to get button ID from customId");
-
-    const handler = buttonHandlers[buttonId];
-    if (!handler) throw new Error(`No handler for button ID ${buttonId}`);
-
-    await interaction.deferReply({ ephemeral: true });
-    await handler(interaction);
-  });
+    try {
+      const buttonId = interaction.customId.match(/(?<=_button_).*$/i)?.[0];
+      if (!buttonId) throw new Error("Unable to get button ID from customId");
+  
+      const handler = buttonHandlers[buttonId];
+      if (!handler) throw new Error(`No handler for button ID ${buttonId}`);
+  
+      await interaction.deferReply({ ephemeral: true });
+      await handler(interaction);
+    } catch (error) {
+      console.error(`Error handling thread button ${interaction.customId}`);
+    }
+});
 }
 
 function getEmbedSubmissionCollector(
