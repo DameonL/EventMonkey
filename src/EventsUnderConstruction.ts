@@ -1,4 +1,5 @@
 import { EventMonkeyEvent } from "./EventMonkey";
+import logger from "./Logger";
 import Time from "./Utility/Time";
 
 const eventsUnderConstruction: UserEventMap = {};
@@ -44,7 +45,7 @@ function maintainEvents() {
       delete eventsUnderConstruction[userId];
     }
   } catch (error) {
-    console.error(error);
+    logger.error("Error while maintaining events:", error);
   }
 }
 

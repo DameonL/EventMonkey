@@ -1,6 +1,4 @@
-import {
-  EventMonkeyConfiguration,
-} from "./EventMonkeyConfiguration";
+import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
@@ -17,7 +15,7 @@ function defaultConfiguration(): EventMonkeyConfiguration {
     ],
     timeZone: {
       name: "PST",
-      offset: 0
+      offset: 0,
     },
     editingTimeout: 108000, // Default of 30 minutes
   };
@@ -25,8 +23,18 @@ function defaultConfiguration(): EventMonkeyConfiguration {
 
 export default {
   defaultConfiguration,
-  get current() { return configuration },
+  get current() {
+    return configuration;
+  },
   set current(value: EventMonkeyConfiguration) {
     configuration = value;
-  }
+  },
+  get client() {
+    if (!configuration.discordClient)
+      throw new Error(
+        "No client configured yet. You must ensure you set the discordClient in the configuration before trying to get the client from the configuration."
+      );
+
+    return this.current.discordClient;
+  },
 };

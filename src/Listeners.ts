@@ -15,6 +15,7 @@ import editEventMessage from "./Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkey";
 import { resolveChannelString } from "./Utility/resolveChannelString";
+import logger from "./Logger";
 
 export default {
   listenForButtons,
@@ -71,7 +72,7 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
       await interaction.deferReply({ ephemeral: true });
       await handler(interaction);
     } catch (error) {
-      console.error(`Error handling thread button ${interaction.customId}`);
+      logger.error(`Error handling thread button ${interaction.customId}`, error);
     }
 });
 }
@@ -120,7 +121,7 @@ function getEmbedSubmissionCollector(
             configuration.discordClient
           );
         } catch (error) {
-          console.error(error);
+          logger.error("Error while running event creation button handler.", error)
           await submissionInteraction.editReply("Sorry, but something went wrong! Rest assured, somebody will be punished.");
           await interaction.editReply(await editEventMessage(event, "Creating an event...", interaction));
           return;

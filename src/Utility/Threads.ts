@@ -7,14 +7,13 @@ import {
   ThreadChannel,
 } from "discord.js";
 import Configuration from "../Configuration";
-import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
+import { deseralizeEventEmbed, getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import { resolveChannelString } from "./resolveChannelString";
 import Time from "./Time";
+import logger from "../Logger";
 
 interface ChannelWithThreads {
-  threads:
-    | GuildForumThreadManager
-    | GuildTextThreadManager<ChannelType.PublicThread>;
+  threads: GuildForumThreadManager | GuildTextThreadManager<ChannelType.PublicThread>;
 }
 
 export default {
@@ -27,23 +26,15 @@ export default {
 async function closeAllOutdatedThreads() {
   if (!Configuration.current.discordClient) return;
 
-  for (const [guildId, guild] of Configuration.current.discordClient.guilds
-    .cache) {
-    for (const { name, discussionChannel } of Configuration.current
-      .eventTypes) {
+  for (const [guildId, guild] of Configuration.current.discordClient.guilds.cache) {
+    for (const { name, discussionChannel } of Configuration.current.eventTypes) {
       try {
-        const resolvedChannel = await resolveChannelString(
-          discussionChannel,
-          guild
-        );
-        if (
-          resolvedChannel.type === ChannelType.GuildText ||
-          resolvedChannel.type === ChannelType.GuildForum
-        ) {
+        const resolvedChannel = await resolveChannelString(discussionChannel, guild);
+        if (resolvedChannel.type === ChannelType.GuildText || resolvedChannel.type === ChannelType.GuildForum) {
           await closeOutdatedThreadsInChannel(resolvedChannel);
         }
       } catch (error) {
-        console.error(error);
+        logger.error(`Error trying to close outdated threads in ${discussionChannel} on ${guild.name}`, error);
         continue;
       }
     }
@@ -66,48 +57,33 @@ async function closeOutdatedThreadsInChannel(channel: ChannelWithThreads) {
         await closeEventThread(threadChannel, threadEvent.scheduledEvent);
       }
     } catch (error) {
-      console.error("Error closing thread");
-      console.error(error);
-      console.error(threadChannel);
+      logger.error("Error closing thread", { threadChannel, error });
     }
   }
 }
 
-async function closeEventThread(
-  thread: ThreadChannel,
-  event?: GuildScheduledEvent
-) {
+async function closeEventThread(thread: ThreadChannel, event?: GuildScheduledEvent) {
   if (thread.archived) return;
 
-  const pinnedMessage = (await thread.messages.fetchPinned()).at(0);
+  const pinnedMessage = await getEventDetailsMessage(thread);
   if (pinnedMessage && pinnedMessage.components.length > 0) {
     await pinnedMessage.edit({ components: [] });
   }
 
-  let lastMessage = await thread.messages.cache.last();
+  let lastMessage = thread.messages.cache.last();
   let threadAge = thread.createdAt;
   if (lastMessage && lastMessage.createdAt) {
-    threadAge =
-      thread.lastPinAt && lastMessage.createdAt < thread.lastPinAt
-        ? thread.lastPinAt
-        : lastMessage.createdAt;
+    threadAge = thread.lastPinAt && lastMessage.createdAt < thread.lastPinAt ? thread.lastPinAt : lastMessage.createdAt;
   }
 
-  const closeThreadsAfter =
-    Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1);
-  if (
-    threadAge &&
-    new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter
-  )
-    return;
+  const closeThreadsAfter = Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1);
+  if (threadAge && new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter) return;
 
   await (
     await thread.send({
       embeds: [
         new EmbedBuilder()
-          .setTitle(
-            `Event is ${event && event.isCanceled() ? "Canceled" : "Over"}`
-          )
+          .setTitle(`Event is ${event && event.isCanceled() ? "Canceled" : "Over"}`)
           .setDescription("Thread has been locked and archived.")
           .setColor("DarkRed"),
       ],
@@ -118,17 +94,11 @@ async function closeEventThread(
   await thread.setArchived(true);
 }
 
-async function getThreadFromEventDescription(
-  eventDescription: string
-): Promise<ThreadChannel | undefined> {
-  const guildAndThread = eventDescription.match(
-    /(?<=https:\/\/discord.com\/channels\/\d+\/)(?<threadId>\d+)/im
-  );
+async function getThreadFromEventDescription(eventDescription: string): Promise<ThreadChannel | undefined> {
+  const guildAndThread = eventDescription.match(/(?<=https:\/\/discord.com\/channels\/\d+\/)(?<threadId>\d+)/im);
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
-    const thread = await Configuration.current.discordClient?.channels.fetch(
-      threadId
-    );
+    const thread = await Configuration.current.discordClient?.channels.fetch(threadId);
     if (thread && thread.type === ChannelType.PublicThread) {
       return thread;
     }

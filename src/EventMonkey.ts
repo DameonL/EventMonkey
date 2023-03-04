@@ -1,9 +1,4 @@
-import {
-  Events,
-  GuildScheduledEvent,
-  GuildScheduledEventStatus,
-  Routes,
-} from "discord.js";
+import { Events, GuildScheduledEvent, GuildScheduledEventStatus, Routes } from "discord.js";
 
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
@@ -18,6 +13,7 @@ import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
+import logger from "./Logger";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 export default {
@@ -30,35 +26,27 @@ export default {
 
 async function registerCommands() {
   if (!Configuration.current.discordClient?.application?.id) {
-    throw new Error(
-      `discordClient in the configuration must be set before commands can be registered.`
-    );
+    throw new Error(`discordClient in the configuration must be set before commands can be registered.`);
   }
 
   const builtCommand = eventCommand.builder();
   await Configuration.current.discordClient.rest.put(
-    Routes.applicationCommands(
-      Configuration.current.discordClient.application?.id
-    ),
+    Routes.applicationCommands(Configuration.current.discordClient.application?.id),
     {
       body: [builtCommand.toJSON()],
     }
   );
 
-  Configuration.current.discordClient.on(
-    Events.InteractionCreate,
-    (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
+  Configuration.current.discordClient.on(Events.InteractionCreate, (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
 
-      if (
-        interaction.applicationId ===
-          Configuration.current.discordClient?.application?.id &&
-        interaction.commandName === Configuration.current.commandName
-      ) {
-        eventCommand.execute(interaction);
-      }
+    if (
+      interaction.applicationId === Configuration.current.discordClient?.application?.id &&
+      interaction.commandName === Configuration.current.commandName
+    ) {
+      eventCommand.execute(interaction);
     }
-  );
+  });
 }
 
 async function configure(newConfiguration: EventMonkeyConfiguration) {
@@ -69,45 +57,32 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
   Configuration.current = newConfiguration;
 
   if (Configuration.current.eventTypes.length === 0) {
-    throw new Error(
-      "You must define at least one event type in the configuration."
-    );
+    throw new Error("You must define at least one event type in the configuration.");
   }
 
   const client = Configuration.current.discordClient;
   if (client && client !== cachedClient) {
     await Listeners.listenForButtons();
-    client.on(
-      Events.GuildScheduledEventDelete,
-      async (guildScheduledEvent: GuildScheduledEvent) => {
-        if (!guildScheduledEvent.description) return;
+    client.on(Events.GuildScheduledEventDelete, async (guildScheduledEvent: GuildScheduledEvent) => {
+      if (!guildScheduledEvent.description) return;
 
-        const thread = await Threads.getThreadFromEventDescription(
-          guildScheduledEvent.description
-        );
+      const thread = await Threads.getThreadFromEventDescription(guildScheduledEvent.description);
 
-        if (thread) {
-          await sendEventClosingMessage(thread, GuildScheduledEventStatus.Canceled);
-          await Threads.closeEventThread(thread, guildScheduledEvent);
-        }
+      if (thread) {
+        await sendEventClosingMessage(thread, GuildScheduledEventStatus.Canceled);
+        await Threads.closeEventThread(thread, guildScheduledEvent);
       }
-    );
+    });
 
-    client.on(
-      Events.GuildScheduledEventUserAdd,
-      ClientEventHandlers.userShowedInterest
-    );
+    client.on(Events.GuildScheduledEventUserAdd, ClientEventHandlers.userShowedInterest);
 
-    client.on(
-      Events.GuildScheduledEventUpdate,
-      (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
-        if (event.status === GuildScheduledEventStatus.Active) {
-          ClientEventHandlers.eventStarted(oldEvent, event);
-        } else if (event.status === GuildScheduledEventStatus.Completed) {
-          ClientEventHandlers.eventCompleted(oldEvent, event);
-        }
+    client.on(Events.GuildScheduledEventUpdate, (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
+      if (event.status === GuildScheduledEventStatus.Active) {
+        ClientEventHandlers.eventStarted(oldEvent, event);
+      } else if (event.status === GuildScheduledEventStatus.Completed) {
+        ClientEventHandlers.eventCompleted(oldEvent, event);
       }
-    );
+    });
 
     await startupMaintenanceTasks();
     startRecurringTasks();
@@ -116,22 +91,18 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
 
 async function startupMaintenanceTasks() {
   try {
-    console.log("Performing startup maintenance...")
+    logger.log("Performing startup maintenance...");
     await Threads.closeAllOutdatedThreads();
     await restartRecurringEvents();
     await performAnnouncements();
-    console.log("Startup maintenance complete.");
+    logger.log("Startup maintenance complete.");
   } catch (error) {
-    console.log("Error in startup maintenance task:");
-    console.error(error);
+    logger.error("Error in startup maintenance task:", error);
   }
 }
 
 function startRecurringTasks() {
-  setInterval(
-    EventsUnderConstruction.maintainEvents,
-    Time.toMilliseconds.hours(1)
-  );
+  setInterval(EventsUnderConstruction.maintainEvents, Time.toMilliseconds.hours(1));
   setInterval(Threads.closeAllOutdatedThreads, Time.toMilliseconds.minutes(30));
   setInterval(performAnnouncements, Time.toMilliseconds.minutes(1));
 }
