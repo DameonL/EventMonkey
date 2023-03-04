@@ -99,7 +99,7 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
     } else {
         if (event.image) {
             const imageAttachment = new AttachmentBuilder(event.image);
-            threadMessage.files.push([imageAttachment]);
+            threadMessage.files = [imageAttachment];
         }
         const threadChannel = await targetChannel.threads.create({
             name: threadName,
