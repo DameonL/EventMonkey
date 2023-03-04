@@ -48,7 +48,7 @@ async function createGuildScheduledEvent(
     }
 
     eventToSubmit.image = event.image;
-
+    eventToSubmit.privacyLevel = event.privacyLevel;
     const scheduledEvent = await (event.scheduledEvent
         ? guild.scheduledEvents.edit(event.scheduledEvent.id, eventToSubmit)
         : guild.scheduledEvents.create(eventToSubmit));
@@ -78,13 +78,12 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
         event.name
     } hosted by ${event.author.username}`;
 
-    const threadMessage = {
+    const threadMessage: any = {
         embeds: [
             await eventEmbed(event, guild),
             attendeesToEmbed(event.attendees),
         ],
         components: new Array<ActionRowBuilder<ButtonBuilder>>(),
-        files: new Array<AttachmentBuilder>(),
     };
 
     let channelMessage: Message | undefined;
@@ -100,7 +99,7 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
     } else {
         if (event.image) {
             const imageAttachment = new AttachmentBuilder(event.image);
-            threadMessage.files.push(imageAttachment);
+            threadMessage.files.push([imageAttachment]);
         }
         const threadChannel = await targetChannel.threads.create({
             name: threadName,

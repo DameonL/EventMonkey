@@ -21,6 +21,7 @@ import EventsUnderConstruction from "../EventsUnderConstruction";
 import Listeners from "../Listeners";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/Time";
+import { MessageCreateOptions } from 'discord.js';
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (
@@ -118,7 +119,7 @@ const eventCreationButtonHandlers: {
     client
   ) => {
     await originalInteraction.editReply({
-      content: "Adding image...",
+      content: "Adding image. Please be patient! If your image is large, this may take a minute.",
       embeds: [],
       components: [],
     });
@@ -150,17 +151,31 @@ const eventCreationButtonHandlers: {
       return;
     }
 
+    await originalInteraction.editReply({
+      content: "Adding image...",
+      embeds: [],
+      components: [],
+    });
+
+    let submissionEmbed: MessageCreateOptions;
     if (replies.at(0)?.attachments.at(0)?.url) {
       event.image = replies.at(0)?.attachments.at(0)?.url as string;
-      await replies.at(0)?.delete();
-      await imageResponse.delete();
-      const submissionEmbed = await editEventMessage(
+      submissionEmbed = await editEventMessage(
         event,
         "Image added!",
         originalInteraction
       );
-      await originalInteraction.editReply(submissionEmbed);
+      await replies.at(0)?.delete();
+      await imageResponse.delete();
+    } else {
+      submissionEmbed = await editEventMessage(
+        event,
+        "Your message didn't have a valid image attached!",
+        originalInteraction
+      );
     }
+
+    await originalInteraction.editReply(submissionEmbed);
   },
   save: async (event, submissionInteraction, originalInteraction, client) => {
     await originalInteraction.editReply({
