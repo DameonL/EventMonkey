@@ -26,7 +26,6 @@ async function createGuildScheduledEvent(
     thread: ThreadChannel
 ) {
     const eventToSubmit = {} as any;
-    eventToSubmit.creatorId = event.author.id;
     eventToSubmit.description = `${event.description}\nDiscussion: ${
         thread.url
     }\nHosted by: ${event.author.toString()}`;
