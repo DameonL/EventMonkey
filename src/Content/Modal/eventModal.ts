@@ -3,6 +3,7 @@ import {
   ChatInputCommandInteraction,
   GuildScheduledEventEntityType,
   ModalBuilder,
+  ModalSubmitInteraction,
   TextInputStyle,
 } from "discord.js";
 import Configuration from "../../Configuration";
@@ -20,11 +21,8 @@ import {
 const deserializationConfig: ModalDeserializationConfig = {
   validators: {
     scheduledStartTime: (fieldValue: string) =>
-      /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue)
-        ? undefined
-        : "Invalid date format.",
-    duration: (fieldValue: string) =>
-      isNaN(Number(fieldValue)) ? "Invalid duration" : undefined,
+      /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue) ? undefined : "Invalid date format.",
+    duration: (fieldValue: string) => (isNaN(Number(fieldValue)) ? "Invalid duration" : undefined),
   },
   customDeserializers: {
     scheduledStartTime: (fieldValue: string) => {
@@ -44,28 +42,27 @@ export async function eventModal(
   const modal = eventEditModal(event, interaction.id);
 
   await interaction.showModal(modal);
-  const modalSubmission = await interaction.awaitModalSubmit({
-    time: Configuration.current.editingTimeout,
-    filter: (submitInteraction, collected) => {
-      if (
-        submitInteraction.user.id === interaction.user.id &&
-        submitInteraction.customId === interaction.id
-      ) {
-        return true;
-      }
+  let modalSubmission: ModalSubmitInteraction;
+  try {
+    modalSubmission = await interaction.awaitModalSubmit({
+      time: Configuration.current.editingTimeout,
+      filter: (submitInteraction, collected) => {
+        if (submitInteraction.user.id === interaction.user.id && submitInteraction.customId === interaction.id) {
+          return true;
+        }
 
-      return false;
-    },
-  });
+        return false;
+      },
+    });
+  } catch (error) {
+    return;
+  }
+
   await modalSubmission.deferReply({ ephemeral: true });
 
   const startTime = event.scheduledStartTime;
   try {
-    deserializeModal<EventMonkeyEvent>(
-      modalSubmission.fields.fields.entries(),
-      event,
-      deserializationConfig
-    );
+    deserializeModal<EventMonkeyEvent>(modalSubmission.fields.fields.entries(), event, deserializationConfig);
   } catch (error: any) {
     await modalSubmission.editReply({
       content: JSON.stringify(error),
@@ -76,10 +73,7 @@ export async function eventModal(
   }
 
   // If the scheduled time has changed, we need to update recurrence settings.
-  if (
-    event.recurrence &&
-    event.scheduledStartTime.valueOf() !== startTime.valueOf()
-  ) {
+  if (event.recurrence && event.scheduledStartTime.valueOf() !== startTime.valueOf()) {
     event.recurrence.firstStartTime = event.scheduledStartTime;
     event.recurrence.timesHeld = 0;
   }
@@ -105,8 +99,7 @@ export function eventEditModal(event: EventMonkeyEvent, id: string) {
   };
 
   if (event.entityType === GuildScheduledEventEntityType.External) {
-    serializationObject["entityMetadata.location"] =
-      event.entityMetadata.location;
+    serializationObject["entityMetadata.location"] = event.entityMetadata.location;
   }
 
   const serializationConfig: ModalSerializationConfig = {
@@ -121,9 +114,7 @@ export function eventEditModal(event: EventMonkeyEvent, id: string) {
       description: TextInputStyle.Paragraph,
     },
   };
-  modal.addComponents(
-    serializeToModal(`${event.id}_`, serializationObject, serializationConfig)
-  );
+  modal.addComponents(serializeToModal(`${event.id}_`, serializationObject, serializationConfig));
 
   return modal;
 }
