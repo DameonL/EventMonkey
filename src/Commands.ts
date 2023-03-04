@@ -159,7 +159,17 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const event = await deseralizeEventEmbed(channel, channel.client);
+  let event: EventMonkeyEvent | undefined = undefined;
+  try {
+    event = await deseralizeEventEmbed(channel, channel.client);
+  } catch (error) {
+    interaction.reply({
+      content: "It doesn't look like that's an event thread.",
+      ephemeral: true,
+    });
+
+    return;
+  }
 
   if (event.author.id !== interaction.user.id) {
     interaction.reply({
