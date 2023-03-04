@@ -121,7 +121,7 @@ function getEmbedSubmissionCollector(
             configuration.discordClient
           );
         } catch (error) {
-          logger.error("Error while running event creation button handler.", error)
+          logger.error(`Error while running event creation button handler "${handlerName}".`, error)
           await submissionInteraction.editReply("Sorry, but something went wrong! Rest assured, somebody will be punished.");
           await interaction.editReply(await editEventMessage(event, "Creating an event...", interaction));
           return;
