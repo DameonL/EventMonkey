@@ -40,13 +40,39 @@ async function startServer() {
 async function onClientReady(client: discord.Client) {
   console.log("Client ready");
   configuration.discordClient = client;
+  var uptime = 0;
+  setInterval(() => {
+    uptime += 1;
+    client.user?.setActivity(`Uptime: ${unitString(uptime)}`);
+  }, 60000);
   await eventMonkey.configure(configuration);
   await eventMonkey.registerCommands();
   console.log("Commands registered.");
 
-  var uptime = 0;
-  setInterval(() => {
-    uptime += 1;
-    client.user?.setActivity(`Uptime: ${Math.round(uptime)} minutes`);
-  }, 60000);
+}
+
+function unitString(minutes: number) {
+  const units = [
+    { name: "minute", minutes: 1 },
+    { name: "hour", minutes: 60 },
+    { name: "day", minutes: 60 * 24 },
+    { name: "week", minutes: 60 * 24 * 7 },
+    { name: "month", minutes: 60 * 24 * 7 * 4 },
+    { name: "year", minutes: 525600 },
+  ];
+
+  let currentMinutes = minutes;
+  let unitString;
+  for (let i = units.length - 1; i >= 0; i--) {
+    const unit = units[i];
+    if (unit.minutes > currentMinutes) continue;
+
+    const unitAmount = Math.floor(currentMinutes / unit.minutes);
+    unitString = `${unitString ?? ""}${unitString ? ", " : ""}${unitAmount} ${unit.name}${unitAmount > 1 ? "s" : ""}`;
+    currentMinutes -= unitAmount * unit.minutes;
+
+    if (currentMinutes <= 0) break;
+  }
+
+  return unitString ?? "";
 }
