@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import express from "express";
 
 const client = new discord.Client({
+  // A high timeout is important for handling large images.
+  rest: { timeout: 60000 },
   intents: [
     discord.GatewayIntentBits.Guilds,
     discord.GatewayIntentBits.GuildMessages,
@@ -53,7 +55,6 @@ async function onClientReady(client: discord.Client) {
   await eventMonkey.configure(configuration);
   await eventMonkey.registerCommands();
   console.log("Commands registered.");
-
 }
 
 function unitString(minutes: number) {
