@@ -1,13 +1,17 @@
-import { ChannelType, GuildScheduledEventEntityType, GuildScheduledEventStatus } from "discord.js";
-import logger from "../Logger";
+import { GuildScheduledEventEntityType, GuildScheduledEventStatus } from "discord.js";
 import Configuration from "../Configuration";
+import logger from "../Logger";
 import Threads from "./Threads";
 
 export default async function updateVoiceAndStageEvents() {
-  const now = Date.now();
+  const now = new Date().valueOf();
   for (const [guildId, guild] of Configuration.client.guilds.cache.entries()) {
     for (const [eventId, scheduledEvent] of guild.scheduledEvents.cache.entries()) {
-      if (scheduledEvent.status !== GuildScheduledEventStatus.Scheduled && scheduledEvent.status !== GuildScheduledEventStatus.Active) continue;
+      if (
+        scheduledEvent.status !== GuildScheduledEventStatus.Scheduled &&
+        scheduledEvent.status !== GuildScheduledEventStatus.Active
+      )
+        continue;
       if (!scheduledEvent.scheduledStartAt || !scheduledEvent.scheduledEndAt) continue;
 
       const startTime = scheduledEvent.scheduledStartAt.valueOf();
@@ -33,7 +37,7 @@ export default async function updateVoiceAndStageEvents() {
         } catch (error) {
           logger.error(`Error trying to end event ${scheduledEvent.name}`, { error, scheduledEvent });
         }
-    }
+      }
     }
   }
 }
