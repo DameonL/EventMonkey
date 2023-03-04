@@ -31,7 +31,7 @@ const eventCreationButtonHandlers: {
     submissionInteraction: ButtonInteraction,
     originalInteraction: ChatInputCommandInteraction,
     client: Client
-  ) => void;
+  ) => Promise<void>;
 } = {
   edit: async (event, submissionInteraction, originalInteraction, client) => {
     await eventModal(event, submissionInteraction, originalInteraction);
@@ -177,12 +177,12 @@ const eventCreationButtonHandlers: {
   },
   finish: async (event, submissionInteraction, originalInteraction, client) => {
     if (!submissionInteraction.message.guild) return;
-    await submissionInteraction.deferUpdate();
+    await submissionInteraction.deferReply({ ephemeral: true });
 
     if (event.scheduledStartTime.valueOf() - Date.now() < Time.toMilliseconds.minutes(30)) {
       const member = await submissionInteraction.message.guild.members.fetch(event.author.id);
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        await submissionInteraction.update({
+        await originalInteraction.editReply({
           content: "Sorry, your start time needs to be more than 30 minutes from now!",
         });
 
@@ -222,13 +222,13 @@ const eventCreationButtonHandlers: {
         components: [],
       });
 
-      if (forumThread) await forumThread.delete();
+      if (forumThread && !event.scheduledEvent) await forumThread.delete();
 
       EventsUnderConstruction.saveEvent(event);
       return;
-    } finally {
-      Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
     }
+
+    Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
 
     await originalInteraction.editReply({
       content: "Event created successfully!",
@@ -237,6 +237,7 @@ const eventCreationButtonHandlers: {
     });
 
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
+    await submissionInteraction.deleteReply();
   },
   cancel: async (event, submissionInteraction, originalInteraction, client) => {
     const submissionMessage = submissionInteraction.message;
