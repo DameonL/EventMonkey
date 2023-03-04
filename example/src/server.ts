@@ -43,7 +43,12 @@ async function onClientReady(client: discord.Client) {
   var uptime = 0;
   setInterval(() => {
     uptime += 1;
-    client.user?.setActivity(`Uptime: ${unitString(uptime)}`);
+    try {
+      client.user?.setActivity(`Uptime: ${unitString(uptime)}`);
+    } catch (error) {
+      console.error("Error setting activity:");
+      console.error(error);
+    }
   }, 60000);
   await eventMonkey.configure(configuration);
   await eventMonkey.registerCommands();
