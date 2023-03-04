@@ -1,3 +1,4 @@
+import { Client } from "discord.js";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
@@ -35,6 +36,6 @@ export default {
         "No client configured yet. You must ensure you set the discordClient in the configuration before trying to get the client from the configuration."
       );
 
-    return this.current.discordClient;
+    return this.current.discordClient as Client;
   },
 };
