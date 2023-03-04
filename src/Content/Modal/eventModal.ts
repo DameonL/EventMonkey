@@ -84,7 +84,7 @@ export async function eventModal(
     event.recurrence.timesHeld = 0;
   }
 
-  let submissionEmbed = await editEventMessage(event, "", originalInteraction);
+  let submissionEmbed = await editEventMessage(event, "Edited event.", originalInteraction);
 
   await originalInteraction.editReply(submissionEmbed);
   await modalSubmission.deleteReply();
