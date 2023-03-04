@@ -12,12 +12,11 @@ export async function restartRecurringEvents() {
 
   if (!configuration.discordClient) return;
 
-  const now = Date.now();
   for (const [guildName, guildAuth] of await configuration.discordClient.guilds.fetch()) {
     const guild = await guildAuth.fetch();
     for (const eventType of configuration.eventTypes) {
       try {
-        restartEventType(eventType, guild);
+        await restartEventType(eventType, guild);
       } catch (error) {
         logger.error("Problem while trying to restart a recurring event:", error);
       }
@@ -33,7 +32,7 @@ async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
 
   for (const [threadId, thread] of (await channel.threads.fetchActive()).threads) {
     try {
-      restartThreadEvents(thread, guild);
+      await restartThreadEvents(thread, guild);
     } catch (error) {
       logger.error(`There was a problem restarting thread "${thread.name}"`, error);
     }
@@ -41,13 +40,11 @@ async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
 }
 
 async function restartThreadEvents(thread: ThreadChannel, guild: Guild) {
-  if (!Configuration.current.discordClient) return;
-
   const threadPins = [...(await thread.messages.fetchPinned())];
   if (threadPins.length === 0) return;
   if (threadPins.find((x) => x[1].embeds.at(0)?.title === "Event is Canceled")) return;
 
-  const eventMonkeyEvent = await deseralizeEventEmbed(thread, Configuration.current.discordClient);
+  const eventMonkeyEvent = await deseralizeEventEmbed(thread, Configuration.client);
   if (
     eventMonkeyEvent.recurrence &&
     (!eventMonkeyEvent.scheduledEvent || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Completed)
