@@ -2,7 +2,6 @@ import discord from "discord.js";
 import configuration from "./eventMonkeyConfig";
 import eventMonkey from "eventmonkey";
 import dotenv from "dotenv";
-import express from "express";
 
 const client = new discord.Client({
   // A high timeout is important for handling large images.
@@ -22,12 +21,6 @@ const client = new discord.Client({
 startServer();
 
 async function startServer() {
-  const expressServer = express();
-  expressServer.listen(8080);
-  expressServer.get("/", (request, response, next) => {
-    response.send("Eventmonkey is active.");
-  });
-
   dotenv.config();
   client.on(discord.Events.ClientReady, onClientReady);
   if (process.env.DEBUG) {

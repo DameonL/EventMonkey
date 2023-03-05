@@ -12,9 +12,10 @@
     "discord.js": "^14.7.1",
     "dotenv": "^16.0.3",
     "eventmonkey": "^0.0.73",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "pm2": "^5.2.2"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "pm2 start eventMonkeyFrontend.js && pm2 start eventMonkeyBot.js --log logs/monkeyBotLog.txt && pm2 logs"
   }
 }
