@@ -8,10 +8,7 @@ import {
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   Message,
-  StageChannel,
-  TextChannel,
   ThreadChannel,
-  VoiceBasedChannel,
 } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
 import { EventRecurrence, deserializeRecurrence, serializeRecurrence } from "../../Recurrence";
@@ -83,7 +80,7 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
 
   const scheduledStartTime = Time.getTimeFromString(thread.name);
   const name = getEventNameFromString(thread.name);
-  const image = detailsMessage.attachments.entries.length > 0 ? detailsMessage.attachments.at(0)?.url : undefined;
+  const image = detailsMessage.attachments.first()?.url;
 
   const duration = Number(
     embed.fields

@@ -1,6 +1,6 @@
 {
   "name": "eventmonkey",
-  "version": "0.0.73",
+  "version": "0.0.74",
   "description": "Discord package to add event scheduling to bots",
   "main": "EventMonkey.js",
   "author": "Dameon Laird",
