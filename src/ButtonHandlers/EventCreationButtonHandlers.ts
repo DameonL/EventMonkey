@@ -139,7 +139,6 @@ const eventCreationButtonHandlers: {
     try {
       const attachmentUrl = replies.at(0)?.attachments.at(0)?.url;
       if (attachmentUrl) {
-        logger.log(attachmentUrl);
         event.image = attachmentUrl;
         submissionEmbed = await editEventMessage(event, "Image added!", originalInteraction);
         submissionEmbed.files = [new AttachmentBuilder(event.image)];
