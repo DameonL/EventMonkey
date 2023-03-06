@@ -16,6 +16,6 @@
     "pm2": "^5.2.2"
   },
   "scripts": {
-    "start": "pm2 start eventMonkeyFrontend.js && pm2 start eventMonkeyBot.js --log logs/monkeyBotLog.txt && pm2 logs"
+    "start": "pm2 start eventMonkeyFrontend.js && pm2 start eventMonkeyBot.js --log logs/monkeyBotLog.txt && pm2 startup && pm2 logs"
   }
 }
