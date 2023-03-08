@@ -31,10 +31,11 @@ export async function eventEmbed(event: EventMonkeyEvent, guild: Guild): Promise
     iconURL: event.author.avatarURL() ?? undefined,
   });
 
+  
   const location =
     event.entityType === GuildScheduledEventEntityType.External
       ? event.entityMetadata.location
-      : (await resolveChannelString(event.entityMetadata.location, guild)).toString();
+      : (await resolveChannelString(event.entityMetadata.location, guild))?.toString() ?? "";
 
   const fields: APIEmbedField[] = [
     {

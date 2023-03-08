@@ -30,6 +30,8 @@ async function closeAllOutdatedThreads() {
     for (const { name, discussionChannel } of Configuration.current.eventTypes) {
       try {
         const resolvedChannel = await resolveChannelString(discussionChannel, guild);
+        if (!resolvedChannel) continue;
+        
         if (resolvedChannel.type === ChannelType.GuildText || resolvedChannel.type === ChannelType.GuildForum) {
           await closeOutdatedThreadsInChannel(resolvedChannel);
         }

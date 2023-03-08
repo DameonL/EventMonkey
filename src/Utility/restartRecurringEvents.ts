@@ -28,6 +28,8 @@ async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
   if (!Configuration.current.discordClient) return;
 
   const channel = await resolveChannelString(eventType.discussionChannel, guild);
+  if (!channel) return;
+  
   if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildForum) return;
 
   for (const [threadId, thread] of (await channel.threads.fetchActive()).threads) {

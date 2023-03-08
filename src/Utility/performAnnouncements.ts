@@ -62,8 +62,8 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   for (const channelId of announcementChannels) {
     const announcementChannel = await resolveChannelString(channelId, event.guild);
     if (
-      announcementChannel.type !== ChannelType.GuildText &&
-      announcementChannel.type !== ChannelType.GuildAnnouncement
+      !announcementChannel ||
+      (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
     )
       continue;
 
