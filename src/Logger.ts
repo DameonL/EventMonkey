@@ -26,7 +26,7 @@ function logMessage(severity: LoggingSeverity, logMessage: string, objectToLog?:
   if (objectToLog) {
     logFunction(`${prefix}${JSON.stringify(objectToLog)}`);
     if (severity === LoggingSeverity.Error) {
-      console.trace();
+      console.trace(objectToLog);
     }
   }
 }
