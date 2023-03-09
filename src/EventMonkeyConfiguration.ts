@@ -1,4 +1,4 @@
-import { Client } from "discord.js";
+import { Client, GuildScheduledEventEntityType } from "discord.js";
 
 export interface EventMonkeyConfiguration {
   commandName: string;
@@ -16,13 +16,28 @@ export interface EventMonkeyConfiguration {
   };
 }
 
-export interface EventMonkeyEventType {
+export interface BaseEventMonkeyEventType {
   name: string;
+  description?: string;
   discussionChannel: string;
-  voiceChannel?: string;
-  stageChannel?: string;
   announcement?: EventAnnouncement;
 }
+
+export interface EventMonkeyEventTypeExternal extends BaseEventMonkeyEventType {
+  entityType: GuildScheduledEventEntityType.External;
+}
+
+export interface EventMonkeyEventTypeVoice extends BaseEventMonkeyEventType {
+  entityType: GuildScheduledEventEntityType.Voice;
+  channel: string | string[];
+}
+
+export interface EventMonkeyEventTypeStage extends BaseEventMonkeyEventType {
+  entityType: GuildScheduledEventEntityType.StageInstance;
+  channel: string | string[];
+}
+
+export type EventMonkeyEventType = EventMonkeyEventTypeExternal | EventMonkeyEventTypeStage | EventMonkeyEventTypeVoice;
 
 export interface EventAnnouncement {
   channel?: string | string[];

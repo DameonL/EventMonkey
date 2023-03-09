@@ -4,20 +4,24 @@ import {
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   InteractionCollector,
+  StageChannel,
   ThreadChannel,
   User,
-  VoiceBasedChannel,
+  VoiceChannel,
 } from "discord.js";
+import {
+  EventMonkeyEventTypeExternal,
+  EventMonkeyEventTypeStage,
+  EventMonkeyEventTypeVoice,
+} from "./EventMonkeyConfiguration";
 import { EventRecurrence } from "./Recurrence";
 
-export interface EventMonkeyEvent {
+export interface BaseEventMonkeyEvent {
   author: User;
   name: string;
   description: string;
-  image: string;
+  image?: string;
   attendees: string[];
-  entityMetadata: { location: string };
-  channel?: VoiceBasedChannel;
   scheduledStartTime: Date;
   scheduledEndTime?: Date;
   duration: number;
@@ -25,8 +29,28 @@ export interface EventMonkeyEvent {
   id: string;
   submissionCollector?: InteractionCollector<ButtonInteraction>;
   discussionChannelId: string;
-  entityType: GuildScheduledEventEntityType;
   threadChannel?: ThreadChannel;
   scheduledEvent?: GuildScheduledEvent;
   recurrence?: EventRecurrence;
+  entityType: GuildScheduledEventEntityType;
 }
+
+export interface EventMonkeyEventVoice extends BaseEventMonkeyEvent {
+  entityType: GuildScheduledEventEntityType.Voice;
+  eventType: EventMonkeyEventTypeVoice;
+  channel: VoiceChannel;
+}
+
+export interface EventMonkeyEventStage extends BaseEventMonkeyEvent {
+  entityType: GuildScheduledEventEntityType.StageInstance;
+  eventType: EventMonkeyEventTypeStage;
+  channel: StageChannel;
+}
+
+export interface EventMonkeyEventExternal extends BaseEventMonkeyEvent {
+  entityType: GuildScheduledEventEntityType.External;
+  eventType: EventMonkeyEventTypeExternal;
+  entityMetadata: { location: string };
+}
+
+export type EventMonkeyEvent = EventMonkeyEventStage | EventMonkeyEventExternal | EventMonkeyEventVoice;
