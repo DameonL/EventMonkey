@@ -118,7 +118,6 @@ function getEmbedSubmissionCollector(
             event,
             submissionInteraction,
             interaction,
-            configuration.discordClient
           );
         } catch (error) {
           logger.error(`Error while running event creation button handler "${handlerName}".`, error)

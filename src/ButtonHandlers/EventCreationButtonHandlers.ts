@@ -5,23 +5,27 @@ import {
   ButtonInteraction,
   ButtonStyle,
   ChatInputCommandInteraction,
-  Client,
   EmbedBuilder,
   GuildScheduledEvent,
+  GuildScheduledEventEntityType,
   MessageCreateOptions,
+  ModalBuilder,
   PermissionsBitField,
-  TextInputModalData,
+  StringSelectMenuBuilder,
+  StringSelectMenuInteraction,
+  TextInputBuilder,
+  TextInputStyle,
   ThreadChannel,
 } from "discord.js";
 import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
-import { editRecurrence } from "../Content/Modal/editRecurrence";
 import { eventModal } from "../Content/Modal/eventModal";
 import EventCreators from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
 import Listeners from "../Listeners";
 import logger from "../Logger";
+import { getValidVoiceOrStageChannel } from "../Utility/getValidVoiceOrStageChannel";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/Time";
 
@@ -29,60 +33,87 @@ const eventCreationButtonHandlers: {
   [handlerName: string]: (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
-    originalInteraction: ChatInputCommandInteraction,
-    client: Client
+    originalInteraction: ChatInputCommandInteraction
   ) => Promise<void>;
 } = {
-  edit: async (event, submissionInteraction, originalInteraction, client) => {
+  edit: async (event, submissionInteraction, originalInteraction) => {
     await eventModal(event, submissionInteraction, originalInteraction);
   },
-  makeRecurring: async (event, submissionInteraction, originalInteraction, client) => {
+  makeRecurring: async (event, submissionInteraction, originalInteraction) => {
     if (!submissionInteraction.guild) return;
 
-    event.recurrence = {
-      firstStartTime: event.scheduledStartTime,
-      timesHeld: 0,
-      weeks: 1,
+    const periodId = `${submissionInteraction.id}_${event.id}_recurrencePeriod`;
+    const submissionFilter = (x: { customId: string; user: { id: string } }) =>
+      x.customId === periodId && x.user.id === submissionInteraction.user.id;
+
+    const recurrenceUnitMessage = {
+      content: "What period will your event recur over?",
+      components: [
+        new ActionRowBuilder<StringSelectMenuBuilder>().setComponents([
+          new StringSelectMenuBuilder()
+            .setCustomId(periodId)
+            .setOptions(
+              { label: "hours", value: "hours" },
+              { label: "days", value: "days" },
+              { label: "weeks", value: "weeks" },
+              { label: "months", value: "months" }
+            )
+            .setMaxValues(1),
+        ]),
+      ],
+      fetchReply: true,
+      ephemeral: true,
     };
 
-    const recurrenceModal = editRecurrence(event, submissionInteraction);
-    await submissionInteraction.showModal(recurrenceModal);
-    var submission = await submissionInteraction.awaitModalSubmit({
-      time: Time.toMilliseconds.minutes(5),
-      filter: (submitInteraction, collected) =>
-        submitInteraction.user.id === event.author.id && submitInteraction.customId === recurrenceModal.data.custom_id,
-    });
+    const unitReply = await submissionInteraction.reply(recurrenceUnitMessage);
 
-    await submission.deferUpdate();
-    var unitField = submission.fields.getField(`${event.id}_unit`) as TextInputModalData;
-    let unit = unitField.value;
+    let unitInteraction: StringSelectMenuInteraction | undefined = undefined;
+    let unit: string = "hours";
 
-    if (!unit.endsWith("s")) unit += "s";
-    if (unit !== "hours" && unit !== "days" && unit !== "weeks" && unit !== "months") {
-      await submission.reply({
-        content: `Invalid time unit. Valid options are "hours", "days", "weeks", or "months"`,
-        ephemeral: true,
+    try {
+      unitInteraction = (await unitReply.awaitMessageComponent({
+        filter: submissionFilter,
+        time: Time.toMilliseconds.minutes(5),
+      })) as StringSelectMenuInteraction;
+      unit = unitInteraction.values[0];
+      await submissionInteraction.editReply({ content: `${unit}! Got it!`, components: [] });
+    } catch {
+      await submissionInteraction.editReply({ content: "Sorry, you took too long!", components: [] });
+    }
+
+    if (!unitInteraction) return;
+
+    await unitInteraction.showModal(
+      new ModalBuilder()
+        .setTitle(`How many ${unit} between events?`)
+        .setCustomId(periodId)
+        .addComponents(
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder().setLabel(unit).setValue("1").setStyle(TextInputStyle.Short).setCustomId("units")
+          )
+        )
+    );
+
+    let frequency: number | undefined = undefined;
+    try {
+      const modalSubmit = await unitInteraction.awaitModalSubmit({
+        filter: submissionFilter,
+        time: Time.toMilliseconds.minutes(5),
       });
+      await modalSubmit.deferUpdate();
+      const fieldValue = Number(modalSubmit.fields.fields.first()?.value);
+      if (isNaN(Number(fieldValue))) {
+        await submissionInteraction.editReply({ content: "That's not a valid number!", components: [] });
+        return;
+      }
+
+      frequency = Number(fieldValue);
+    } catch {
+      await submissionInteraction.editReply({ content: "Sorry, you took too long!", components: [] });
       return;
     }
 
-    const frequencyField = submission.fields.getField(`${event.id}_frequency`) as TextInputModalData;
-    if (frequencyField.value.match(/[^\d]/)) {
-      await submission.reply({
-        content: `Frequency must be a whole number.`,
-        ephemeral: true,
-      });
-      return;
-    }
-
-    const frequency = Number(frequencyField.value);
-    if (isNaN(frequency)) {
-      await submission.reply({
-        content: `The time before the next recurrence must be a number.`,
-        ephemeral: true,
-      });
-      return;
-    }
+    await submissionInteraction.editReply({ content: `Every ${frequency} ${unit}! Got it!`, components: [] });
 
     const recurrence: any = {
       firstStartTime: event.scheduledStartTime,
@@ -99,7 +130,7 @@ const eventCreationButtonHandlers: {
     );
     await originalInteraction.editReply(submissionEmbed);
   },
-  addImage: async (event, submissionInteraction, originalInteraction, client) => {
+  addImage: async (event, submissionInteraction, originalInteraction) => {
     await originalInteraction.editReply({
       content: "Adding image...",
       embeds: [],
@@ -165,7 +196,7 @@ const eventCreationButtonHandlers: {
       await imageResponse.delete();
     }
   },
-  save: async (event, submissionInteraction, originalInteraction, client) => {
+  save: async (event, submissionInteraction, originalInteraction) => {
     await originalInteraction.editReply({
       content: `Saved for later! You can continue from where you left off. Don't wait too long, or you will have to start over again!`,
       embeds: [],
@@ -174,17 +205,35 @@ const eventCreationButtonHandlers: {
     EventsUnderConstruction.saveEvent(event);
     Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
   },
-  finish: async (event, submissionInteraction, originalInteraction, client) => {
-    if (!submissionInteraction.message.guild) return;
+  finish: async (event, submissionInteraction, originalInteraction) => {
+    if (!originalInteraction.guild) return;
+
     await submissionInteraction.deferReply({ ephemeral: true });
 
     if (event.scheduledStartTime.valueOf() - Date.now() < Time.toMilliseconds.minutes(30)) {
-      const member = await submissionInteraction.message.guild.members.fetch(event.author.id);
+      const member = await originalInteraction.guild.members.fetch(event.author.id);
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         await originalInteraction.editReply({
           content: "Sorry, your start time needs to be more than 30 minutes from now!",
         });
 
+        return;
+      }
+    }
+
+    if (event.eventType.entityType !== GuildScheduledEventEntityType.External) {
+      const channelList = event.eventType.channel;
+
+      if (!channelList)
+        throw new Error(
+          `No valid channels for event type ${event.eventType?.name} on guild ${originalInteraction.guild?.name}`
+        );
+
+      const channel = await getValidVoiceOrStageChannel(event, event.eventType, originalInteraction.guild);
+      if (!channel) {
+        await submissionInteraction.editReply({
+          content: `Sorry, it looks like that time overlaps with another event! Please change your event's time.`,
+        });
         return;
       }
     }
@@ -195,18 +244,19 @@ const eventCreationButtonHandlers: {
     if (attachmentUrl) {
       event.image = attachmentUrl;
     }
+
     await originalInteraction.editReply({
       content: "Creating event...",
       embeds: [],
       components: [],
     });
 
-    const forumThread = await EventCreators.createThreadChannelEvent(event, submissionInteraction.message.guild);
+    const forumThread = await EventCreators.createThreadChannelEvent(event, originalInteraction.guild);
 
     try {
       const guildScheduledEvent = await EventCreators.createGuildScheduledEvent(
         event,
-        submissionInteraction.message.guild,
+        originalInteraction.guild,
         forumThread
       );
 
@@ -238,7 +288,7 @@ const eventCreationButtonHandlers: {
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
     await submissionInteraction.deleteReply();
   },
-  cancel: async (event, submissionInteraction, originalInteraction, client) => {
+  cancel: async (event, submissionInteraction, originalInteraction) => {
     const submissionMessage = submissionInteraction.message;
     if (event.threadChannel) {
       const yesNoButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
