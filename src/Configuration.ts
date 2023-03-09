@@ -1,4 +1,4 @@
-import { Client } from "discord.js";
+import { Client, GuildScheduledEventEntityType } from "discord.js";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
@@ -9,6 +9,7 @@ function defaultConfiguration(): EventMonkeyConfiguration {
       {
         name: "Meetup",
         discussionChannel: "meetups",
+        entityType: GuildScheduledEventEntityType.External,
         announcement: {
           onStart: true,
         },
