@@ -1,19 +1,19 @@
-import { EventMonkeyEvent } from "./EventMonkey";
+import { BaseEventMonkeyEvent } from "./EventMonkeyEvent";
 import logger from "./Logger";
 import Time from "./Utility/Time";
 
 const eventsUnderConstruction: UserEventMap = {};
 
 interface UserEventMap {
-  [userId: string]: [Date, EventMonkeyEvent];
+  [userId: string]: [Date, BaseEventMonkeyEvent];
 }
 
 export default {
   getEvent,
   saveEvent,
   deleteEvent,
-  maintainEvents
-}
+  maintainEvents,
+};
 
 function getEvent(userId: string) {
   if (userId in eventsUnderConstruction) return eventsUnderConstruction[userId][1];
@@ -21,7 +21,7 @@ function getEvent(userId: string) {
   return undefined;
 }
 
-function saveEvent(event: EventMonkeyEvent) {
+function saveEvent(event: BaseEventMonkeyEvent) {
   eventsUnderConstruction[event.author.id] = [new Date(), event];
 }
 
@@ -48,4 +48,3 @@ function maintainEvents() {
     logger.error("Error while maintaining events:", error);
   }
 }
-
