@@ -24,13 +24,7 @@ async function createGuildScheduledEvent(event: EventMonkeyEvent, guild: Guild, 
   const eventToSubmit = {} as any;
   eventToSubmit.description = `${event.description}\nDiscussion: ${thread.url}\nHosted by: ${event.author.toString()}`;
   eventToSubmit.name = `${event.name} hosted by ${event.author.username}`;
-  eventToSubmit.entityType = event.entityType;
-  if (event.entityType !== GuildScheduledEventEntityType.External) {
-    eventToSubmit.channel = event.entityMetadata.location;
-  } else {
-    eventToSubmit.entityMetadata = event.entityMetadata;
-  }
-
+  eventToSubmit.entityType = event.eventType.entityType;
   eventToSubmit.scheduledStartTime = event.scheduledStartTime;
   if (!event.scheduledEndTime) {
     const endTime = new Date(eventToSubmit.scheduledStartTime);
@@ -38,6 +32,12 @@ async function createGuildScheduledEvent(event: EventMonkeyEvent, guild: Guild, 
     eventToSubmit.scheduledEndTime = endTime;
   } else {
     eventToSubmit.scheduledEndTime = event.scheduledEndTime;
+  }
+
+  if (event.entityType === GuildScheduledEventEntityType.External) {
+    eventToSubmit.entityMetadata = event.entityMetadata;
+  } else {
+    eventToSubmit.channel = event.channel;
   }
 
   eventToSubmit.image = event.image;
@@ -66,7 +66,7 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
   }`;
 
   const threadMessage: any = {
-    embeds: [await eventEmbed(event, guild), attendeesToEmbed(event.attendees)],
+    embeds: [await eventEmbed(event), attendeesToEmbed(event.attendees)],
     files: event.image ? [new AttachmentBuilder(event.image)] : undefined,
   };
 
