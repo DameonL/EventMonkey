@@ -3,20 +3,20 @@ import {
   ChannelType,
   Client,
   EmbedBuilder,
-  Guild,
   GuildScheduledEvent,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   Message,
   ThreadChannel,
 } from "discord.js";
+import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import { EventRecurrence, deserializeRecurrence, serializeRecurrence } from "../../Recurrence";
+import { BaseEventMonkeyEvent } from "../../EventMonkeyEvent";
+import { deserializeRecurrence, EventRecurrence, serializeRecurrence } from "../../Recurrence";
 import Time from "../../Utility/Time";
-import { resolveChannelString } from "../../Utility/resolveChannelString";
 import { getAttendeesFromMessage } from "./attendees";
 
-export async function eventEmbed(event: EventMonkeyEvent, guild: Guild): Promise<EmbedBuilder> {
+export async function eventEmbed(event: EventMonkeyEvent): Promise<EmbedBuilder> {
   const previewEmbed = new EmbedBuilder();
   previewEmbed.setTitle("Event Details");
 
@@ -31,16 +31,17 @@ export async function eventEmbed(event: EventMonkeyEvent, guild: Guild): Promise
     iconURL: event.author.avatarURL() ?? undefined,
   });
 
-  
-  const location =
-    event.entityType === GuildScheduledEventEntityType.External
-      ? event.entityMetadata.location
-      : (await resolveChannelString(event.entityMetadata.location, guild))?.toString() ?? "";
-
   const fields: APIEmbedField[] = [
     {
+      name: "Type",
+      value: event.eventType.name,
+    },
+    {
       name: "Location",
-      value: location,
+      value:
+        event.entityType === GuildScheduledEventEntityType.External
+          ? event.entityMetadata.location
+          : event.channel.toString(),
       inline: true,
     },
     {
@@ -79,6 +80,11 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
   const author = client.users.cache.get(userId);
   if (!author) throw new Error("Unable to resolve user ID from embed.");
 
+  const eventTypeName = embed.fields.find((x) => x.name === "Type")?.value;
+  if (!eventTypeName) throw new Error();
+  const eventType = Configuration.current.eventTypes.find((x) => x.name === eventTypeName);
+  if (!eventType) throw new Error();
+
   const scheduledStartTime = Time.getTimeFromString(thread.name);
   const name = getEventNameFromString(thread.name);
   const image = detailsMessage.attachments.first()?.url;
@@ -90,14 +96,7 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
       .replace(" hour", "") ?? 1
   );
   const location = embed.fields.find((x) => x.name === "Location")?.value;
-  const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
-  const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
-  const entityType =
-    channel == undefined
-      ? GuildScheduledEventEntityType.External
-      : channel.type === ChannelType.GuildStageVoice
-      ? GuildScheduledEventEntityType.StageInstance
-      : GuildScheduledEventEntityType.Voice;
+  if (!location) throw new Error();
 
   const eventId = embed.url?.match(/(?<=https:\/\/discord.com\/events\/.*\/).*/i)?.[0];
 
@@ -118,7 +117,7 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
 
   const attendees = getAttendeesFromMessage(detailsMessage);
 
-  const output: any = {
+  const baseEvent: BaseEventMonkeyEvent = {
     name,
     scheduledStartTime,
     author,
@@ -126,17 +125,35 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
     privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
     duration: duration,
     discussionChannelId: thread.parentId ?? "",
-    entityMetadata: { location: channel ? channel.id : location },
-    entityType,
     threadChannel: thread,
     scheduledEvent,
     image,
     id,
     recurrence,
     attendees,
+    entityType: eventType.entityType,
   };
 
-  return output;
+  if (eventType.entityType === GuildScheduledEventEntityType.External) {
+    return {
+      ...baseEvent,
+      eventType,
+      entityMetadata: { location },
+      entityType: GuildScheduledEventEntityType.External,
+    };
+  } else if (eventType.entityType === GuildScheduledEventEntityType.Voice) {
+    const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
+    const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
+    if (!channel || channel.type !== ChannelType.GuildVoice) throw new Error();
+
+    return { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.Voice };
+  } else {
+    const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
+    const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
+    if (!channel || channel.type !== ChannelType.GuildStageVoice) throw new Error();
+
+    return { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.StageInstance };
+  }
 }
 
 export async function getEventDetailsEmbed(message: Message) {
