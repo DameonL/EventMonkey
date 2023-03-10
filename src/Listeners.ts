@@ -1,27 +1,20 @@
 import {
   ButtonInteraction,
-  ChannelType,
-  ChatInputCommandInteraction,
-  ComponentType,
-  ForumChannel,
+  ChannelType, ForumChannel,
   InteractionCollector,
   TextChannel,
-  ThreadChannel,
+  ThreadChannel
 } from "discord.js";
 import buttonHandlers from "./ButtonHandlers/EventButtonHandlers";
-import eventCreationButtonHandlers from "./ButtonHandlers/EventCreationButtonHandlers";
 import Configuration from "./Configuration";
-import editEventMessage from "./Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "./Content/Embed/eventEmbed";
-import { EventMonkeyEvent } from "./EventMonkey";
-import { resolveChannelString } from "./Utility/resolveChannelString";
 import logger from "./Logger";
+import { resolveChannelString } from "./Utility/resolveChannelString";
 
 export default {
   listenForButtons,
   listenForButtonsInChannel,
   listenForButtonsInThread,
-  getEmbedSubmissionCollector,
 };
 
 async function listenForButtons() {
@@ -75,70 +68,4 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
       logger.error(`Error handling thread button ${interaction.customId}`, error);
     }
 });
-}
-
-function getEmbedSubmissionCollector(
-  event: EventMonkeyEvent,
-  interaction: ChatInputCommandInteraction
-) {
-  if (
-    !interaction.channel ||
-    (interaction.channel.type !== ChannelType.GuildText &&
-      interaction.channel.type !== ChannelType.PublicThread)
-  )
-    return;
-  if (event.submissionCollector) event.submissionCollector.stop();
-  const configuration = Configuration.current;
-
-  const submissionCollector =
-    interaction.channel.createMessageComponentCollector<ComponentType.Button>({
-      filter: (submissionInteraction) =>
-        submissionInteraction.user.id === event.author.id &&
-        submissionInteraction.customId.startsWith(
-          `${interaction.id}_${event.id}_`
-        ),
-      time: configuration.editingTimeout,
-    });
-
-  submissionCollector.on(
-    "collect",
-    async (submissionInteraction: ButtonInteraction) => {
-      const handlerName = submissionInteraction.customId.replace(
-        `${interaction.id}_${event.id}_button_`,
-        ""
-      );
-      const handler = eventCreationButtonHandlers[handlerName];
-      if (handler) {
-        if (!configuration.discordClient || !configuration.discordClient.user) {
-          throw new Error("Client not set or not connected.");
-        }
-
-        try {
-          await handler(
-            event,
-            submissionInteraction,
-            interaction,
-          );
-        } catch (error) {
-          logger.error(`Error while running event creation button handler "${handlerName}".`, error)
-          await submissionInteraction.editReply("Sorry, but something went wrong! Rest assured, somebody will be punished.");
-          await interaction.editReply(await editEventMessage(event, "Creating an event...", interaction));
-          return;
-        }
-      }
-    }
-  );
-
-  submissionCollector.on("end", (collected, reason) => {
-    if (reason === "time") {
-      interaction.editReply({
-        content:
-          "Sorry, your event editing timed out! You can continue from where you left off when ready.",
-        embeds: [],
-        components: [],
-      });
-    }
-  });
-
-  return submissionCollector;
 }
