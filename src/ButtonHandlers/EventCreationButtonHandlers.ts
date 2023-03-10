@@ -23,25 +23,28 @@ import { eventModal } from "../Content/Modal/eventModal";
 import EventCreators from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
-import Listeners from "../Listeners";
 import logger from "../Logger";
 import { getValidVoiceOrStageChannel } from "../Utility/getValidVoiceOrStageChannel";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/Time";
+
+export enum EventCreationButtonHandlerResponse {
+  ContinueEditing,
+  EndEditing,
+}
 
 const eventCreationButtonHandlers: {
   [handlerName: string]: (
     event: EventMonkeyEvent,
     submissionInteraction: ButtonInteraction,
     originalInteraction: ChatInputCommandInteraction
-  ) => Promise<void>;
+  ) => Promise<EventCreationButtonHandlerResponse>;
 } = {
   edit: async (event, submissionInteraction, originalInteraction) => {
     await eventModal(event, submissionInteraction, originalInteraction);
+    return EventCreationButtonHandlerResponse.ContinueEditing
   },
   makeRecurring: async (event, submissionInteraction, originalInteraction) => {
-    if (!submissionInteraction.guild) return;
-
     const periodId = `${submissionInteraction.id}_${event.id}_recurrencePeriod`;
     const submissionFilter = (x: { customId: string; user: { id: string } }) =>
       x.customId === periodId && x.user.id === submissionInteraction.user.id;
@@ -81,7 +84,8 @@ const eventCreationButtonHandlers: {
       await submissionInteraction.editReply({ content: "Sorry, you took too long!", components: [] });
     }
 
-    if (!unitInteraction) return;
+    if (!unitInteraction) return EventCreationButtonHandlerResponse.ContinueEditing
+    ;
 
     await unitInteraction.showModal(
       new ModalBuilder()
@@ -104,13 +108,13 @@ const eventCreationButtonHandlers: {
       const fieldValue = Number(modalSubmit.fields.fields.first()?.value);
       if (isNaN(Number(fieldValue))) {
         await submissionInteraction.editReply({ content: "That's not a valid number!", components: [] });
-        return;
+        return EventCreationButtonHandlerResponse.ContinueEditing;
       }
 
       frequency = Number(fieldValue);
     } catch {
       await submissionInteraction.editReply({ content: "Sorry, you took too long!", components: [] });
-      return;
+      return EventCreationButtonHandlerResponse.EndEditing;
     }
 
     await submissionInteraction.editReply({ content: `Every ${frequency} ${unit}! Got it!`, components: [] });
@@ -129,6 +133,7 @@ const eventCreationButtonHandlers: {
       originalInteraction
     );
     await originalInteraction.editReply(submissionEmbed);
+    return EventCreationButtonHandlerResponse.ContinueEditing
   },
   addImage: async (event, submissionInteraction, originalInteraction) => {
     await originalInteraction.editReply({
@@ -142,7 +147,7 @@ const eventCreationButtonHandlers: {
       fetchReply: true,
     });
 
-    if (!("awaitMessages" in imageResponse.channel)) return;
+    if (!("awaitMessages" in imageResponse.channel)) return EventCreationButtonHandlerResponse.EndEditing;
 
     let replies = await imageResponse.channel.awaitMessages({
       filter: (replyInteraction) =>
@@ -157,7 +162,7 @@ const eventCreationButtonHandlers: {
       setTimeout(() => imageResponse.delete(), Time.toMilliseconds.minutes(1));
       const submissionEmbed = await editEventMessage(event, "", originalInteraction);
       await originalInteraction.editReply(submissionEmbed);
-      return;
+      return EventCreationButtonHandlerResponse.EndEditing;
     }
 
     await submissionInteraction.editReply({
@@ -195,6 +200,7 @@ const eventCreationButtonHandlers: {
       await replies.at(0)?.delete();
       await imageResponse.delete();
     }
+    return EventCreationButtonHandlerResponse.ContinueEditing
   },
   save: async (event, submissionInteraction, originalInteraction) => {
     await originalInteraction.editReply({
@@ -203,10 +209,10 @@ const eventCreationButtonHandlers: {
       components: [],
     });
     EventsUnderConstruction.saveEvent(event);
-    Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
+    return EventCreationButtonHandlerResponse.EndEditing
   },
   finish: async (event, submissionInteraction, originalInteraction) => {
-    if (!originalInteraction.guild) return;
+    if (!originalInteraction.guild) return EventCreationButtonHandlerResponse.EndEditing;
 
     await submissionInteraction.deferReply({ ephemeral: true });
 
@@ -217,7 +223,7 @@ const eventCreationButtonHandlers: {
           content: "Sorry, your start time needs to be more than 30 minutes from now!",
         });
 
-        return;
+        return EventCreationButtonHandlerResponse.ContinueEditing;
       }
     }
 
@@ -234,7 +240,7 @@ const eventCreationButtonHandlers: {
         await submissionInteraction.editReply({
           content: `Sorry, it looks like that time overlaps with another event! Please change your event's time.`,
         });
-        return;
+        return EventCreationButtonHandlerResponse.ContinueEditing;
       }
     }
 
@@ -274,10 +280,8 @@ const eventCreationButtonHandlers: {
       if (forumThread && !event.scheduledEvent) await forumThread.delete();
 
       EventsUnderConstruction.saveEvent(event);
-      return;
+      return EventCreationButtonHandlerResponse.EndEditing;
     }
-
-    Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
 
     await originalInteraction.editReply({
       content: "Event created successfully!",
@@ -287,6 +291,7 @@ const eventCreationButtonHandlers: {
 
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
     await submissionInteraction.deleteReply();
+    return EventCreationButtonHandlerResponse.EndEditing;
   },
   cancel: async (event, submissionInteraction, originalInteraction) => {
     const submissionMessage = submissionInteraction.message;
@@ -317,7 +322,7 @@ const eventCreationButtonHandlers: {
         await submissionInteraction.editReply({
           content: "Sorry, your response timed out!",
         });
-        return;
+        return EventCreationButtonHandlerResponse.EndEditing;
       }
 
       await collected.deferUpdate();
@@ -346,7 +351,7 @@ const eventCreationButtonHandlers: {
     });
 
     EventsUnderConstruction.deleteEvent(submissionInteraction.user.id);
-    Listeners.getEmbedSubmissionCollector(event, originalInteraction)?.stop();
+    return EventCreationButtonHandlerResponse.EndEditing;
   },
 };
 
