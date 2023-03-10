@@ -29,6 +29,7 @@ import { getValidVoiceOrStageChannel } from "./Utility/getValidVoiceOrStageChann
 import { resolveChannelString } from "./Utility/resolveChannelString";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
+import Listeners from "./Listeners";
 
 export const eventCommand = {
   builder: getEventCommandBuilder,
@@ -155,7 +156,10 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   if (!newEvent) throw new Error();
 
   EventsUnderConstruction.saveEvent(newEvent);
-  editEvent(newEvent, interaction);
+  await editEvent(newEvent, interaction);
+  if (newEvent.threadChannel) {
+    Listeners.listenForButtonsInThread(newEvent.threadChannel)
+  }
 }
 
 async function executeEditCommand(interaction: ChatInputCommandInteraction) {
@@ -226,7 +230,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
   await interaction.editReply({
     ...submissionMessage,
   });
-  editEvent(monkeyEvent, interaction);
+  await editEvent(monkeyEvent, interaction);
 }
 
 function checkRolePermissions(interaction: ChatInputCommandInteraction): boolean {
