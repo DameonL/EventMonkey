@@ -29,13 +29,15 @@ async function startServer() {
     });
   }
   await client.login(process.env.botToken);
-  console.log("Login success");
 }
 
 async function onClientReady(client: discord.Client) {
-  console.log("Client ready");
   configuration.discordClient = client;
   var uptime = 0;
+  client.user?.setActivity(`Performing maintenance...`);
+  await eventMonkey.configure(configuration);
+  await eventMonkey.registerCommands();
+  client.user?.setActivity(`Ready!`);
   setInterval(() => {
     uptime += 1;
     try {
@@ -45,9 +47,6 @@ async function onClientReady(client: discord.Client) {
       console.error(error);
     }
   }, 60000);
-  await eventMonkey.configure(configuration);
-  await eventMonkey.registerCommands();
-  console.log("Commands registered.");
 }
 
 function unitString(minutes: number) {
