@@ -23,12 +23,9 @@ async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildSc
   const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
   const monkeyEvent = await deseralizeEventEmbed(thread, Configuration.current.discordClient);
-  var idString = `Event ID: ${monkeyEvent.id}`;
 
-  const eventType = Configuration.current.eventTypes.find(
-    (x) => x.discussionChannel === thread.parent?.id || x.discussionChannel === thread.parent?.name
-  );
-  if (!eventType || !eventType.announcement || !eventType.announcement.onStart) return;
+  const eventType = monkeyEvent.eventType;
+  if (!eventType.announcement || !eventType.announcement.onStart) return;
 
   const message = {
     embeds: [eventAnnouncement(monkeyEvent)],
