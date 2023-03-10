@@ -11,9 +11,10 @@
   "scripts": {
     "build": "tsc && copy-files-from-to",
     "build-clean": "rimraf ./dist && npm run build",
-    "start": "pm2 start dist/eventMonkeyFrontend.js && pm2 start dist/eventMonkeyBot.js --log monkeyBotLog.txt",
-    "stop": "pm2 delete dist/eventMonkeyBot.js && pm2 delete dist/eventMonkeyFrontend.js",
-    "dev": "nodemon -e ts,js,json --delay 1 --watch src --watch ../dist --exec \"npm run build && npm run start\""
+    "start": "pm2 start ecosystem.config.js",
+    "stop": "pm2 delete ecosystem.config.js",
+    "dev": "npm run start && nodemon --ext ts,js --watch src --watch ../dist --exec \"npm run build\" --delay 1",
+    "postdev": "npm run stop"
   },
   "dependencies": {
     "discord.js": "^14.7.1",
