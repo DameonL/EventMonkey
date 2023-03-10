@@ -1,8 +1,22 @@
-import { CategoryChannel, ChannelType, Collection, Guild, GuildScheduledEvent, GuildScheduledEventEntityType, GuildScheduledEventStatus, StageChannel, VoiceBasedChannel, VoiceChannel } from "discord.js";
+import {
+  CategoryChannel,
+  ChannelType,
+  Collection,
+  Guild,
+  GuildScheduledEvent,
+  GuildScheduledEventEntityType,
+  GuildScheduledEventStatus,
+  StageChannel,
+  VoiceChannel,
+} from "discord.js";
 import { EventMonkeyEventTypeStage, EventMonkeyEventTypeVoice } from "../EventMonkeyConfiguration";
-import { BaseEventMonkeyEvent, EventMonkeyEvent } from "../EventMonkeyEvent";
+import { BaseEventMonkeyEvent } from "../EventMonkeyEvent";
 
-export async function getValidVoiceOrStageChannel(event: BaseEventMonkeyEvent, eventType: EventMonkeyEventTypeStage | EventMonkeyEventTypeVoice, guild: Guild): Promise<VoiceChannel | StageChannel | undefined> {
+export async function getValidVoiceOrStageChannel(
+  event: BaseEventMonkeyEvent,
+  eventType: EventMonkeyEventTypeStage | EventMonkeyEventTypeVoice,
+  guild: Guild
+): Promise<VoiceChannel | StageChannel | undefined> {
   if (!event.scheduledStartTime || !event.scheduledEndTime)
     throw new Error("Event must have a scheduled start and end time.");
 
@@ -43,14 +57,17 @@ export async function getValidVoiceOrStageChannel(event: BaseEventMonkeyEvent, e
 
     return channel;
   }
-  
 }
 
-function eventsOverlap(channelId: string, event: BaseEventMonkeyEvent, guildEvents: Collection<string, GuildScheduledEvent<GuildScheduledEventStatus>>) {
+function eventsOverlap(
+  channelId: string,
+  event: BaseEventMonkeyEvent,
+  guildEvents: Collection<string, GuildScheduledEvent<GuildScheduledEventStatus>>
+) {
   if (!event.scheduledStartTime || !event.scheduledEndTime)
     throw new Error("Event must have a scheduled start and end time.");
 
-    const channelEvents = guildEvents.filter((x) => x.description?.includes(channelId));
+  const channelEvents = guildEvents.filter((x) => x.channel?.id === channelId);
 
   for (const [guildEventId, guildEvent] of channelEvents) {
     if (!guildEvent.scheduledStartAt || !guildEvent.scheduledEndAt) continue;
