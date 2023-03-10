@@ -4,29 +4,30 @@ import {
   ChannelType,
   ChatInputCommandInteraction,
   ComponentType,
+  Guild,
   GuildMemberRoleManager,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
-  MessageCreateOptions,
-  MessageFlags,
   PermissionsBitField,
   SlashCommandBuilder,
   SlashCommandSubcommandBuilder,
   StringSelectMenuBuilder,
-  ThreadChannel,
+  User,
 } from "discord.js";
 import { v4 as uuidv4 } from "uuid";
-import eventCreationButtonHandlers, { EventCreationButtonHandlerResponse } from "./ButtonHandlers/EventCreationButtonHandlers";
+import eventCreationButtonHandlers, {
+  EventCreationButtonHandlerResponse,
+} from "./ButtonHandlers/EventCreationButtonHandlers";
 import Configuration from "./Configuration";
 import editEventMessage from "./Content/Embed/editEventMessage";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEventType } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import EventsUnderConstruction from "./EventsUnderConstruction";
-import Listeners from "./Listeners";
 import logger from "./Logger";
 import { getValidVoiceOrStageChannel } from "./Utility/getValidVoiceOrStageChannel";
 import { resolveChannelString } from "./Utility/resolveChannelString";
+import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
 
 export const eventCommand = {
@@ -41,14 +42,6 @@ function getEventCommandBuilder() {
 
   const createSubCommand = new SlashCommandSubcommandBuilder().setName("create").setDescription("Create a new event");
   const editSubCommand = new SlashCommandSubcommandBuilder().setName("edit").setDescription("Edit an existing event");
-  editSubCommand.addChannelOption((x) =>
-    x
-      .setName("thread")
-      .setDescription("The name of the event thread")
-      .addChannelTypes(ChannelType.PublicThread)
-      .setRequired(true)
-  );
-
   builder.addSubcommand(createSubCommand);
   builder.addSubcommand(editSubCommand);
 
@@ -79,13 +72,13 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   defaultStartTime.setDate(defaultStartTime.getDate() + 1);
   const defaultEndTime = new Date(defaultStartTime);
   defaultEndTime.setHours(defaultEndTime.getHours() + 1);
-  const selectMenuOptions: APISelectMenuOption[] = [];
-  for (const eventType of Configuration.current.eventTypes) {
-    const channel = await resolveChannelString(eventType.discussionChannel, interaction.guild);
-    if (channel) {
-      selectMenuOptions.push({ label: eventType.name, value: eventType.name, description: eventType.description });
-    }
-  }
+  const selectMenuOptions: APISelectMenuOption[] = Configuration.current.eventTypes
+    .filter(async (x) =>
+      interaction.guild ? await resolveChannelString(x.discussionChannel, interaction.guild) : false
+    )
+    .map((x) => {
+      return { label: x.name, value: x.name, description: x.description };
+    });
 
   let eventType: EventMonkeyEventType | undefined;
   try {
@@ -162,37 +155,58 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   if (!newEvent) throw new Error();
 
   EventsUnderConstruction.saveEvent(newEvent);
-  editEvent(newEvent, interaction)
+  editEvent(newEvent, interaction);
 }
 
 async function executeEditCommand(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild || !interaction.channel) return;
-  const channel = interaction.options.getChannel("thread") as ThreadChannel;
+
   if (!checkRolePermissions(interaction)) {
     return;
   }
 
-  let event: EventMonkeyEvent | undefined = undefined;
+  const userEvents = await getUserEvents(interaction.guild, interaction.user);
+  if (userEvents.length === 0) {
+    await interaction.editReply({
+      content: "Sorry, it looks like you don't have any existing events to edit.",
+      components: [],
+      embeds: [],
+    });
+
+    return;
+  }
+  const selectMenuOptions: APISelectMenuOption[] = userEvents.map((x) => {
+    return { label: x.name, value: x.id, description: Time.getTimeString(x.scheduledStartTime) };
+  });
+
+  let monkeyEvent: EventMonkeyEvent | undefined;
   try {
-    event = await deseralizeEventEmbed(channel, channel.client);
+    const eventTypeMessage = await interaction.editReply({
+      content: "Which event do you want to edit?",
+      components: [
+        new ActionRowBuilder<StringSelectMenuBuilder>().setComponents([
+          new StringSelectMenuBuilder().setCustomId(interaction.id).setOptions(selectMenuOptions),
+        ]),
+      ],
+    });
+
+    const selectResponse = await eventTypeMessage.awaitMessageComponent<ComponentType.StringSelect>({
+      filter: (x) => x.customId === interaction.id,
+      time: Time.toMilliseconds.minutes(5),
+    });
+    await selectResponse.deferUpdate();
+    interaction.editReply({ content: "Working...", components: [] });
+
+    monkeyEvent = userEvents.find((x) => x.id === selectResponse.values[0]);
   } catch (error) {
-    interaction.editReply({
-      content: "It doesn't look like that's an event thread.",
-    });
-
-    return;
-  }
-  if (!event) throw new Error();
-
-  if (event.author.id !== interaction.user.id) {
-    interaction.editReply({
-      content: "Sorry, you can only edit events that you created!",
-    });
-
+    logger.error("", error);
+    await interaction.editReply({ content: "Timed out! Come back when you're ready!", components: [] });
     return;
   }
 
-  if (event.threadChannel && event.scheduledStartTime.valueOf() < Date.now()) {
+  if (!monkeyEvent) throw new Error();
+
+  if (monkeyEvent.threadChannel && monkeyEvent.scheduledStartTime.valueOf() < Date.now()) {
     interaction.editReply({
       content: "You can't edit an event that is in the past.",
     });
@@ -200,7 +214,7 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  if (event.threadChannel && event.threadChannel.archived) {
+  if (monkeyEvent.threadChannel && monkeyEvent.threadChannel.archived) {
     interaction.editReply({
       content: "You can't edit an event that has been cancelled.",
     });
@@ -208,11 +222,11 @@ async function executeEditCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const submissionMessage = await editEventMessage(event, "Editing your existing event...", interaction);
+  const submissionMessage = await editEventMessage(monkeyEvent, "Editing your existing event...", interaction);
   await interaction.editReply({
     ...submissionMessage,
   });
-  editEvent(event, interaction);
+  editEvent(monkeyEvent, interaction);
 }
 
 function checkRolePermissions(interaction: ChatInputCommandInteraction): boolean {
@@ -288,4 +302,20 @@ async function editEvent(event: EventMonkeyEvent, interaction: ChatInputCommandI
     });
     return;
   }
+}
+
+async function getUserEvents(guild: Guild, user: User) {
+  const guildEvents = guild.scheduledEvents.cache.filter((x) => x.description?.includes(user.id));
+  const output: EventMonkeyEvent[] = [];
+  for (const [id, event] of guildEvents) {
+    if (!event.description) continue;
+
+    const thread = await Threads.getThreadFromEventDescription(event.description);
+    if (!thread) continue;
+
+    const monkeyEvent = await deseralizeEventEmbed(thread, guild.client);
+    output.push(monkeyEvent);
+  }
+
+  return output;
 }
