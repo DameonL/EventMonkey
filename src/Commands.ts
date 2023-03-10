@@ -143,7 +143,13 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
         eventType,
         entityType: GuildScheduledEventEntityType.Voice,
       };
-      EventsUnderConstruction.saveEvent(newEvent);
+    } else if (channel.type === ChannelType.GuildStageVoice && eventType.entityType === GuildScheduledEventEntityType.StageInstance) {
+      newEvent = {
+        ...baseEvent,
+        channel,
+        eventType,
+        entityType: GuildScheduledEventEntityType.StageInstance,
+      };
     }
   } else {
     newEvent = {
