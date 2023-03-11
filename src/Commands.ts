@@ -82,6 +82,12 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
       return { label: x.name, value: x.name, description: x.description };
     });
 
+  const existingEditingEvent = EventsUnderConstruction.getEvent(interaction.user.id);
+  if (existingEditingEvent) {
+    await editEvent(existingEditingEvent, interaction);
+    return;
+  }
+
   let eventType: EventMonkeyEventType | undefined;
   try {
     const eventTypeMessage = await interaction.editReply({
@@ -133,21 +139,15 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   baseEvent.discussionChannelId = discussionChannel.id;
   let newEvent: EventMonkeyEvent | undefined;
   if (eventType.entityType !== GuildScheduledEventEntityType.External) {
-    const channel = await getValidVoiceOrStageChannel(baseEvent, eventType, interaction.guild);
-
-    if (!channel) throw new Error();
-
-    if (channel.type === ChannelType.GuildVoice && eventType.entityType === GuildScheduledEventEntityType.Voice) {
+    if (eventType.entityType === GuildScheduledEventEntityType.Voice) {
       newEvent = {
         ...baseEvent,
-        channel,
         eventType,
         entityType: GuildScheduledEventEntityType.Voice,
       };
-    } else if (channel.type === ChannelType.GuildStageVoice && eventType.entityType === GuildScheduledEventEntityType.StageInstance) {
+    } else if (eventType.entityType === GuildScheduledEventEntityType.StageInstance) {
       newEvent = {
         ...baseEvent,
-        channel,
         eventType,
         entityType: GuildScheduledEventEntityType.StageInstance,
       };
@@ -295,9 +295,13 @@ async function editEvent(event: EventMonkeyEvent, interaction: ChatInputCommandI
       const handlerName = editingInteraction.customId.replace(`${interaction.id}_button_`, "");
       const handler = eventCreationButtonHandlers[handlerName];
       if (handler) {
+        await interaction.editReply({content: "Working...", embeds: [], components: []});
         try {
           const response = await handler(event, editingInteraction, interaction);
           if (response === EventCreationButtonHandlerResponse.EndEditing) break;
+
+          const eventMessage = await editEventMessage(event, "", interaction);
+          await interaction.editReply(eventMessage);   
         } catch (error) {
           logger.error(`Error while running event creation button handler "${handlerName}".`, error);
           await interaction.editReply("Sorry, but something went wrong! Rest assured, somebody will be punished.");
