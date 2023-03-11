@@ -86,6 +86,12 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
       }
     });
 
+    logger.log("Pre-loading channels and events...");
+    for (const [guildId, partialGuild] of await client.guilds.fetch()) {
+      const guild = await partialGuild.fetch();
+      const channels = await guild.channels.fetch();
+      const threads = await guild.channels.fetchActiveThreads();
+    }
     await startupMaintenanceTasks();
     startRecurringTasks();
   }
