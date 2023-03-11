@@ -17,7 +17,6 @@ import {
   TextInputStyle,
   ThreadChannel,
 } from "discord.js";
-import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import { eventModal } from "../Content/Modal/eventModal";
 import EventCreators from "../EventCreators";
@@ -27,6 +26,7 @@ import logger from "../Logger";
 import { getValidVoiceOrStageChannel } from "../Utility/getValidVoiceOrStageChannel";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/Time";
+import editEventMessage from "../Content/Embed/editEventMessage";
 
 export enum EventCreationButtonHandlerResponse {
   ContinueEditing,
@@ -127,12 +127,6 @@ const eventCreationButtonHandlers: {
     recurrence[unit] = frequency;
 
     event.recurrence = recurrence;
-    const submissionEmbed = await editEventMessage(
-      event,
-      `Event will recur every ${frequency} ${unit}`,
-      originalInteraction
-    );
-    await originalInteraction.editReply(submissionEmbed);
     return EventCreationButtonHandlerResponse.ContinueEditing
   },
   addImage: async (event, submissionInteraction, originalInteraction) => {
@@ -160,9 +154,7 @@ const eventCreationButtonHandlers: {
     if (!replies.at(0)) {
       imageResponse.edit("Sorry, you took too long! Please try again.");
       setTimeout(() => imageResponse.delete(), Time.toMilliseconds.minutes(1));
-      const submissionEmbed = await editEventMessage(event, "", originalInteraction);
-      await originalInteraction.editReply(submissionEmbed);
-      return EventCreationButtonHandlerResponse.EndEditing;
+      return EventCreationButtonHandlerResponse.ContinueEditing;
     }
 
     await submissionInteraction.editReply({
@@ -178,15 +170,10 @@ const eventCreationButtonHandlers: {
         event.image = attachmentUrl;
         submissionEmbed = await editEventMessage(event, "Image added!", originalInteraction);
         submissionEmbed.files = [new AttachmentBuilder(event.image)];
+        await originalInteraction.editReply(submissionEmbed);
       } else {
-        submissionEmbed = await editEventMessage(
-          event,
-          "Your message didn't have a valid image attached!",
-          originalInteraction
-        );
+        await submissionInteraction.editReply({content: "Your message didn't have a valid image attached!"});
       }
-
-      await originalInteraction.editReply(submissionEmbed);
     } catch (error) {
       logger.error("Error adding image", error);
       event.image = "";
@@ -227,7 +214,7 @@ const eventCreationButtonHandlers: {
       }
     }
 
-    if (event.eventType.entityType !== GuildScheduledEventEntityType.External) {
+    if (event.entityType !== GuildScheduledEventEntityType.External) {
       const channelList = event.eventType.channel;
 
       if (!channelList)
@@ -242,6 +229,7 @@ const eventCreationButtonHandlers: {
         });
         return EventCreationButtonHandlerResponse.ContinueEditing;
       }
+      event.channel = channel;
     }
 
     if (!event.attendees.includes(submissionInteraction.user.id)) event.attendees.push(submissionInteraction.user.id);
