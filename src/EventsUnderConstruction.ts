@@ -1,11 +1,11 @@
-import { BaseEventMonkeyEvent } from "./EventMonkeyEvent";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import logger from "./Logger";
 import Time from "./Utility/Time";
 
 const eventsUnderConstruction: UserEventMap = {};
 
 interface UserEventMap {
-  [userId: string]: [Date, BaseEventMonkeyEvent];
+  [userId: string]: [Date, EventMonkeyEvent];
 }
 
 export default {
@@ -21,7 +21,7 @@ function getEvent(userId: string) {
   return undefined;
 }
 
-function saveEvent(event: BaseEventMonkeyEvent) {
+function saveEvent(event: EventMonkeyEvent) {
   eventsUnderConstruction[event.author.id] = [new Date(), event];
 }
 
