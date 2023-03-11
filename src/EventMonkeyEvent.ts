@@ -38,13 +38,13 @@ export interface BaseEventMonkeyEvent {
 export interface EventMonkeyEventVoice extends BaseEventMonkeyEvent {
   entityType: GuildScheduledEventEntityType.Voice;
   eventType: EventMonkeyEventTypeVoice;
-  channel: VoiceChannel;
+  channel?: VoiceChannel;
 }
 
 export interface EventMonkeyEventStage extends BaseEventMonkeyEvent {
   entityType: GuildScheduledEventEntityType.StageInstance;
   eventType: EventMonkeyEventTypeStage;
-  channel: StageChannel;
+  channel?: StageChannel;
 }
 
 export interface EventMonkeyEventExternal extends BaseEventMonkeyEvent {
