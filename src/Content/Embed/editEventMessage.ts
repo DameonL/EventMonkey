@@ -7,12 +7,11 @@ import {
   MessageCreateOptions,
 } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import { EventMonkeyEventExternal, EventMonkeyEventStage, EventMonkeyEventVoice } from "../../EventMonkeyEvent";
 import Time from "../../Utility/Time";
 import { eventEmbed } from "./eventEmbed";
 
 export default async function editEventMessage(
-  event: EventMonkeyEventVoice | EventMonkeyEventStage | EventMonkeyEventExternal,
+  event: EventMonkeyEvent,
   content: string,
   originalInteraction: Interaction
 ): Promise<MessageCreateOptions> {
