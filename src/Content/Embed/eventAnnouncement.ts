@@ -33,7 +33,7 @@ export default function eventAnnouncement(event: EventMonkeyEvent, timeBeforeSta
   if (event.entityType !== GuildScheduledEventEntityType.External) {
     announcementFields.push({
       name: "Channel",
-      value: event.channel.toString(),
+      value: event.channel?.toString() ?? "Not yet chosen",
     });
   } else {
     announcementFields.push({
