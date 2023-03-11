@@ -8,6 +8,7 @@ import {
   GuildMemberRoleManager,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
+  GuildScheduledEventStatus,
   PermissionsBitField,
   SlashCommandBuilder,
   SlashCommandSubcommandBuilder,
@@ -315,7 +316,7 @@ async function editEvent(event: EventMonkeyEvent, interaction: ChatInputCommandI
 }
 
 async function getUserEvents(guild: Guild, user: User) {
-  const guildEvents = guild.scheduledEvents.cache.filter((x) => x.description?.includes(user.id));
+  const guildEvents = guild.scheduledEvents.cache.filter((x) => x.status === GuildScheduledEventStatus.Scheduled && x.description?.includes(user.id));
   const output: EventMonkeyEvent[] = [];
   for (const [id, event] of guildEvents) {
     if (!event.description) continue;
