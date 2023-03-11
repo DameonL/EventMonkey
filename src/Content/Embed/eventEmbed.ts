@@ -41,7 +41,7 @@ export async function eventEmbed(event: EventMonkeyEvent): Promise<EmbedBuilder>
       value:
         event.entityType === GuildScheduledEventEntityType.External
           ? event.entityMetadata.location
-          : event.channel.toString(),
+          : event.channel?.toString() ?? "To be determined",
       inline: true,
     },
     {
@@ -144,13 +144,13 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
   } else if (eventType.entityType === GuildScheduledEventEntityType.Voice) {
     const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
     const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
-    if (!channel || channel.type !== ChannelType.GuildVoice) throw new Error();
+    if (channel && channel.type !== ChannelType.GuildVoice) throw new Error();
 
     return { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.Voice };
   } else {
     const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
     const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
-    if (!channel || channel.type !== ChannelType.GuildStageVoice) throw new Error();
+    if (channel && channel.type !== ChannelType.GuildStageVoice) throw new Error();
 
     return { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.StageInstance };
   }
