@@ -12,7 +12,7 @@ const logger = {
   error: (message: string, objectToLog?: any) => logMessage(LoggingSeverity.Error, message, objectToLog),
 };
 
-const prefix = `[eventMonkey ${packageJson.version}]: `;
+const prefix = `${new Date().toISOString()} [eventMonkey ${packageJson.version}]: `;
 
 function logMessage(severity: LoggingSeverity, logMessage: string, objectToLog?: any) {
   const logFunction =
