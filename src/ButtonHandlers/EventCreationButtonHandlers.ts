@@ -239,6 +239,10 @@ const eventCreationButtonHandlers: {
       event.image = attachmentUrl;
     }
 
+    if (!event.image && event.eventType.defaultImageUrl) {
+      event.image = event.eventType.defaultImageUrl;
+    }
+
     await originalInteraction.editReply({
       content: "Creating event...",
       embeds: [],

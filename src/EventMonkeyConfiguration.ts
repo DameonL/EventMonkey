@@ -21,6 +21,7 @@ export interface BaseEventMonkeyEventType {
   description?: string;
   discussionChannel: string;
   announcement?: EventAnnouncement;
+  defaultImageUrl?: string;
 }
 
 export interface EventMonkeyEventTypeExternal extends BaseEventMonkeyEventType {

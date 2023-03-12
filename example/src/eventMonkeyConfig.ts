@@ -15,14 +15,16 @@ const configuration: EventMonkeyConfiguration = {
       description: "A hosted, in-person event",
       discussionChannel: "meetups",
       announcement,
-      entityType: GuildScheduledEventEntityType.External
+      entityType: GuildScheduledEventEntityType.External,
+      defaultImageUrl: "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png"
     },
     {
       name: "Happening",
       description: "A freeform in-person without formal hosting",
       discussionChannel: "happenings",
       announcement,
-      entityType: GuildScheduledEventEntityType.External
+      entityType: GuildScheduledEventEntityType.External,
+      defaultImageUrl: "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png"
     },
     {
       name: "🎤 Hangout",
@@ -30,7 +32,8 @@ const configuration: EventMonkeyConfiguration = {
       discussionChannel: "hangouts",
       channel: "Hangout",
       announcement,
-      entityType: GuildScheduledEventEntityType.Voice
+      entityType: GuildScheduledEventEntityType.Voice,
+      defaultImageUrl: "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png"
     },
     {
       name: "🗣 Lecture",
@@ -38,7 +41,8 @@ const configuration: EventMonkeyConfiguration = {
       discussionChannel: "lectures",
       channel: "Lecture",
       announcement,
-      entityType: GuildScheduledEventEntityType.StageInstance
+      entityType: GuildScheduledEventEntityType.StageInstance,
+      defaultImageUrl: "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png"
     },
   ],
   editingTimeout: eventMonkey.time.toMilliseconds.minutes(30),
