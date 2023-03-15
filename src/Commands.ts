@@ -136,7 +136,7 @@ const commands = {
       return;
     }
 
-    const userEvents = await getUserEvents(guild, interaction.user, GuildScheduledEventStatus.Scheduled);
+    const userEvents = (await getUserEvents(guild, interaction.user, GuildScheduledEventStatus.Scheduled)).filter(x => x.scheduledStartTime.valueOf() > Date.now());
     if (userEvents.length === 0) {
       await interaction.editReply({
         content: "Sorry, it looks like you don't have any existing events to edit.",
