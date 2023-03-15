@@ -214,6 +214,11 @@ const eventCreationButtonHandlers: {
       }
     }
 
+    if (!event.scheduledEndTime) {
+      event.scheduledEndTime = new Date(event.scheduledStartTime);
+      event.scheduledEndTime.setHours(event.scheduledEndTime.getHours() + event.duration);
+    }
+
     if (event.entityType !== GuildScheduledEventEntityType.External) {
       const channelList = event.eventType.channel;
 
