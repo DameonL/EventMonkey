@@ -9,11 +9,10 @@ import { eventCommand } from "./Commands";
 import Configuration from "./Configuration";
 import Listeners from "./Listeners";
 import logger from "./Logger";
-import Threads from "./Utility/Threads";
-import Time from "./Utility/Time";
 import performAnnouncements from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
-import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
+import Threads from "./Utility/Threads";
+import Time from "./Utility/Time";
 import updateVoiceAndStageEvents from "./Utility/updateVoiceAndStageEvents";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
@@ -64,17 +63,9 @@ async function configure(newConfiguration: EventMonkeyConfiguration) {
   const client = Configuration.current.discordClient;
   if (client && client !== cachedClient) {
     await Listeners.listenForButtons();
-    client.on(Events.GuildScheduledEventDelete, async (guildScheduledEvent: GuildScheduledEvent) => {
-      if (!guildScheduledEvent.description) return;
-
-      const thread = await Threads.getThreadFromEventDescription(guildScheduledEvent.description);
-      if (!(thread && await client.channels.fetch(thread.id))) return;
-
-      if (thread) {
-        await sendEventClosingMessage(thread, GuildScheduledEventStatus.Canceled);
-        await Threads.closeEventThread(thread, guildScheduledEvent);
-      }
-    });
+    client.on(Events.GuildScheduledEventDelete, async (guildScheduledEvent: GuildScheduledEvent) =>
+      ClientEventHandlers.eventCompleted(null, guildScheduledEvent)
+    );
 
     client.on(Events.GuildScheduledEventUserAdd, ClientEventHandlers.userShowedInterest);
 
