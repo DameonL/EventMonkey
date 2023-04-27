@@ -84,7 +84,7 @@ async function eventCompleted(oldEvent: GuildScheduledEvent | null, event: Guild
           ],
         });
       } else {
-        sendEventClosingMessage(thread, GuildScheduledEventStatus.Completed);
+        await sendEventClosingMessage(thread, GuildScheduledEventStatus.Completed);
         await Threads.closeEventThread(thread, event);
       }
     }
