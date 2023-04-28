@@ -16,7 +16,7 @@ export default async function performAnnouncements() {
       }
     }
   } catch (error) {
-    logger.log("Error while performing announcments", error);
+    logger.error("Error while performing announcments", error);
   }
 }
 
@@ -50,7 +50,7 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
   try {
     if (!threadAnnouncement) thread.send({ embeds: [announcementEmbed] });
   } catch (error) {
-    logger.log("Error sending event announcement to thread:", { announcementEmbed, error });
+    logger.error("Error sending event announcement to thread:", { announcementEmbed, error });
   }
 
   const announcementChannels = Array.isArray(eventType.announcement.channel)
