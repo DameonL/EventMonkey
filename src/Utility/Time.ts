@@ -1,6 +1,5 @@
 import Configuration from "../Configuration";
 import { EventMonkeyTimeZone } from "../EventMonkeyConfiguration";
-import logger from "../Logger";
 
 const toMilliseconds = {
   days: (numberOfDays: number) => toMilliseconds.hours(24) * numberOfDays,
