@@ -1,7 +1,7 @@
 import discord from "discord.js";
-import configuration from "./eventMonkeyConfig";
-import eventMonkey from "eventmonkey";
 import dotenv from "dotenv";
+import eventMonkey from "eventmonkey";
+import configuration from "./eventMonkeyConfig";
 
 const client = new discord.Client({
   // A high timeout is important for handling large images.
@@ -32,10 +32,11 @@ async function startServer() {
 }
 
 async function onClientReady(client: discord.Client) {
-  configuration.discordClient = client;
+  const config = configuration();
+  config.discordClient = client;
   var uptime = 0;
   client.user?.setActivity(`Performing maintenance...`);
-  await eventMonkey.configure(configuration);
+  await eventMonkey.configure(config);
   await eventMonkey.registerCommands();
   client.user?.setActivity(`Ready!`);
   setInterval(() => {

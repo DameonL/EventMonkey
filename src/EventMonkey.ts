@@ -49,14 +49,23 @@ async function registerCommands() {
   });
 }
 
-async function configure(newConfiguration: EventMonkeyConfiguration) {
+async function configure(newConfiguration: EventMonkeyConfiguration | (() => EventMonkeyConfiguration)) {
+  let configuration: EventMonkeyConfiguration | undefined;
+  if ((typeof newConfiguration) === "function") {
+    configuration = (newConfiguration as () => EventMonkeyConfiguration)();
+  }
+
+  if (!configuration) {
+    configuration = newConfiguration as EventMonkeyConfiguration;
+  }
+
   const serverOffset = Math.round(new Date().getTimezoneOffset() / 60);
-  for (const timeZone of newConfiguration.timeZones) {
+  for (const timeZone of configuration.timeZones) {
     timeZone.offset += serverOffset;
   }
 
   const cachedClient = Configuration.current.discordClient;
-  Configuration.current = newConfiguration;
+  Configuration.current = configuration;
 
   if (Configuration.current.eventTypes.length === 0) {
     throw new Error("You must define at least one event type in the configuration.");
