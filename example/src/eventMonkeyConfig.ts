@@ -7,7 +7,7 @@ const announcement = {
   onStart: true,
 };
 
-const configuration: () => EventMonkeyConfiguration = () => {
+function configuration(): EventMonkeyConfiguration {
   return {
     commandName: "eventmonkey",
     eventTypes: [
@@ -73,6 +73,6 @@ const configuration: () => EventMonkeyConfiguration = () => {
       },
     ],
   };
-};
+}
 
 export default configuration;
