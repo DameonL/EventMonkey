@@ -25,7 +25,8 @@ async function createGuildScheduledEvent(event: EventMonkeyEvent, guild: Guild, 
   eventToSubmit.description = `${event.description}\nDiscussion: ${thread.url}\nHosted by: ${event.author.toString()}`;
   eventToSubmit.name = `${event.name} hosted by ${event.author.username}`;
   eventToSubmit.entityType = event.eventType.entityType;
-  eventToSubmit.scheduledStartTime = event.scheduledStartTime;
+  eventToSubmit.scheduledStartTime = new Date(event.scheduledStartTime);
+  
   if (!event.scheduledEndTime) {
     const endTime = new Date(eventToSubmit.scheduledStartTime);
     endTime.setHours(endTime.getHours() + event.duration);

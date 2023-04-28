@@ -5,15 +5,19 @@ export interface EventMonkeyConfiguration {
   discordClient?: Client;
   editingTimeout: number;
   eventTypes: EventMonkeyEventType[];
-  timeZone: {
-    name: string;
-    offset: number;
-  };
+  timeZones: EventMonkeyTimeZone[];
   closeThreadsAfter?: number;
   roles?: {
     allowed?: string[];
     denied?: string[];
   };
+}
+
+export interface EventMonkeyTimeZone {
+  name: string;
+  offset: number;
+  start?: Date;
+  end?: Date;
 }
 
 export interface BaseEventMonkeyEventType {

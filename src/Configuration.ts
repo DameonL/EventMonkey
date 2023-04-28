@@ -1,5 +1,7 @@
 import { Client, GuildScheduledEventEntityType } from "discord.js";
 import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
+import logger from "./Logger";
+import Time from "./Utility/Time";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
@@ -15,11 +17,27 @@ function defaultConfiguration(): EventMonkeyConfiguration {
         },
       },
     ],
-    timeZone: {
-      name: "PST",
-      offset: 0,
-    },
-    editingTimeout: 108000, // Default of 30 minutes
+    timeZones: [
+      {
+        name: "PST",
+        offset: -8,
+        start: Time.getNthWeekday(new Date().getFullYear() - 1, 10, 0, 1),
+        end: Time.getNthWeekday(new Date().getFullYear(), 2, 0, 2),
+      },
+      {
+        name: "PDT",
+        offset: -7,
+        start: Time.getNthWeekday(new Date().getFullYear(), 2, 0, 2),
+        end: Time.getNthWeekday(new Date().getFullYear(), 10, 0, 1),
+      },
+      {
+        name: "PST",
+        offset: -8,
+        start: Time.getNthWeekday(new Date().getFullYear(), 10, 0, 1),
+        end: Time.getNthWeekday(new Date().getFullYear() + 1, 2, 0, 2),
+      },
+    ],
+      editingTimeout: 108000, // Default of 30 minutes
   };
 }
 

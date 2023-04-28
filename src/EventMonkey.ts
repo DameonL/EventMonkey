@@ -51,7 +51,9 @@ async function registerCommands() {
 
 async function configure(newConfiguration: EventMonkeyConfiguration) {
   const serverOffset = Math.round(new Date().getTimezoneOffset() / 60);
-  newConfiguration.timeZone.offset += serverOffset;
+  for (const timeZone of newConfiguration.timeZones) {
+    timeZone.offset += serverOffset;
+  }
 
   const cachedClient = Configuration.current.discordClient;
   Configuration.current = newConfiguration;

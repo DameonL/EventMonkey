@@ -7,14 +7,14 @@ enum LoggingSeverity {
 }
 
 const logger = {
-  log: (message: string, objectToLog?: any) => logMessage(LoggingSeverity.Info, message, objectToLog),
-  warn: (message: string, objectToLog?: any) => logMessage(LoggingSeverity.Warning, message, objectToLog),
-  error: (message: string, objectToLog?: any) => logMessage(LoggingSeverity.Error, message, objectToLog),
+  log: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Info, message, objectToLog),
+  warn: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Warning, message, objectToLog),
+  error: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Error, message, objectToLog),
 };
 
 const prefix = `${new Date().toISOString()} [eventMonkey ${packageJson.version}]: `;
 
-function logMessage(severity: LoggingSeverity, logMessage: string, objectToLog?: any) {
+function logMessage(severity: LoggingSeverity, logMessage: any, objectToLog?: any) {
   const logFunction =
     severity === LoggingSeverity.Info
       ? console.log
@@ -22,7 +22,8 @@ function logMessage(severity: LoggingSeverity, logMessage: string, objectToLog?:
       ? console.warn
       : console.error;
 
-  logFunction(`${prefix}${logMessage}`);
+  if ((typeof logMessage))
+  logFunction(`${prefix}${(typeof logMessage) === "string" ? logMessage : logMessage.toString()}`);
   if (objectToLog) {
     logFunction(`${prefix}${JSON.stringify(objectToLog)}`);
     if (severity === LoggingSeverity.Error) {
