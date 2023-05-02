@@ -10,7 +10,7 @@
   "main": "dist/EventMonkey.js",
   "scripts": {
     "dev": "nodemon --watch src --watch package.json --watch package.dist.json --ext ts,js,json --exec \"npm run build\"",
-    "build": "copy-files-from-to && cd src && tsc",
+    "build": "cd src && tsc && cd .. && copy-files-from-to",
     "deploy": "rimraf dist && rimraf dist && npm run build && cd dist && npm publish"
   },
   "copyFiles": [
@@ -25,6 +25,10 @@
     {
       "from": "LICENSE.md",
       "to": "dist/LICENSE.md"
+    },
+    {
+      "from": "dist/**/*",
+      "to": "example/eventMonkey"
     }
   ],
   "copyFilesSettings": {
