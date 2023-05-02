@@ -31,7 +31,7 @@ async function closeAllOutdatedThreads() {
       try {
         const resolvedChannel = await resolveChannelString(discussionChannel, guild);
         if (!resolvedChannel) continue;
-        
+
         if (resolvedChannel.type === ChannelType.GuildText || resolvedChannel.type === ChannelType.GuildForum) {
           await closeOutdatedThreadsInChannel(resolvedChannel);
         }
@@ -52,6 +52,7 @@ async function closeOutdatedThreadsInChannel(channel: ChannelWithThreads) {
       const threadEvent = await deseralizeEventEmbed(threadChannel, client);
       if (
         threadEvent &&
+        !threadEvent.recurrence &&
         (!threadEvent.scheduledEvent ||
           threadEvent.scheduledEvent.isCompleted() ||
           threadEvent.scheduledEvent.isCanceled())

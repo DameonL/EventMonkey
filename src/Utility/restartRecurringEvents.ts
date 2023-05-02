@@ -51,7 +51,7 @@ async function restartThreadEvents(thread: ThreadChannel, guild: Guild) {
   const eventMonkeyEvent = await deseralizeEventEmbed(thread, Configuration.client);
   if (
     eventMonkeyEvent.recurrence &&
-    (!eventMonkeyEvent.scheduledEvent || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Completed)
+    (!eventMonkeyEvent.scheduledEvent || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Completed || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Canceled)
   ) {
     const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(
       eventMonkeyEvent.recurrence,
