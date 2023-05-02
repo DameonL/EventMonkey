@@ -33,7 +33,6 @@ export function getNextRecurrence(recurrence: EventRecurrence): Date {
 
 export function getNextValidRecurrence(recurrence: EventRecurrence, eventDuration: number) {
   const now = new Date();
-  now.setHours(now.getHours() + Time.getEffectiveTimeZone().offset);
   let nextStartDate = getNextRecurrence(recurrence);
   let scheduledEndTime = getNextEndDate(nextStartDate, eventDuration);
   recurrence.timesHeld++;

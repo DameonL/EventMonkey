@@ -69,7 +69,7 @@ function getTimeFromString(text: string, useTimezone: boolean = true): Date {
   return output;
 }
 
-function getTimeString(date: Date, useTimezone: boolean = false): string {
+function getTimeString(date: Date, useTimezone: boolean = true): string {
   const offsetDate = new Date(date);
   if (useTimezone) {
     offsetDate.setHours(offsetDate.getHours() + getEffectiveTimeZone().offset);
