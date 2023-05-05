@@ -15,8 +15,9 @@ import {
   StringSelectMenuInteraction,
   TextInputBuilder,
   TextInputStyle,
-  ThreadChannel,
+  ThreadChannel
 } from "discord.js";
+import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
 import { eventModal } from "../Content/Modal/eventModal";
 import EventCreators from "../EventCreators";
@@ -26,7 +27,6 @@ import logger from "../Logger";
 import { getValidVoiceOrStageChannel } from "../Utility/getValidVoiceOrStageChannel";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/Time";
-import editEventMessage from "../Content/Embed/editEventMessage";
 
 export enum EventCreationButtonHandlerResponse {
   ContinueEditing,
@@ -42,7 +42,7 @@ const eventCreationButtonHandlers: {
 } = {
   edit: async (event, submissionInteraction, originalInteraction) => {
     await eventModal(event, submissionInteraction, originalInteraction);
-    return EventCreationButtonHandlerResponse.ContinueEditing
+    return EventCreationButtonHandlerResponse.ContinueEditing;
   },
   makeRecurring: async (event, submissionInteraction, originalInteraction) => {
     const periodId = `${submissionInteraction.id}_${event.id}_recurrencePeriod`;
@@ -84,8 +84,7 @@ const eventCreationButtonHandlers: {
       await submissionInteraction.editReply({ content: "Sorry, you took too long!", components: [] });
     }
 
-    if (!unitInteraction) return EventCreationButtonHandlerResponse.ContinueEditing
-    ;
+    if (!unitInteraction) return EventCreationButtonHandlerResponse.ContinueEditing;
 
     await unitInteraction.showModal(
       new ModalBuilder()
@@ -127,7 +126,7 @@ const eventCreationButtonHandlers: {
     recurrence[unit] = frequency;
 
     event.recurrence = recurrence;
-    return EventCreationButtonHandlerResponse.ContinueEditing
+    return EventCreationButtonHandlerResponse.ContinueEditing;
   },
   addImage: async (event, submissionInteraction, originalInteraction) => {
     await originalInteraction.editReply({
@@ -172,7 +171,7 @@ const eventCreationButtonHandlers: {
         submissionEmbed.files = [new AttachmentBuilder(event.image)];
         await originalInteraction.editReply(submissionEmbed);
       } else {
-        await submissionInteraction.editReply({content: "Your message didn't have a valid image attached!"});
+        await submissionInteraction.editReply({ content: "Your message didn't have a valid image attached!" });
       }
     } catch (error) {
       logger.error("Error adding image", error);
@@ -187,7 +186,7 @@ const eventCreationButtonHandlers: {
       await replies.at(0)?.delete();
       await imageResponse.delete();
     }
-    return EventCreationButtonHandlerResponse.ContinueEditing
+    return EventCreationButtonHandlerResponse.ContinueEditing;
   },
   save: async (event, submissionInteraction, originalInteraction) => {
     await originalInteraction.editReply({
@@ -196,7 +195,7 @@ const eventCreationButtonHandlers: {
       components: [],
     });
     EventsUnderConstruction.saveEvent(event);
-    return EventCreationButtonHandlerResponse.EndEditing
+    return EventCreationButtonHandlerResponse.EndEditing;
   },
   finish: async (event, submissionInteraction, originalInteraction) => {
     if (!originalInteraction.guild) return EventCreationButtonHandlerResponse.EndEditing;
