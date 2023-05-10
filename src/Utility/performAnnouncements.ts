@@ -41,6 +41,10 @@ async function performEventAnnouncement(event: GuildScheduledEvent) {
     return;
 
   const monkeyEvent = await deseralizeEventEmbed(thread, event.client);
+  if (!monkeyEvent) {
+    return;
+  }
+  
   const announcementEmbed = eventAnnouncement(monkeyEvent, timeBeforeStart);
 
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>

@@ -136,7 +136,9 @@ const commands = {
       return;
     }
 
-    const userEvents = (await getUserEvents(guild, interaction.user, GuildScheduledEventStatus.Scheduled)).filter(x => x.scheduledStartTime.valueOf() > Date.now());
+    const userEvents = (await getUserEvents(guild, interaction.user, GuildScheduledEventStatus.Scheduled)).filter(
+      (x) => x.scheduledStartTime.valueOf() > Date.now()
+    );
     if (userEvents.length === 0) {
       await interaction.editReply({
         content: "Sorry, it looks like you don't have any existing events to edit.",
@@ -416,7 +418,9 @@ async function getUserEvents(guild: Guild, user: User, status: GuildScheduledEve
     if (!thread) continue;
 
     const monkeyEvent = await deseralizeEventEmbed(thread, guild.client);
-    output.push(monkeyEvent);
+    if (monkeyEvent) {
+      output.push(monkeyEvent);
+    }
   }
 
   return output;

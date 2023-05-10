@@ -35,7 +35,9 @@ async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
 
   for (const [threadId, thread] of (await channel.threads.fetchActive()).threads) {
     try {
-      await restartThreadEvents(thread, guild);
+      if (thread.ownerId === Configuration.current.discordClient.user?.id) {
+        await restartThreadEvents(thread, guild);
+      }
     } catch (error) {
       logger.error(`There was a problem restarting thread "${thread.name}"`, error);
     }
@@ -49,6 +51,10 @@ async function restartThreadEvents(thread: ThreadChannel, guild: Guild) {
   if (threadPins.find((x) => x[1].embeds.at(0)?.title === "Event is Canceled")) return;
 
   const eventMonkeyEvent = await deseralizeEventEmbed(thread, Configuration.client);
+  if (!eventMonkeyEvent) {
+    return;
+  }
+  
   if (
     eventMonkeyEvent.recurrence &&
     (!eventMonkeyEvent.scheduledEvent || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Completed || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Canceled)

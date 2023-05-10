@@ -23,6 +23,9 @@ async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildSc
   const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
   const monkeyEvent = await deseralizeEventEmbed(thread, Configuration.current.discordClient);
+  if (!monkeyEvent) {
+    return;
+  }
 
   const eventType = monkeyEvent.eventType;
   if (!eventType.announcement || !eventType.announcement.onStart) return;
@@ -60,6 +63,9 @@ async function eventCompleted(oldEvent: GuildScheduledEvent | null, event: Guild
     const thread = await Threads.getThreadFromEventDescription(event.description);
     if (thread && !thread.archived) {
       const eventMonkeyEvent = await deseralizeEventEmbed(thread, event.client);
+      if (!eventMonkeyEvent) {
+        return;
+      }
 
       if (eventMonkeyEvent.recurrence) {
         const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(

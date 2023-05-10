@@ -98,11 +98,17 @@ async function closeEventThread(thread: ThreadChannel, event?: GuildScheduledEve
 }
 
 async function getThreadFromEventDescription(eventDescription: string): Promise<ThreadChannel | undefined> {
+  if (!Configuration.current.discordClient) throw new Error("Discord client not set in configuration.");
+
   const guildAndThread = eventDescription.match(/(?<=https:\/\/discord.com\/channels\/\d+\/)(?<threadId>\d+)/im);
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
     const thread = await Configuration.current.discordClient?.channels.fetch(threadId);
-    if (thread && thread.type === ChannelType.PublicThread) {
+    if (
+      thread &&
+      thread.type === ChannelType.PublicThread &&
+      thread.ownerId === Configuration.current.discordClient?.user?.id
+    ) {
       return thread;
     }
   }

@@ -63,9 +63,15 @@ export async function eventEmbed(event: EventMonkeyEvent): Promise<EmbedBuilder>
   return previewEmbed;
 }
 
-export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client): Promise<EventMonkeyEvent> {
+export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client): Promise<EventMonkeyEvent | undefined> {
+  if (thread.ownerId !== client.user?.id) {
+    return undefined;
+  }
+
   const detailsMessage = await getEventDetailsMessage(thread);
-  if (!detailsMessage) throw new Error(`Thread is not an event thread.`);
+  if (!detailsMessage) {
+    return undefined;
+  }
 
   const embed = await getEventDetailsEmbed(detailsMessage);
 
