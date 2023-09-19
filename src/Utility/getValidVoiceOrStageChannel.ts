@@ -10,10 +10,10 @@ import {
   VoiceChannel,
 } from "discord.js";
 import { EventMonkeyEventTypeStage, EventMonkeyEventTypeVoice } from "../EventMonkeyConfiguration";
-import { BaseEventMonkeyEvent } from "../EventMonkeyEvent";
+import { EventMonkeyEvent } from "../EventMonkeyEvent";
 
 export async function getValidVoiceOrStageChannel(
-  event: BaseEventMonkeyEvent,
+  event: EventMonkeyEvent,
   eventType: EventMonkeyEventTypeStage | EventMonkeyEventTypeVoice,
   guild: Guild
 ): Promise<VoiceChannel | StageChannel | undefined> {
@@ -61,7 +61,7 @@ export async function getValidVoiceOrStageChannel(
 
 function eventsOverlap(
   channelId: string,
-  event: BaseEventMonkeyEvent,
+  event: EventMonkeyEvent,
   guildEvents: Collection<string, GuildScheduledEvent<GuildScheduledEventStatus>>
 ) {
   if (!event.scheduledStartTime || !event.scheduledEndTime)
