@@ -9,7 +9,7 @@
   "author": "Dameon Laird",
   "license": "Creative Commons Zero v1.0 Universal",
   "dependencies": {
-    "discord.js": "^14.7.1",
+    "discord.js": "^14.13.1",
     "dotenv": "^16.0.3",
     "eventmonkey": "file:eventMonkey",
     "express": "^4.18.2",

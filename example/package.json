@@ -18,7 +18,7 @@
     "postdev": "npm run stop"
   },
   "dependencies": {
-    "discord.js": "^14.7.1",
+    "discord.js": "^14.13.0",
     "dotenv": "^16.0.3",
     "eventmonkey": "file:eventMonkey",
     "express": "^4.18.2",
