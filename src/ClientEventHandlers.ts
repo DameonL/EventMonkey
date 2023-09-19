@@ -1,14 +1,14 @@
-import { ChannelType, EmbedBuilder, GuildScheduledEvent, GuildScheduledEventStatus, User } from "discord.js";
+import { EmbedBuilder, GuildScheduledEvent, GuildScheduledEventStatus, User } from "discord.js";
 import Configuration from "./Configuration";
 import eventAnnouncement from "./Content/Embed/eventAnnouncement";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import EventCreators from "./EventCreators";
-import { getNextRecurrence, getNextValidRecurrence } from "./Recurrence";
-import { resolveChannelString } from "./Utility/resolveChannelString";
+import logger from "./Logger";
+import { getNextValidRecurrence } from "./Recurrence";
+import { performEventAnnouncement } from "./Utility/performAnnouncements";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
-import logger from "./Logger";
 
 export default {
   eventStarted,
@@ -28,31 +28,21 @@ async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildSc
   }
 
   const eventType = monkeyEvent.eventType;
-  if (!eventType.announcement || !eventType.announcement.onStart) return;
+  const startAnnouncements = eventType.announcements?.filter((x) => !x.beforeStart || x.beforeStart === 0);
+  if (!startAnnouncements || startAnnouncements.length === 0) return;
 
-  const message = {
-    embeds: [eventAnnouncement(monkeyEvent)],
-  };
+  const announcementEmbed = eventAnnouncement(monkeyEvent);
 
-  thread.send(message);
-  const announcementChannels = Array.isArray(eventType.announcement.channel)
-    ? eventType.announcement.channel
-    : eventType.announcement.channel
-    ? [eventType.announcement.channel]
-    : [];
-
-  for (const channelId of announcementChannels) {
-    if (!event.guild) continue;
-
-    const announcementChannel = await resolveChannelString(channelId, event.guild);
-
-    if (
-      !announcementChannel ||
-      (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
-    )
-      continue;
-
-    announcementChannel.send(message);
+  for (const announcement of startAnnouncements) {
+    performEventAnnouncement({
+      announcement,
+      event,
+      thread,
+      announcementEmbed,
+      threadAnnouncement: (await thread.messages.fetch()).find((x) =>
+        x.embeds.find((x) => x.footer?.text === announcementEmbed.footer?.text && x.title === announcementEmbed.title)
+      ),
+    });
   }
 }
 
