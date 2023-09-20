@@ -11,8 +11,8 @@ import {
 } from "discord.js";
 import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
-import { BaseEventMonkeyEvent } from "../../EventMonkeyEvent";
-import { deserializeRecurrence, EventRecurrence, serializeRecurrence } from "../../Recurrence";
+import { ExternalEvent, PartialEventMonkeyEvent, StageEvent, VoiceEvent } from "../../EventMonkeyEvent";
+import { EventRecurrence, deserializeRecurrence, serializeRecurrence } from "../../Recurrence";
 import Time from "../../Utility/Time";
 import { getAttendeesFromMessage } from "./attendees";
 
@@ -57,13 +57,23 @@ export async function eventEmbed(event: EventMonkeyEvent): Promise<EmbedBuilder>
       value: serializeRecurrence(event.recurrence),
     });
   }
+
+  if (event.maxAttendees) {
+    fields.push({
+      name: "Max Attendees",
+      value: event.maxAttendees.toString(),
+    });
+  }
   fields.push({ name: "Event ID", value: event.id });
 
   previewEmbed.addFields(fields);
   return previewEmbed;
 }
 
-export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client): Promise<EventMonkeyEvent | undefined> {
+export async function deseralizeEventEmbed(
+  thread: ThreadChannel,
+  client: Client
+): Promise<EventMonkeyEvent<StageEvent | VoiceEvent | ExternalEvent> | undefined> {
   if (thread.ownerId !== client.user?.id) {
     return undefined;
   }
@@ -104,6 +114,8 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
   const location = embed.fields.find((x) => x.name === "Location")?.value;
   if (!location) throw new Error();
 
+  const maxAttendees = embed.fields.find((x) => x.name === "Max Attendees");
+
   const eventId = embed.url?.match(/(?<=https:\/\/discord.com\/events\/.*\/).*/i)?.[0];
 
   let scheduledEvent: GuildScheduledEvent | undefined = undefined;
@@ -123,7 +135,7 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
 
   const attendees = getAttendeesFromMessage(detailsMessage);
 
-  const baseEvent: BaseEventMonkeyEvent = {
+  const baseEvent: PartialEventMonkeyEvent = {
     name,
     scheduledStartTime,
     author,
@@ -138,6 +150,7 @@ export async function deseralizeEventEmbed(thread: ThreadChannel, client: Client
     recurrence,
     attendees,
     entityType: eventType.entityType,
+    maxAttendees: maxAttendees?.value && !isNaN(Number(maxAttendees.value)) ? Number(maxAttendees.value) : undefined,
   };
 
   if (eventType.entityType === GuildScheduledEventEntityType.External) {
