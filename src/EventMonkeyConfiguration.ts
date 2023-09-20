@@ -24,7 +24,7 @@ export interface BaseEventMonkeyEventType {
   name: string;
   description?: string;
   discussionChannel: string;
-  announcement?: EventAnnouncement;
+  announcements?: EventAnnouncement[];
   defaultImageUrl?: string;
 }
 
@@ -47,6 +47,10 @@ export type EventMonkeyEventType = EventMonkeyEventTypeExternal | EventMonkeyEve
 export interface EventAnnouncement {
   channel?: string | string[];
   beforeStart?: number;
-  onStart?: boolean;
   message?: string;
+  mention?: {
+    attendees?: boolean;
+    here?: boolean;
+    everyone?: boolean;
+  };
 }

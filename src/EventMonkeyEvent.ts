@@ -16,11 +16,12 @@ import {
 } from "./EventMonkeyConfiguration";
 import { EventRecurrence } from "./Recurrence";
 
-export interface BaseEventMonkeyEvent {
+export type PartialEventMonkeyEvent = {
   author: User;
   name: string;
   description: string;
   image?: string;
+  maxAttendees?: number;
   attendees: string[];
   scheduledStartTime: Date;
   scheduledEndTime?: Date;
@@ -35,22 +36,22 @@ export interface BaseEventMonkeyEvent {
   entityType: GuildScheduledEventEntityType;
 }
 
-export interface EventMonkeyEventVoice extends BaseEventMonkeyEvent {
+export type EventMonkeyEvent<T = VoiceEvent | StageEvent | ExternalEvent> = PartialEventMonkeyEvent & T;
+
+export interface VoiceEvent {
   entityType: GuildScheduledEventEntityType.Voice;
   eventType: EventMonkeyEventTypeVoice;
   channel?: VoiceChannel;
 }
 
-export interface EventMonkeyEventStage extends BaseEventMonkeyEvent {
+export interface StageEvent {
   entityType: GuildScheduledEventEntityType.StageInstance;
   eventType: EventMonkeyEventTypeStage;
   channel?: StageChannel;
 }
 
-export interface EventMonkeyEventExternal extends BaseEventMonkeyEvent {
+export interface ExternalEvent {
   entityType: GuildScheduledEventEntityType.External;
   eventType: EventMonkeyEventTypeExternal;
   entityMetadata: { location: string };
 }
-
-export type EventMonkeyEvent = EventMonkeyEventStage | EventMonkeyEventExternal | EventMonkeyEventVoice;

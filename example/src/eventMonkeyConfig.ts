@@ -1,11 +1,17 @@
 import { GuildScheduledEventEntityType } from "discord.js";
 import eventMonkey, { EventMonkeyConfiguration } from "eventmonkey";
+import { EventAnnouncement } from "eventmonkey/EventMonkeyConfiguration";
 
-const announcement = {
+const announcements: EventAnnouncement[] = [{
   channel: "announcements",
   beforeStart: eventMonkey.time.toMilliseconds.minutes(30),
-  onStart: true,
-};
+}, {
+  channel: "announcements",
+  beforeStart: 0,
+  mention: {
+    attendees: true,
+  },
+}];
 
 function configuration(): EventMonkeyConfiguration {
   return {
@@ -15,7 +21,7 @@ function configuration(): EventMonkeyConfiguration {
         name: "Meetup",
         description: "A hosted, in-person event",
         discussionChannel: "meetups",
-        announcement,
+        announcements,
         entityType: GuildScheduledEventEntityType.External,
         defaultImageUrl:
           "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png",
@@ -24,7 +30,7 @@ function configuration(): EventMonkeyConfiguration {
         name: "Happening",
         description: "A freeform in-person without formal hosting",
         discussionChannel: "happenings",
-        announcement,
+        announcements,
         entityType: GuildScheduledEventEntityType.External,
         defaultImageUrl:
           "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png",
@@ -34,7 +40,7 @@ function configuration(): EventMonkeyConfiguration {
         description: "A relaxed conversation in a voice channel",
         discussionChannel: "hangouts",
         channel: "Hangout",
-        announcement,
+        announcements,
         entityType: GuildScheduledEventEntityType.Voice,
         defaultImageUrl:
           "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png",
@@ -44,7 +50,7 @@ function configuration(): EventMonkeyConfiguration {
         description: "A voice event with moderation and limited speakers",
         discussionChannel: "lectures",
         channel: "Lecture",
-        announcement,
+        announcements,
         entityType: GuildScheduledEventEntityType.StageInstance,
         defaultImageUrl:
           "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png",

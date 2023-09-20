@@ -9,7 +9,7 @@ import { eventCommand } from "./Commands";
 import Configuration from "./Configuration";
 import Listeners from "./Listeners";
 import logger from "./Logger";
-import performAnnouncements from "./Utility/performAnnouncements";
+import { performAnnouncements } from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
@@ -51,7 +51,7 @@ async function registerCommands() {
 
 async function configure(newConfiguration: EventMonkeyConfiguration | (() => EventMonkeyConfiguration)) {
   let configuration: EventMonkeyConfiguration | undefined;
-  if ((typeof newConfiguration) === "function") {
+  if (typeof newConfiguration === "function") {
     configuration = (newConfiguration as () => EventMonkeyConfiguration)();
   }
 

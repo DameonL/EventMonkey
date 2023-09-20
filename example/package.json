@@ -13,11 +13,12 @@
     "build-clean": "rimraf ./dist && npm run build",
     "start": "pm2 start ecosystem.config.js",
     "stop": "pm2 delete all",
+    "restart": "npm run stop && npm run start",
     "dev": "nodemon --ext ts,js --watch src --watch ../dist --exec \"npm run build && node dist/eventMonkeyBot.js\" --delay 1",
     "postdev": "npm run stop"
   },
   "dependencies": {
-    "discord.js": "^14.7.1",
+    "discord.js": "^14.13.0",
     "dotenv": "^16.0.3",
     "eventmonkey": "file:eventMonkey",
     "express": "^4.18.2",

@@ -12,34 +12,19 @@ import EventsUnderConstruction from "../../EventsUnderConstruction";
 import Time from "../../Utility/Time";
 import editEventMessage from "../Embed/editEventMessage";
 import {
-  deserializeModal,
   ModalDeserializationConfig,
   ModalSerializationConfig,
+  deserializeModal,
   serializeToModal,
 } from "./SerializedModal";
-
-const deserializationConfig: ModalDeserializationConfig = {
-  validators: {
-    scheduledStartTime: (fieldValue: string) =>
-      /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue) ? undefined : "Invalid date format.",
-    duration: (fieldValue: string) => (isNaN(Number(fieldValue)) ? "Invalid duration" : undefined),
-  },
-  customDeserializers: {
-    scheduledStartTime: (fieldValue: string) => {
-      const output = Time.getTimeFromString(fieldValue);
-
-      return output;
-    },
-    duration: (fieldValue: string) => Number(fieldValue),
-  },
-};
 
 export async function eventModal(
   event: EventMonkeyEvent,
   interaction: ButtonInteraction | ChatInputCommandInteraction,
-  originalInteraction: ChatInputCommandInteraction
+  originalInteraction: ChatInputCommandInteraction,
+  page = 0
 ) {
-  const modal = eventEditModal(event, interaction.id);
+  const modal = eventEditModal(event, interaction.id, page);
 
   await interaction.showModal(modal);
   let modalSubmission: ModalSubmitInteraction;
@@ -62,7 +47,7 @@ export async function eventModal(
 
   const startTime = event.scheduledStartTime;
   try {
-    deserializeModal<EventMonkeyEvent>(modalSubmission.fields.fields.entries(), event, deserializationConfig);
+    deserializeModal<EventMonkeyEvent>(modalSubmission.fields.fields.entries(), event, pages[page].deserializeConfig);
   } catch (error: any) {
     await modalSubmission.editReply({
       content: JSON.stringify(error),
@@ -86,9 +71,9 @@ export async function eventModal(
   return event;
 }
 
-export function eventEditModal(event: EventMonkeyEvent, id: string) {
+export function eventEditModal(event: EventMonkeyEvent, id: string, page = 0) {
   const modal = new ModalBuilder();
-  modal.setTitle("Create a New Meetup");
+  modal.setTitle("Edit Your Event");
   modal.setCustomId(id);
 
   const serializationObject: any = {
@@ -102,19 +87,73 @@ export function eventEditModal(event: EventMonkeyEvent, id: string) {
     serializationObject["entityMetadata.location"] = event.entityMetadata.location;
   }
 
-  const serializationConfig: ModalSerializationConfig = {
-    labels: {
-      "entityMetadata.location": "Location",
-      scheduledStartTime: "Scheduled Start Time",
-    },
-    formatters: {
-      scheduledStartTime: Time.getTimeString,
-    },
-    styles: {
-      description: TextInputStyle.Paragraph,
-    },
-  };
-  modal.addComponents(serializeToModal(`${event.id}_`, serializationObject, serializationConfig));
+  modal.addComponents(serializeToModal(`${event.id}_`, pages[page].converter(event), pages[page].serializeConfig));
 
   return modal;
 }
+
+interface EditModalPage {
+  converter: (event: EventMonkeyEvent) => any;
+  serializeConfig: ModalSerializationConfig;
+  deserializeConfig: ModalDeserializationConfig;
+}
+
+const pages: EditModalPage[] = [
+  {
+    converter: (event: EventMonkeyEvent) => {
+      return {
+        name: event.name,
+        description: event.description,
+        scheduledStartTime: event.scheduledStartTime,
+        duration: event.duration,
+      };
+    },
+    serializeConfig: {
+      labels: {
+        "entityMetadata.location": "Location",
+        scheduledStartTime: "Scheduled Start Time",
+      },
+      formatters: {
+        scheduledStartTime: Time.getTimeString,
+      },
+      styles: {
+        description: TextInputStyle.Paragraph,
+      },
+    },
+    deserializeConfig: {
+      validators: {
+        scheduledStartTime: (fieldValue: string) =>
+          /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue) ? undefined : "Invalid date format.",
+        duration: (fieldValue: string) => (isNaN(Number(fieldValue)) ? "Invalid duration" : undefined),
+      },
+      customDeserializers: {
+        scheduledStartTime: (fieldValue: string) => {
+          const output = Time.getTimeFromString(fieldValue);
+
+          return output;
+        },
+        duration: (fieldValue: string) => Number(fieldValue),
+      },
+    },
+  },
+  {
+    converter: (event: EventMonkeyEvent) => {
+      return {
+        maxAttendees: event.maxAttendees ?? "No Max",
+      };
+    },
+    serializeConfig: {
+      labels: {
+        maxAttendees: "Max Attendees",
+      },
+      formatters: {
+        maxAttendees: (maxAttendees) => (maxAttendees ? maxAttendees.toString() : "No Max"),
+      },
+    },
+    deserializeConfig: {
+      customDeserializers: {
+        maxAttendees: (fieldValue: string) => (isNaN(Number(fieldValue)) ? undefined : Number(fieldValue)),
+      },
+    },
+  },
+];

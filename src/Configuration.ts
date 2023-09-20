@@ -10,9 +10,9 @@ function defaultConfiguration(): EventMonkeyConfiguration {
         name: "Meetup",
         discussionChannel: "meetups",
         entityType: GuildScheduledEventEntityType.External,
-        announcement: {
-          onStart: true,
-        },
+        announcements: [{
+          beforeStart: 0,
+        }],
       },
     ],
     timeZones: [
