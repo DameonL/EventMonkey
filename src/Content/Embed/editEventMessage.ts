@@ -23,6 +23,7 @@ export default async function editEventMessage(
   const prefix = `${originalInteraction.id}_button`;
   const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([
     new ButtonBuilder().setLabel("Edit").setCustomId(`${prefix}_edit`).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setLabel("More Settings").setCustomId(`${prefix}_edit2`).setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setLabel(event.recurrence ? "Edit Recurrence" : "Make Recurring")
       .setCustomId(`${prefix}_makeRecurring`)

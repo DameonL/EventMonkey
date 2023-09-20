@@ -15,7 +15,7 @@ import {
   StringSelectMenuInteraction,
   TextInputBuilder,
   TextInputStyle,
-  ThreadChannel
+  ThreadChannel,
 } from "discord.js";
 import editEventMessage from "../Content/Embed/editEventMessage";
 import { getEventDetailsMessage } from "../Content/Embed/eventEmbed";
@@ -24,9 +24,9 @@ import EventCreators from "../EventCreators";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import EventsUnderConstruction from "../EventsUnderConstruction";
 import logger from "../Logger";
-import { getValidVoiceOrStageChannel } from "../Utility/getValidVoiceOrStageChannel";
 import Threads from "../Utility/Threads";
 import Time from "../Utility/Time";
+import { getValidVoiceOrStageChannel } from "../Utility/getValidVoiceOrStageChannel";
 
 export enum EventCreationButtonHandlerResponse {
   ContinueEditing,
@@ -41,7 +41,11 @@ const eventCreationButtonHandlers: {
   ) => Promise<EventCreationButtonHandlerResponse>;
 } = {
   edit: async (event, submissionInteraction, originalInteraction) => {
-    await eventModal(event, submissionInteraction, originalInteraction);
+    await eventModal(event, submissionInteraction, originalInteraction, 0);
+    return EventCreationButtonHandlerResponse.ContinueEditing;
+  },
+  edit2: async (event, submissionInteraction, originalInteraction) => {
+    await eventModal(event, submissionInteraction, originalInteraction, 1);
     return EventCreationButtonHandlerResponse.ContinueEditing;
   },
   makeRecurring: async (event, submissionInteraction, originalInteraction) => {
@@ -306,6 +310,7 @@ const eventCreationButtonHandlers: {
         content: "Do you want to cancel your existing event, or just cancel editing?",
         ephemeral: true,
         components: [yesNoButtons],
+        fetchReply: true,
       });
       let collected;
       try {
