@@ -36,9 +36,9 @@ const configuration = {
     {
       name: "Meetup",
       discussionChannel: "meetups",
-      announcement: {
+      announcements: [{
         onStart: true,
-      },
+      }],
     },
   ],
 };
@@ -64,11 +64,11 @@ A simple configuration would look like this:
       {
         name: "Meetup",
         channel: "meetups",
-        announcement: {
+        announcements: [{
           channel: "general",
           beforeStart: minutesToMilliseconds(30),
-          onStart: true,
-        },
+          message: "Get over here!"
+        }],
       },
       {
         name: "Hangout",
