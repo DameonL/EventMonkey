@@ -1,19 +1,13 @@
-import {
-  APIEmbed,
-  ChannelType,
-  GuildScheduledEvent,
-  GuildScheduledEventStatus,
-  Message,
-  ThreadChannel,
-} from "discord.js";
+import { APIEmbed, ChannelType, GuildScheduledEvent, GuildScheduledEventStatus } from "discord.js";
 import Configuration from "../Configuration";
 import { attendeeTags } from "../Content/Embed/attendees";
-import eventAnnouncement from "../Content/Embed/eventAnnouncement";
+import eventAnnouncement, { getFooter, getTitle } from "../Content/Embed/eventAnnouncement";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
 import { EventAnnouncement } from "../EventMonkeyConfiguration";
+import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import logger from "../Logger";
-import { resolveChannelString } from "./resolveChannelString";
 import Threads from "./Threads";
+import { resolveChannelString } from "./resolveChannelString";
 
 export async function performAnnouncements() {
   if (!Configuration.current.discordClient) return;
@@ -45,66 +39,89 @@ export async function performEventAnnouncements(event: GuildScheduledEvent) {
     return;
   }
 
-  const timeBeforeStart = event.scheduledStartAt.valueOf() - new Date().valueOf();
-
-  const announcementEmbed = eventAnnouncement(monkeyEvent, timeBeforeStart);
-
-  let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
-    x.embeds.find((x) => x.footer?.text === announcementEmbed.footer?.text && x.title === announcementEmbed.title)
-  );
+  const announcementEmbed = eventAnnouncement(monkeyEvent);
 
   for (const announcement of eventType.announcements) {
-    performEventAnnouncement({ announcement, event, threadAnnouncement, thread, announcementEmbed });
+    performEventAnnouncement({ announcement, event: monkeyEvent, announcementEmbed });
   }
 }
 
-export async function performEventAnnouncement(options: {
+export async function performEventThreadAnnouncement(options: {
   announcement: EventAnnouncement;
-  event: GuildScheduledEvent;
-  threadAnnouncement: Message | undefined;
-  thread: ThreadChannel;
   announcementEmbed: APIEmbed;
+  event: EventMonkeyEvent;
 }) {
-  if (!options.event.scheduledStartAt) {
+  const thread = options.event.threadChannel;
+  if (!thread) {
     return;
   }
 
-  const timeBeforeStart = options.event.scheduledStartAt.valueOf() - new Date().valueOf();
+  let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
+    x.embeds.find((x) => x.footer?.text === getFooter(options.event) && x.title === getTitle(options.event))
+  );
 
-  if (
-    !options.event.guild ||
-    !options.announcement.beforeStart ||
-    timeBeforeStart < 0 ||
-    timeBeforeStart > options.announcement.beforeStart ||
-    options.event.status === GuildScheduledEventStatus.Active
-  ) {
+  if (!threadAnnouncement) {
     return;
   }
 
-  let content = "";
+  try {
+    thread.send({ content: await getAnnouncementMessage(options), embeds: [options.announcementEmbed] });
+  } catch (error) {
+    logger.error("Error sending event announcement to thread:", {
+      announcementEmbed: options.announcementEmbed,
+      error,
+    });
+  }
+}
+
+async function getAnnouncementMessage(options: {
+  announcement: EventAnnouncement;
+  event: EventMonkeyEvent;
+}): Promise<string> {
+  if (!options.event.threadChannel) {
+    return "";
+  }
+
+  let attendeeMentions = "";
   if (options.announcement.mention) {
     const mentionOptions = options.announcement.mention;
 
     if (mentionOptions.attendees) {
-      content += `${content !== "" ? " " : ""}${await attendeeTags(options.thread)}`;
+      attendeeMentions += `${attendeeMentions !== "" ? " " : ""}${await attendeeTags(options.event.threadChannel)}`;
     }
 
     if (mentionOptions.everyone) {
-      content += `${content !== "" ? " " : ""}@everyone`;
+      attendeeMentions += `${attendeeMentions !== "" ? " " : ""}@everyone`;
     }
 
     if (mentionOptions.here) {
-      content += `${content !== "" ? " " : ""}@here`;
+      attendeeMentions += `${attendeeMentions !== "" ? " " : ""}@here`;
     }
   }
 
-  try {
-    if (!options.threadAnnouncement) options.thread.send({ content, embeds: [options.announcementEmbed] });
-  } catch (error) {
-    logger.error("Error sending event announcement to thread:", {
-      announcementEmbed: options.threadAnnouncement,
-      error,
-    });
+  const content = `${options.announcement.message ? options.announcement.message + "\n" : ""}${attendeeMentions}`;
+  return content;
+}
+
+export async function performEventAnnouncement(options: {
+  announcement: EventAnnouncement;
+  event: EventMonkeyEvent;
+  announcementEmbed: APIEmbed;
+}) {
+  if (!options.event.scheduledEvent?.scheduledStartAt) {
+    return;
+  }
+
+  const timeBeforeStart = options.event.scheduledStartTime.valueOf() - new Date().valueOf();
+
+  if (
+    !options.event.scheduledEvent.guild ||
+    !options.announcement.beforeStart ||
+    timeBeforeStart < 0 ||
+    timeBeforeStart > options.announcement.beforeStart ||
+    options.event.scheduledEvent.status === GuildScheduledEventStatus.Active
+  ) {
+    return;
   }
 
   const announcementChannels = Array.isArray(options.announcement.channel)
@@ -114,7 +131,7 @@ export async function performEventAnnouncement(options: {
     : [];
 
   for (const channelId of announcementChannels) {
-    const announcementChannel = await resolveChannelString(channelId, options.event.guild);
+    const announcementChannel = await resolveChannelString(channelId, options.event.scheduledEvent.guild);
     if (
       !announcementChannel ||
       (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
@@ -129,7 +146,10 @@ export async function performEventAnnouncement(options: {
 
     if (!existingAnnouncement) {
       try {
-        announcementChannel.send({ content, embeds: [options.announcementEmbed] });
+        announcementChannel.send({
+          content: await getAnnouncementMessage({ announcement: options.announcement, event: options.event }),
+          embeds: [options.announcementEmbed],
+        });
       } catch (error) {
         logger.error("Error sending event announcement to channel:", { embed: options.announcementEmbed, error });
       }
