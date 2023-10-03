@@ -30,18 +30,13 @@ async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildSc
   const eventType = monkeyEvent.eventType;
   const startAnnouncements = eventType.announcements?.filter((x) => !x.beforeStart || x.beforeStart === 0);
   if (!startAnnouncements || startAnnouncements.length === 0) return;
-
   const announcementEmbed = eventAnnouncement(monkeyEvent);
 
   for (const announcement of startAnnouncements) {
     performEventAnnouncement({
       announcement,
-      event,
-      thread,
-      announcementEmbed,
-      threadAnnouncement: (await thread.messages.fetch()).find((x) =>
-        x.embeds.find((x) => x.footer?.text === announcementEmbed.footer?.text && x.title === announcementEmbed.title)
-      ),
+      event: monkeyEvent,
+      announcementEmbed
     });
   }
 }
