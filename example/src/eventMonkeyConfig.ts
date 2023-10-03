@@ -8,6 +8,7 @@ const announcements: EventAnnouncement[] = [{
 }, {
   channel: "announcements",
   beforeStart: 0,
+  message: "An event is happening, you better get in here!",
   mention: {
     attendees: true,
   },
