@@ -3,7 +3,7 @@ import Configuration from "../Configuration";
 import { attendeeTags } from "../Content/Embed/attendees";
 import eventAnnouncement, { getFooter, getTitle } from "../Content/Embed/eventAnnouncement";
 import { deseralizeEventEmbed } from "../Content/Embed/eventEmbed";
-import { EventAnnouncement } from "../EventMonkeyConfiguration";
+import { EventAnnouncement, EventAnnouncementType } from "../EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import logger from "../Logger";
 import Threads from "./Threads";
@@ -39,19 +39,26 @@ export async function performEventAnnouncements(event: GuildScheduledEvent) {
     return;
   }
 
-  const announcementEmbed = eventAnnouncement(monkeyEvent);
-
   const timeBeforeStart = monkeyEvent.scheduledStartTime.valueOf() - new Date().valueOf();
+  const timeBeforeEnd = monkeyEvent.scheduledEndTime ? monkeyEvent.scheduledEndTime.valueOf() - new Date().valueOf() : undefined;
 
   for (const announcement of eventType.announcements) {
-    if (
-      !announcement.beforeStart ||
-      (announcement.beforeStart && timeBeforeStart > announcement.beforeStart) ||
-      event.status === GuildScheduledEventStatus.Active
-    ) {
+    if (announcement.type !== EventAnnouncementType.starting && announcement.type !== EventAnnouncementType.ending) {
       return;
     }
 
+    if (announcement.type === EventAnnouncementType.starting) {
+      if (timeBeforeStart > announcement.timeBefore || event.status === GuildScheduledEventStatus.Active) {
+        return;
+      }
+    } else if (announcement.type === EventAnnouncementType.ending) {
+      if (!timeBeforeEnd || timeBeforeEnd > announcement.timeBefore || event.status !== GuildScheduledEventStatus.Active) {
+        return;
+      }
+    }
+
+
+    const announcementEmbed = eventAnnouncement(monkeyEvent, announcement);
     performEventAnnouncement({ announcement, event: monkeyEvent, announcementEmbed });
   }
 }
@@ -66,7 +73,7 @@ export async function performEventThreadAnnouncement(options: {
     return;
   }
 
-  const eventTitle = getTitle(options.event);
+  const eventTitle = getTitle(options.event, options.announcement);
 
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
     x.embeds.find((x) => x.footer?.text === getFooter(options.event) && x.title === eventTitle)
@@ -112,7 +119,14 @@ async function getAnnouncementMessage(options: {
     }
   }
 
-  const content = `${options.announcement.message ? options.announcement.message + "\n" : ""}${attendeeMentions}`;
+  let message: string | undefined;
+  if (typeof options.announcement.message === "function") {
+    message = options.announcement.message(options.event, options.announcement);
+  } else {
+    message = options.announcement.message;
+  }
+
+  const content = `${message ? `${message}\n` : ""}${attendeeMentions}`;
   return content;
 }
 
@@ -139,7 +153,6 @@ export async function performEventAnnouncement(options: {
       (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
     )
       continue;
-
 
     const existingAnnouncement = (await announcementChannel.messages.fetch()).find((x) =>
       x.embeds.find(
