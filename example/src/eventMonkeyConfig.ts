@@ -1,30 +1,45 @@
 import { GuildScheduledEventEntityType } from "discord.js";
 import eventMonkey, { EventMonkeyConfiguration } from "eventmonkey";
-import { EventAnnouncement } from "eventmonkey/EventMonkeyConfiguration";
+import { EventAnnouncement, EventAnnouncementType } from "eventmonkey/EventMonkeyConfiguration";
 
-const announcements: EventAnnouncement[] = [{
-  channel: "announcements",
-  beforeStart: eventMonkey.time.toMilliseconds.minutes(30),
-}, {
-  channel: "announcements",
-  beforeStart: 0,
-  message: "An event is happening, you better get in here!",
-  mention: {
-    attendees: true,
-    here: true
+// Defines the announcements associated with an event
+const announcements: EventAnnouncement[] = [
+  {
+    type: EventAnnouncementType.starting,
+    channel: "announcements",
+    timeBefore: eventMonkey.time.toMilliseconds.minutes(30), // How long before the event starts to announce
   },
-}];
+  {
+    type: EventAnnouncementType.started, // Determines when the announcement is fired
+    channel: "announcements", // The name or ID of the channel to announce in
+    message: "An event is happening, you better get in here!", // Custom messages can be a string or a function that returns a string
+    // Options to allow the bot to add mentions to the message
+    mention: {
+      attendees: true,
+      here: true,
+    },
+  },
+  {
+    type: EventAnnouncementType.ending,
+    channel: "announcements",
+    timeBefore: eventMonkey.time.toMilliseconds.minutes(5),
+  },
+  {
+    type: EventAnnouncementType.ended,
+    channel: "announcements",
+  },
+];
 
 function configuration(): EventMonkeyConfiguration {
   return {
-    commandName: "eventmonkey",
+    commandName: "eventmonkey", // The slash command to use for creating, editing, and removing events
     eventTypes: [
       {
-        name: "Meetup",
-        description: "A hosted, in-person event",
-        discussionChannel: "meetups",
+        name: "Meetup", // The displayed name for this type of event
+        description: "A hosted, in-person event", // A description for the type of event
+        discussionChannel: "meetups", // Used as the base channel for threads created for this event type
         announcements,
-        entityType: GuildScheduledEventEntityType.External,
+        entityType: GuildScheduledEventEntityType.External, // See the Discord API for more information
         defaultImageUrl:
           "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png",
       },
@@ -58,8 +73,9 @@ function configuration(): EventMonkeyConfiguration {
           "https://cdn.discordapp.com/attachments/895476102242394135/1084294974771843072/DALLE_2023-03-11_18.00.27_-_a_fantasy_calendar_digital_art.png",
       },
     ],
-    editingTimeout: eventMonkey.time.toMilliseconds.minutes(30),
-    closeThreadsAfter: eventMonkey.time.toMilliseconds.days(1),
+    editingTimeout: eventMonkey.time.toMilliseconds.minutes(30), // If a user does not finish editing an event in this timeframe, it will be saved and editing cancelled
+    closeThreadsAfter: eventMonkey.time.toMilliseconds.days(1), // After an event has ended, how long should we wait to close and lock the thread?
+    // Timezone definitions. These definitions account for Pacific Time with Daylight Savings Time
     timeZones: [
       {
         name: "PST",
