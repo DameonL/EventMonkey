@@ -12,7 +12,7 @@ const logger = {
   error: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Error, message, objectToLog),
 };
 
-const prefix = `${new Date().toISOString()} [eventMonkey ${packageJson.version}]: `;
+function prefix() {return `${new Date().toISOString()} [eventMonkey ${packageJson.version}]: `;}
 
 function logMessage(severity: LoggingSeverity, logMessage: any, objectToLog?: any) {
   const logFunction =
@@ -23,9 +23,9 @@ function logMessage(severity: LoggingSeverity, logMessage: any, objectToLog?: an
       : console.error;
 
   if ((typeof logMessage))
-  logFunction(`${prefix}${(typeof logMessage) === "string" ? logMessage : logMessage.toString()}`);
+  logFunction(`${prefix()}${(typeof logMessage) === "string" ? logMessage : logMessage.toString()}`);
   if (objectToLog) {
-    logFunction(`${prefix}${JSON.stringify(objectToLog)}`);
+    logFunction(`${prefix()}${JSON.stringify(objectToLog)}`);
     if (severity === LoggingSeverity.Error) {
       console.trace(objectToLog);
     }
