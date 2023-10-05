@@ -15,14 +15,25 @@ const fromMilliseconds = {
   seconds: (milliseconds: number) => milliseconds / 1000,
 };
 
-export default {
+const timeDurations = [
+  { name: "year", milliseconds: toMilliseconds.days(365) },
+  { name: "week", milliseconds: toMilliseconds.days(7) },
+  { name: "day", milliseconds: toMilliseconds.days(1) },
+  { name: "hour", milliseconds: toMilliseconds.hours(1) },
+  { name: "minute", milliseconds: toMilliseconds.minutes(1) },
+];
+
+const Time = {
   getEffectiveTimeZone,
   getNthWeekday,
   getTimeFromString,
   getTimeString,
   toMilliseconds,
   fromMilliseconds,
+  getDurationDescription,
 };
+
+export default Time;
 
 function getNthWeekday(year: number, month: number, weekday: number, nth: number): Date {
   const date = new Date(year, month, 0, 0, 0, 0);
@@ -85,4 +96,26 @@ function getTimeString(date: Date, useTimezone: boolean = true): string {
     })
     .replace(",", "")
     .replace(" ", " ")} ${getEffectiveTimeZone().name}`;
+}
+
+function getDurationDescription(milliseconds: number) {
+  let totalDuration = milliseconds;
+  let timeString = "";
+  for (let i = 0; i < timeDurations.length; i++) {
+    const duration = timeDurations[i];
+
+    if (totalDuration < duration.milliseconds) {
+      continue;
+    }
+
+    const total = Math.floor(totalDuration / duration.milliseconds);
+    totalDuration -= total * duration.milliseconds;
+    if (total > 0) {
+      timeString += `${timeString !== "" ? (i === timeDurations.length - 1 ? ", and " : ", ") : ""}${total} ${
+        duration.name
+      }${total > 1 ? "s" : ""}`;
+    }
+  }
+
+  return timeString;
 }
