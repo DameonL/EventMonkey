@@ -1,8 +1,9 @@
 import { APIEmbed, APIEmbedField, GuildScheduledEventEntityType, GuildScheduledEventStatus } from "discord.js";
+import { EventAnnouncement, EventAnnouncementType } from "../../EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 import Time from "../../Utility/Time";
 
-export default function eventAnnouncement(event: EventMonkeyEvent) {
+export default function eventAnnouncement(event: EventMonkeyEvent, announcement: EventAnnouncement) {
   var idString = getFooter(event);
   const scheduledStart =
     event.scheduledEvent?.status === GuildScheduledEventStatus.Active
@@ -11,15 +12,28 @@ export default function eventAnnouncement(event: EventMonkeyEvent) {
       ? event.scheduledEvent.scheduledStartAt
       : event.scheduledStartTime;
   const timeBeforeStart = scheduledStart ? scheduledStart.valueOf() - new Date().valueOf() : undefined;
+  const scheduledEnd =
+    event.scheduledEvent?.status === GuildScheduledEventStatus.Active
+      ? undefined
+      : event.scheduledEvent?.scheduledEndAt
+      ? event.scheduledEvent.scheduledEndAt
+      : event.scheduledEndTime;
+  const timeBeforeEnd = scheduledEnd ? scheduledEnd.valueOf() - new Date().valueOf() : undefined;
 
   const startingString =
-    timeBeforeStart && timeBeforeStart > 0
-      ? `will be starting in ${Time.getDurationDescription(timeBeforeStart)}`
-      : `is starting now`;
+    announcement.type === EventAnnouncementType.starting
+      ? `will be starting in ${timeBeforeStart ? Time.getDurationDescription(timeBeforeStart) : "ERROR"}`
+      : announcement.type === EventAnnouncementType.started
+      ? `is starting now`
+      : announcement.type === EventAnnouncementType.ended
+      ? `has ended`
+      : announcement.type === EventAnnouncementType.ending
+      ? `will be ending in ${timeBeforeEnd ? Time.getDurationDescription(timeBeforeEnd) : "ERROR"}`
+      : undefined;
 
   const announcementEmbed: APIEmbed = {
-    title: getTitle(event),
-    description: `The event "${event.name}" hosted by ${event.author.toString()} ${startingString}!`,
+    title: getTitle(event, announcement),
+    description: `The event "${event.name}" hosted by ${event.author.displayName} ${startingString}!`,
     footer: {
       text: idString,
     },
@@ -56,16 +70,18 @@ export function getFooter(event: EventMonkeyEvent) {
   return `Event ID: ${event.id}`;
 }
 
-export function getTitle(event: EventMonkeyEvent) {
-  const scheduledStart =
-    event.scheduledEvent?.status === GuildScheduledEventStatus.Active
-      ? undefined
-      : event.scheduledEvent?.scheduledStartAt
-      ? event.scheduledEvent.scheduledStartAt
-      : event.scheduledStartTime;
-  const timeBeforeStart = scheduledStart ? scheduledStart.valueOf() - new Date().valueOf() : undefined;
+export function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncement) {
+  switch (announcement.type) {
+    case EventAnnouncementType.starting:
+      return `Upcoming Event Reminder - ${Time.getTimeString(event.scheduledStartTime)}`;
 
-  return `${timeBeforeStart && timeBeforeStart > 0 ? "Upcoming " : ""}Event Reminder - ${Time.getTimeString(
-    event.scheduledStartTime
-  )}`;
+    case EventAnnouncementType.started:
+      return `Event Starting `;
+
+    case EventAnnouncementType.ending:
+      return `Event Ending Soon${event.scheduledEndTime ? `- ${Time.getTimeString(event.scheduledEndTime)}` : ""}`;
+
+    case EventAnnouncementType.ended:
+      return `Event Ending`;
+  }
 }
