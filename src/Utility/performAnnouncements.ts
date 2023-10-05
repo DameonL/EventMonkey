@@ -41,7 +41,17 @@ export async function performEventAnnouncements(event: GuildScheduledEvent) {
 
   const announcementEmbed = eventAnnouncement(monkeyEvent);
 
+  const timeBeforeStart = monkeyEvent.scheduledStartTime.valueOf() - new Date().valueOf();
+
   for (const announcement of eventType.announcements) {
+    if (
+      !announcement.beforeStart ||
+      (announcement.beforeStart && timeBeforeStart > announcement.beforeStart) ||
+      event.status === GuildScheduledEventStatus.Active
+    ) {
+      return;
+    }
+
     performEventAnnouncement({ announcement, event: monkeyEvent, announcementEmbed });
   }
 }
@@ -56,8 +66,10 @@ export async function performEventThreadAnnouncement(options: {
     return;
   }
 
+  const eventTitle = getTitle(options.event);
+
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
-    x.embeds.find((x) => x.footer?.text === getFooter(options.event) && x.title === getTitle(options.event))
+    x.embeds.find((x) => x.footer?.text === getFooter(options.event) && x.title === eventTitle)
   );
 
   if (!threadAnnouncement) {
@@ -78,15 +90,16 @@ async function getAnnouncementMessage(options: {
   announcement: EventAnnouncement;
   event: EventMonkeyEvent;
 }): Promise<string> {
+  let attendeeMentions = "";
+
   if (!options.event.threadChannel) {
-    return "";
+    logger.warn("Unable to get threadChannel for event");
   }
 
-  let attendeeMentions = "";
   if (options.announcement.mention) {
     const mentionOptions = options.announcement.mention;
 
-    if (mentionOptions.attendees) {
+    if (options.event.threadChannel && mentionOptions.attendees) {
       attendeeMentions += `${attendeeMentions !== "" ? " " : ""}${await attendeeTags(options.event.threadChannel)}`;
     }
 
@@ -108,19 +121,8 @@ export async function performEventAnnouncement(options: {
   event: EventMonkeyEvent;
   announcementEmbed: APIEmbed;
 }) {
-  if (!options.event.scheduledEvent?.scheduledStartAt) {
-    return;
-  }
-
-  const timeBeforeStart = options.event.scheduledStartTime.valueOf() - new Date().valueOf();
-
-  if (
-    !options.event.scheduledEvent.guild ||
-    !options.announcement.beforeStart ||
-    timeBeforeStart < 0 ||
-    timeBeforeStart > options.announcement.beforeStart ||
-    options.event.scheduledEvent.status === GuildScheduledEventStatus.Active
-  ) {
+  if (!options.event.scheduledEvent?.guild) {
+    logger.error("No guild or scheduledEvent found.");
     return;
   }
 
@@ -137,6 +139,7 @@ export async function performEventAnnouncement(options: {
       (announcementChannel.type !== ChannelType.GuildText && announcementChannel.type !== ChannelType.GuildAnnouncement)
     )
       continue;
+
 
     const existingAnnouncement = (await announcementChannel.messages.fetch()).find((x) =>
       x.embeds.find(

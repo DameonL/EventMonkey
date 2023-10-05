@@ -1,15 +1,21 @@
-import { APIEmbed, APIEmbedField, GuildScheduledEventEntityType } from "discord.js";
+import { APIEmbed, APIEmbedField, GuildScheduledEventEntityType, GuildScheduledEventStatus } from "discord.js";
 import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 import Time from "../../Utility/Time";
-import { EventAnnouncement } from "../../EventMonkeyConfiguration";
 
 export default function eventAnnouncement(event: EventMonkeyEvent) {
   var idString = getFooter(event);
-  const timeBeforeStart = event.scheduledStartTime.valueOf() - new Date().valueOf();
+  const scheduledStart =
+    event.scheduledEvent?.status === GuildScheduledEventStatus.Active
+      ? undefined
+      : event.scheduledEvent?.scheduledStartAt
+      ? event.scheduledEvent.scheduledStartAt
+      : event.scheduledStartTime;
+  const timeBeforeStart = scheduledStart ? scheduledStart.valueOf() - new Date().valueOf() : undefined;
 
-  const startingString = timeBeforeStart
-    ? `will be starting in ${Math.round(timeBeforeStart / Time.toMilliseconds.minutes(1))} minutes`
-    : `is starting now`;
+  const startingString =
+    timeBeforeStart && timeBeforeStart > 0
+      ? `will be starting in ${Time.getDurationDescription(timeBeforeStart)}`
+      : `is starting now`;
 
   const announcementEmbed: APIEmbed = {
     title: getTitle(event),
@@ -51,7 +57,15 @@ export function getFooter(event: EventMonkeyEvent) {
 }
 
 export function getTitle(event: EventMonkeyEvent) {
-  const timeBeforeStart = event.scheduledEvent?.scheduledStartAt?.valueOf() ?? new Date().valueOf() - new Date().valueOf();
+  const scheduledStart =
+    event.scheduledEvent?.status === GuildScheduledEventStatus.Active
+      ? undefined
+      : event.scheduledEvent?.scheduledStartAt
+      ? event.scheduledEvent.scheduledStartAt
+      : event.scheduledStartTime;
+  const timeBeforeStart = scheduledStart ? scheduledStart.valueOf() - new Date().valueOf() : undefined;
 
-  return `${timeBeforeStart ? "Upcoming " : ""}Event Reminder - ${Time.getTimeString(event.scheduledStartTime)}`
+  return `${timeBeforeStart && timeBeforeStart > 0 ? "Upcoming " : ""}Event Reminder - ${Time.getTimeString(
+    event.scheduledStartTime
+  )}`;
 }
