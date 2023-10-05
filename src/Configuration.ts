@@ -1,5 +1,5 @@
 import { Client, GuildScheduledEventEntityType } from "discord.js";
-import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
+import { EventAnnouncementType, EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
@@ -10,9 +10,11 @@ function defaultConfiguration(): EventMonkeyConfiguration {
         name: "Meetup",
         discussionChannel: "meetups",
         entityType: GuildScheduledEventEntityType.External,
-        announcements: [{
-          beforeStart: 0,
-        }],
+        announcements: [
+          {
+            type: EventAnnouncementType.started,
+          },
+        ],
       },
     ],
     timeZones: [
