@@ -30,7 +30,7 @@ function configuration(): EventMonkeyConfiguration {
       },
       {
         name: "Happening",
-        description: "A freeform in-person without formal hosting",
+        description: "A freeform in-person event without formal hosting",
         discussionChannel: "happenings",
         announcements,
         entityType: GuildScheduledEventEntityType.External,
