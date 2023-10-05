@@ -9,6 +9,7 @@ import { performEventAnnouncement } from "./Utility/performAnnouncements";
 import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
+import { EventAnnouncementType } from "./EventMonkeyConfiguration";
 
 export default {
   eventStarted,
@@ -28,11 +29,12 @@ async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildSc
   }
 
   const eventType = monkeyEvent.eventType;
-  const startAnnouncements = eventType.announcements?.filter((x) => !x.beforeStart || x.beforeStart === 0);
+  const startAnnouncements = eventType.announcements?.filter((x) => x.type === EventAnnouncementType.started);
   if (!startAnnouncements || startAnnouncements.length === 0) return;
-  const announcementEmbed = eventAnnouncement(monkeyEvent);
 
   for (const announcement of startAnnouncements) {
+    const announcementEmbed = eventAnnouncement(monkeyEvent, announcement);
+
     performEventAnnouncement({
       announcement,
       event: monkeyEvent,
@@ -51,6 +53,21 @@ async function eventCompleted(oldEvent: GuildScheduledEvent | null, event: Guild
       if (!eventMonkeyEvent) {
         return;
       }
+
+      const eventType = eventMonkeyEvent.eventType;
+      const announcements = eventType.announcements?.filter((x) => x.type === EventAnnouncementType.ended);
+      if (!announcements || announcements.length === 0) return;
+    
+      for (const announcement of announcements) {
+        const announcementEmbed = eventAnnouncement(eventMonkeyEvent, announcement);
+    
+        performEventAnnouncement({
+          announcement,
+          event: eventMonkeyEvent,
+          announcementEmbed
+        });
+      }
+    
 
       if (eventMonkeyEvent.recurrence) {
         const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(
