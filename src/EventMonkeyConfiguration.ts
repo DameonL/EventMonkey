@@ -1,4 +1,5 @@
 import { Client, GuildScheduledEventEntityType } from "discord.js";
+import { EventMonkeyEvent } from "./EventMonkeyEvent";
 
 export interface EventMonkeyConfiguration {
   commandName: string;
@@ -44,13 +45,43 @@ export interface EventMonkeyEventTypeStage extends BaseEventMonkeyEventType {
 
 export type EventMonkeyEventType = EventMonkeyEventTypeExternal | EventMonkeyEventTypeStage | EventMonkeyEventTypeVoice;
 
-export interface EventAnnouncement {
+export interface BaseEventAnnouncement {
   channel?: string | string[];
-  beforeStart?: number;
-  message?: string;
+  message?: string | ((event: EventMonkeyEvent, announcement: EventAnnouncement) => string);
   mention?: {
     attendees?: boolean;
     here?: boolean;
     everyone?: boolean;
   };
 }
+
+export enum EventAnnouncementType {
+  starting = "Starting",
+  started = "Started",
+  ending = "Ending",
+  ended = "Ended",
+}
+
+export interface EventAnnouncementStarting extends BaseEventAnnouncement {
+  type: EventAnnouncementType.starting;
+  timeBefore: number;
+}
+
+export interface EventAnnouncementStarted extends BaseEventAnnouncement {
+  type: EventAnnouncementType.started;
+}
+
+export interface EventAnnouncementEnding extends BaseEventAnnouncement {
+  type: EventAnnouncementType.ending;
+  timeBefore: number;
+}
+
+export interface EventAnnouncementEnded extends BaseEventAnnouncement {
+  type: EventAnnouncementType.ended;
+}
+
+export type EventAnnouncement =
+  | EventAnnouncementStarting
+  | EventAnnouncementStarted
+  | EventAnnouncementEnding
+  | EventAnnouncementEnded;
