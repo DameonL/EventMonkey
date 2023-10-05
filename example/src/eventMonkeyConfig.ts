@@ -11,6 +11,7 @@ const announcements: EventAnnouncement[] = [{
   message: "An event is happening, you better get in here!",
   mention: {
     attendees: true,
+    here: true
   },
 }];
 
