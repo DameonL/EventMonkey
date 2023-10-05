@@ -1,5 +1,6 @@
 import Configuration from "../Configuration";
 import { EventMonkeyTimeZone } from "../EventMonkeyConfiguration";
+import logger from "../Logger";
 
 const toMilliseconds = {
   days: (numberOfDays: number) => toMilliseconds.hours(24) * numberOfDays,
@@ -117,5 +118,9 @@ function getDurationDescription(milliseconds: number) {
     }
   }
 
+  if (timeString === "") {
+    logger.error("Failed to get a valid time string from duration", totalDuration);
+  }
+  
   return timeString;
 }
