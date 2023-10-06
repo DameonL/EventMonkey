@@ -81,7 +81,7 @@ export function getFooter(event: EventMonkeyEvent) {
 export function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncement) {
   switch (announcement.type) {
     case EventAnnouncementType.starting:
-      return `Upcoming Event Reminder - ${Time.getTimeString(event.scheduledStartTime)}`;
+      return `Upcoming Event Reminder - ${Time.getTimeString(event.scheduledStartTime)} (${Time.getDurationDescription(announcement.timeBefore)})`;
 
     case EventAnnouncementType.started:
       return `Event Starting - ${Time.getTimeString(event.scheduledStartTime)}`;
@@ -89,7 +89,7 @@ export function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncemen
     case EventAnnouncementType.ending:
       return `Event Ending Soon - ${
         event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name
-      }`;
+      } (${Time.getDurationDescription(announcement.timeBefore)})`;
 
     case EventAnnouncementType.ended:
       return `Event Ending - ${
