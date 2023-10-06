@@ -1,15 +1,15 @@
 import { APIEmbed, APIEmbedField, GuildScheduledEventEntityType, GuildScheduledEventStatus } from "discord.js";
 import { EventAnnouncement, EventAnnouncementType } from "../../EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "../../EventMonkeyEvent";
-import Time from "../../Utility/Time";
 import logger from "../../Logger";
+import Time from "../../Utility/Time";
 
 export default function eventAnnouncement(event: EventMonkeyEvent, announcement: EventAnnouncement) {
   var idString = getFooter(event);
 
   if (!event.scheduledEvent) {
     logger.error(event);
-    throw new Error("Expected a scheduled event associated with MonkeyEvent, but there was none.")
+    throw new Error("Expected a scheduled event associated with MonkeyEvent, but there was none.");
   }
 
   const scheduledStart =
@@ -87,9 +87,13 @@ export function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncemen
       return `Event Starting - ${Time.getTimeString(event.scheduledStartTime)}`;
 
     case EventAnnouncementType.ending:
-      return `Event Ending Soon - ${event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name}`;
+      return `Event Ending Soon - ${
+        event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name
+      }`;
 
     case EventAnnouncementType.ended:
-      return `Event Ending - ${event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name}`;
+      return `Event Ending - ${
+        event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name
+      }`;
   }
 }
