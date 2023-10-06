@@ -11,10 +11,10 @@
 
 To start eventMonkey, you call the `configure` function. If the configuration has a `discordClient` defined, eventMonkey will begin running regular maintenance tasks. At this point, you can call the `registerCommands` function. If you would prefer to handle registration yourself, you can retrieve a `SlashCommandBuilder` using `command.builder()`, and handle execution with the `command.execute` function.
 
-View the example folder for a barebones implementation of a standalone bot.
+[*View the example folder for a barebones implementation of a standalone bot.*](https://github.com/DameonL/eventMonkey/blob/main/example/src/eventMonkeyBot.ts)
 
 ### Configuration:
 
 Before the command is built with `command.builder()`, you must call `configure()` with a valid EventMonkeyConfiguration. The `discordClient` on the configuration may be null at this point, but must be provided before any of the commands can be used. A basic default configuration object can be acquired by calling `defaultConfiguration()`. At a minimum, you must specify a `commandName`, `editingTimeout`, a `timeZone` definition, and at least one `EventType`.
 
-The configuration file in the example folder contains a full list of settings, along with descriptions and examples of their usage.
+[*The configuration file in the example folder contains a full list of settings, along with descriptions and examples of their usage.*](https://github.com/DameonL/eventMonkey/blob/main/example/src/eventMonkeyConfig.ts)
