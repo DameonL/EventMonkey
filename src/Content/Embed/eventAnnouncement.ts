@@ -84,12 +84,12 @@ export function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncemen
       return `Upcoming Event Reminder - ${Time.getTimeString(event.scheduledStartTime)}`;
 
     case EventAnnouncementType.started:
-      return `Event Starting `;
+      return `Event Starting - ${Time.getTimeString(event.scheduledStartTime)}`;
 
     case EventAnnouncementType.ending:
-      return `Event Ending Soon${event.scheduledEndTime ? `- ${Time.getTimeString(event.scheduledEndTime)}` : ""}`;
+      return `Event Ending Soon - ${event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name}`;
 
     case EventAnnouncementType.ended:
-      return `Event Ending`;
+      return `Event Ending - ${event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name}`;
   }
 }
