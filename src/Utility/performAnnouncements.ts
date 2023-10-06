@@ -7,6 +7,7 @@ import { EventAnnouncement, EventAnnouncementType } from "../EventMonkeyConfigur
 import { EventMonkeyEvent } from "../EventMonkeyEvent";
 import logger from "../Logger";
 import Threads from "./Threads";
+import Time from "./Time";
 import { resolveChannelString } from "./resolveChannelString";
 
 export async function performAnnouncements() {
@@ -39,24 +40,46 @@ export async function performEventAnnouncements(event: GuildScheduledEvent) {
     return;
   }
 
-  const timeBeforeStart = monkeyEvent.scheduledStartTime.valueOf() - new Date().valueOf();
-  const timeBeforeEnd = monkeyEvent.scheduledEndTime ? monkeyEvent.scheduledEndTime.valueOf() - new Date().valueOf() : undefined;
-
   for (const announcement of eventType.announcements) {
     if (announcement.type !== EventAnnouncementType.starting && announcement.type !== EventAnnouncementType.ending) {
-      return;
+      continue;
     }
 
     if (announcement.type === EventAnnouncementType.starting) {
-      if (timeBeforeStart > announcement.timeBefore || event.status === GuildScheduledEventStatus.Active) {
-        return;
+      const timeBeforeStart = monkeyEvent.scheduledEvent?.scheduledStartAt
+        ? monkeyEvent.scheduledEvent.scheduledStartAt.valueOf() - new Date().valueOf()
+        : undefined;
+
+      if (!timeBeforeStart) {
+        logger.error("Unable to determine the time before event starts.", monkeyEvent);
+      }
+
+      if (
+        !timeBeforeStart ||
+        timeBeforeStart < Time.toMilliseconds.minutes(1) ||
+        timeBeforeStart > announcement.timeBefore ||
+        event.status === GuildScheduledEventStatus.Active
+      ) {
+        continue;
       }
     } else if (announcement.type === EventAnnouncementType.ending) {
-      if (!timeBeforeEnd || timeBeforeEnd > announcement.timeBefore || event.status !== GuildScheduledEventStatus.Active) {
-        return;
+      const timeBeforeEnd = monkeyEvent.scheduledEvent?.scheduledEndAt
+        ? monkeyEvent.scheduledEvent?.scheduledEndAt.valueOf() - new Date().valueOf()
+        : undefined;
+
+      if (!timeBeforeEnd) {
+        logger.error("Unable to determine the time before event ends.", monkeyEvent);
+      }
+
+      if (
+        !timeBeforeEnd ||
+        timeBeforeEnd < Time.toMilliseconds.minutes(1) ||
+        timeBeforeEnd > announcement.timeBefore ||
+        event.status !== GuildScheduledEventStatus.Active
+      ) {
+        continue;
       }
     }
-
 
     const announcementEmbed = eventAnnouncement(monkeyEvent, announcement);
     performEventAnnouncement({ announcement, event: monkeyEvent, announcementEmbed });
@@ -136,7 +159,7 @@ export async function performEventAnnouncement(options: {
   announcementEmbed: APIEmbed;
 }) {
   if (!options.event.scheduledEvent?.guild) {
-    logger.error("No guild or scheduledEvent found.");
+    logger.error("No guild or scheduledEvent found.", options.event);
     return;
   }
 

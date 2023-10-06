@@ -2,22 +2,30 @@ import { APIEmbed, APIEmbedField, GuildScheduledEventEntityType, GuildScheduledE
 import { EventAnnouncement, EventAnnouncementType } from "../../EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 import Time from "../../Utility/Time";
+import logger from "../../Logger";
 
 export default function eventAnnouncement(event: EventMonkeyEvent, announcement: EventAnnouncement) {
   var idString = getFooter(event);
+
+  if (!event.scheduledEvent) {
+    logger.error(event);
+    throw new Error("Expected a scheduled event associated with MonkeyEvent, but there was none.")
+  }
+
   const scheduledStart =
     event.scheduledEvent?.status === GuildScheduledEventStatus.Active
       ? undefined
       : event.scheduledEvent?.scheduledStartAt
       ? event.scheduledEvent.scheduledStartAt
       : event.scheduledStartTime;
-  const timeBeforeStart = scheduledStart ? scheduledStart.valueOf() - new Date().valueOf() : undefined;
   const scheduledEnd =
-    event.scheduledEvent?.status === GuildScheduledEventStatus.Active
+    event.scheduledEvent?.status !== GuildScheduledEventStatus.Active
       ? undefined
       : event.scheduledEvent?.scheduledEndAt
       ? event.scheduledEvent.scheduledEndAt
       : event.scheduledEndTime;
+
+  const timeBeforeStart = scheduledStart ? scheduledStart.valueOf() - new Date().valueOf() : undefined;
   const timeBeforeEnd = scheduledEnd ? scheduledEnd.valueOf() - new Date().valueOf() : undefined;
 
   const startingString =
