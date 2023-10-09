@@ -20,9 +20,9 @@ const announcements: EventAnnouncement[] = [
     /* Options to allow the bot to add mentions to the message */
     mention: {
       /* Will mention each attendee by name. */
-      attendees: true,
+      // attendees: true,
       /* @here. @everyone is also available as an option. */
-      here: true,
+      // here: true,
     },
   },
   {
