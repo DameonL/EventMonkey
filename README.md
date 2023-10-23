@@ -2,10 +2,11 @@
 
 ### Features:
 
-- RSVP List
-- Thread auto-management (archives and locks the thread after it becomes inactive)
-- Recurring events - Events can be set up to recur hourly, daily, weekly, or monthly
-- Notifications - Announcements can be configures 
+- Fancy Pants Event Editing - Events are created and edited using Discord's embeds and modals for a simple, intuitive user experience.
+- RSVP List - Users mark their attendance or cancel their RSVP with the click of a button.
+- Thread auto-management - Archives and locks event threads after they become inactive.
+- Recurring events - Events can be set up to recur hourly, daily, weekly, or monthly.
+- Notifications - Announcements can be configured to mention each attendee by name, roles, and more. Configure announcements to appear before events start and end.
 
 ### Getting Started:
 
