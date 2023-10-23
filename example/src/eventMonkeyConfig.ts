@@ -21,8 +21,8 @@ const announcements: EventAnnouncement[] = [
     mention: {
       /* Will mention each attendee by name. */
       // attendees: true,
-      /* @here. @everyone is also available as an option. */
-      // here: true,
+      /* Use @ to mention roles, users, or special mentions like @here. */
+      // at: ["here", "everyone"]
     },
   },
   {

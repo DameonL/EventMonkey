@@ -50,8 +50,7 @@ export interface BaseEventAnnouncement {
   message?: string | ((event: EventMonkeyEvent, announcement: EventAnnouncement) => string);
   mention?: {
     attendees?: boolean;
-    here?: boolean;
-    everyone?: boolean;
+    at?: string[];
   };
 }
 

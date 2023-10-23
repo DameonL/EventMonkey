@@ -120,7 +120,7 @@ async function getAnnouncementMessage(options: {
   announcement: EventAnnouncement;
   event: EventMonkeyEvent;
 }): Promise<string> {
-  let attendeeMentions = "";
+  let mentions = "";
 
   if (!options.event.threadChannel) {
     logger.warn("Unable to get threadChannel for event");
@@ -129,16 +129,14 @@ async function getAnnouncementMessage(options: {
   if (options.announcement.mention) {
     const mentionOptions = options.announcement.mention;
 
+    if (mentionOptions.at) {
+      for (const mention of mentionOptions.at) {
+        mentions += `${mentions !== "" ? " " : ""}@${mention}`;
+      }
+    }
+
     if (options.event.threadChannel && mentionOptions.attendees) {
-      attendeeMentions += `${attendeeMentions !== "" ? " " : ""}${await attendeeTags(options.event.threadChannel)}`;
-    }
-
-    if (mentionOptions.everyone) {
-      attendeeMentions += `${attendeeMentions !== "" ? " " : ""}@everyone`;
-    }
-
-    if (mentionOptions.here) {
-      attendeeMentions += `${attendeeMentions !== "" ? " " : ""}@here`;
+      mentions += `${mentions !== "" ? " " : ""}${await attendeeTags(options.event.threadChannel)}`;
     }
   }
 
@@ -149,7 +147,7 @@ async function getAnnouncementMessage(options: {
     message = options.announcement.message;
   }
 
-  const content = `${message ? `${message}\n` : ""}${attendeeMentions}`;
+  const content = `${message ? `${message}\n` : ""}${mentions}`;
   return content;
 }
 
