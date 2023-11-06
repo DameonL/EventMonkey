@@ -10,14 +10,14 @@ const buttonHandlers: {
   attending: async (interaction: ButtonInteraction) => {
     let attendees = getAttendeesFromMessage(interaction.message);
     if (
-      !Configuration.current.discordClient ||
+      !Configuration.discordClient ||
       (interaction.message.channel.type !== ChannelType.PublicThread &&
         interaction.message.channel.type !== ChannelType.PrivateThread)
     ) {
       return;
     }
 
-    const monkeyEvent = await deseralizeEventEmbed(interaction.message.channel, Configuration.current.discordClient);
+    const monkeyEvent = await deseralizeEventEmbed(interaction.message.channel, Configuration.discordClient);
     if (!monkeyEvent) {
       logger.error("Couldn't get event from interaction channel.");
       await interaction.editReply("Sorry, something went wrong! Please contact an administrator.");

@@ -4,7 +4,7 @@ import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 import logger from "../../Logger";
 import Time from "../../Utility/Time";
 
-export default function eventAnnouncement(event: EventMonkeyEvent, announcement: EventAnnouncement) {
+export default async function eventAnnouncement(event: EventMonkeyEvent, announcement: EventAnnouncement) {
   var idString = getFooter(event);
 
   if (!event.scheduledEvent) {
@@ -40,7 +40,7 @@ export default function eventAnnouncement(event: EventMonkeyEvent, announcement:
       : undefined;
 
   const announcementEmbed: APIEmbed = {
-    title: getTitle(event, announcement),
+    title: await getTitle(event, announcement),
     description: `The event "${event.name}" hosted by ${event.author.displayName} ${startingString}!`,
     footer: {
       text: idString,
@@ -78,22 +78,33 @@ export function getFooter(event: EventMonkeyEvent) {
   return `Event ID: ${event.id}`;
 }
 
-export function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncement) {
+export async function getTitle(event: EventMonkeyEvent, announcement: EventAnnouncement) {
+  if (!event.scheduledEvent) {
+    throw new Error("Could not get GuildScheduledEvent from EventMonkeyEvent.");
+  }
+
   switch (announcement.type) {
     case EventAnnouncementType.starting:
-      return `Upcoming Event Reminder - ${Time.getTimeString(event.scheduledStartTime)} (${Time.getDurationDescription(announcement.timeBefore)})`;
+      return `Upcoming Event Reminder - ${await Time.getTimeString(
+        event.scheduledStartTime,
+        event.scheduledEvent.guildId
+      )} (${Time.getDurationDescription(announcement.timeBefore)})`;
 
     case EventAnnouncementType.started:
-      return `Event Starting - ${Time.getTimeString(event.scheduledStartTime)}`;
+      return `Event Starting - ${await Time.getTimeString(event.scheduledStartTime, event.scheduledEvent.guildId)}`;
 
     case EventAnnouncementType.ending:
       return `Event Ending Soon - ${
-        event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name
+        event.scheduledEvent?.scheduledEndAt
+          ? await Time.getTimeString(event.scheduledEvent?.scheduledEndAt, event.scheduledEvent.guildId)
+          : event.name
       } (${Time.getDurationDescription(announcement.timeBefore)})`;
 
     case EventAnnouncementType.ended:
       return `Event Ending - ${
-        event.scheduledEvent?.scheduledEndAt ? Time.getTimeString(event.scheduledEvent?.scheduledEndAt) : event.name
+        event.scheduledEvent?.scheduledEndAt
+          ? await Time.getTimeString(event.scheduledEvent?.scheduledEndAt, event.scheduledEvent.guildId)
+          : event.name
       }`;
   }
 }

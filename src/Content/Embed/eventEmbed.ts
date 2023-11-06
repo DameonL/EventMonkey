@@ -16,7 +16,7 @@ import { EventRecurrence, deserializeRecurrence, serializeRecurrence } from "../
 import Time from "../../Utility/Time";
 import { getAttendeesFromMessage } from "./attendees";
 
-export async function eventEmbed(event: EventMonkeyEvent): Promise<EmbedBuilder> {
+export async function eventEmbed(event: EventMonkeyEvent, guildId: string): Promise<EmbedBuilder> {
   const previewEmbed = new EmbedBuilder();
   previewEmbed.setTitle("Event Details");
 
@@ -54,7 +54,7 @@ export async function eventEmbed(event: EventMonkeyEvent): Promise<EmbedBuilder>
   if (event.recurrence) {
     fields.push({
       name: "Frequency",
-      value: serializeRecurrence(event.recurrence),
+      value: await serializeRecurrence(event.recurrence, guildId),
     });
   }
 
@@ -98,10 +98,13 @@ export async function deseralizeEventEmbed(
 
   const eventTypeName = embed.fields.find((x) => x.name === "Type")?.value;
   if (!eventTypeName) throw new Error();
-  const eventType = Configuration.current.eventTypes.find((x) => x.name === eventTypeName);
+
+  const configuration = await Configuration.getCurrent({ guildId: thread.guildId });
+
+  const eventType = configuration.eventTypes.find((x) => x.name === eventTypeName);
   if (!eventType) throw new Error();
 
-  const scheduledStartTime = Time.getTimeFromString(thread.name);
+  const scheduledStartTime = await Time.getTimeFromString(thread.name, thread.guildId);
   const name = getEventNameFromString(thread.name);
   const image = detailsMessage.attachments.first()?.url;
 
@@ -131,7 +134,7 @@ export async function deseralizeEventEmbed(
 
   let recurrence: EventRecurrence | undefined = undefined;
   const frequencyField = embed.fields.find((x) => x.name === "Frequency");
-  recurrence = frequencyField ? deserializeRecurrence(frequencyField.value) : undefined;
+  recurrence = frequencyField ? await deserializeRecurrence(frequencyField.value, thread.guildId) : undefined;
 
   const attendees = getAttendeesFromMessage(detailsMessage);
 
@@ -191,7 +194,7 @@ export async function getEventDetailsMessage(thread: ThreadChannel) {
 
 export function getEventNameFromString(text: string): string {
   const matches = text.match(/(AM|PM)(\s+\w+)?\s+-\s+(?<name>.*)(?= hosted by)/i);
-  if (!matches || !matches.groups) throw new Error("Unable to parse event name from string.");
+  if (!matches || !matches.groups) throw new Error(`Unable to parse event name from string: ${text}`);
 
   return matches.groups.name;
 }

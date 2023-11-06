@@ -24,13 +24,18 @@ export async function eventModal(
   originalInteraction: ChatInputCommandInteraction,
   page = 0
 ) {
-  const modal = eventEditModal(event, interaction.id, page);
+  if (!interaction.guildId) {
+    return;
+  }
+
+  const modal = await eventEditModal(event, interaction.id, interaction.guildId, page);
 
   await interaction.showModal(modal);
+  const configuration = await Configuration.getCurrent({ guildId: interaction.guildId });
   let modalSubmission: ModalSubmitInteraction;
   try {
     modalSubmission = await interaction.awaitModalSubmit({
-      time: Configuration.current.editingTimeout,
+      time: configuration.editingTimeout,
       filter: (submitInteraction, collected) => {
         if (submitInteraction.user.id === interaction.user.id && submitInteraction.customId === interaction.id) {
           return true;
@@ -47,7 +52,12 @@ export async function eventModal(
 
   const startTime = event.scheduledStartTime;
   try {
-    deserializeModal<EventMonkeyEvent>(modalSubmission.fields.fields.entries(), event, pages[page].deserializeConfig);
+    deserializeModal<EventMonkeyEvent>(
+      modalSubmission.fields.fields.entries(),
+      interaction.guildId,
+      event,
+      pages[page].deserializeConfig
+    );
   } catch (error: any) {
     await modalSubmission.editReply({
       content: JSON.stringify(error),
@@ -71,7 +81,7 @@ export async function eventModal(
   return event;
 }
 
-export function eventEditModal(event: EventMonkeyEvent, id: string, page = 0) {
+export async function eventEditModal(event: EventMonkeyEvent, id: string, guildId: string, page = 0) {
   const modal = new ModalBuilder();
   modal.setTitle("Edit Your Event");
   modal.setCustomId(id);
@@ -87,7 +97,9 @@ export function eventEditModal(event: EventMonkeyEvent, id: string, page = 0) {
     serializationObject["entityMetadata.location"] = event.entityMetadata.location;
   }
 
-  modal.addComponents(serializeToModal(`${event.id}_`, pages[page].converter(event), pages[page].serializeConfig));
+  modal.addComponents(
+    await serializeToModal(`${event.id}_`, pages[page].converter(event), guildId, pages[page].serializeConfig)
+  );
 
   return modal;
 }
@@ -127,8 +139,8 @@ const pages: EditModalPage[] = [
         duration: (fieldValue: string) => (isNaN(Number(fieldValue)) ? "Invalid duration" : undefined),
       },
       customDeserializers: {
-        scheduledStartTime: (fieldValue: string) => {
-          const output = Time.getTimeFromString(fieldValue);
+        scheduledStartTime: async (fieldValue, guildId) => {
+          const output = await Time.getTimeFromString(fieldValue, guildId);
 
           return output;
         },

@@ -33,10 +33,9 @@ async function startServer() {
 
 async function onClientReady(client: discord.Client) {
   const config = configuration();
-  config.discordClient = client;
   var uptime = 0;
   client.user?.setActivity(`Performing maintenance...`);
-  await eventMonkey.configure(config);
+  await eventMonkey.configure(config, client);
   await eventMonkey.registerCommands();
   client.user?.setActivity(`Ready!`);
   setInterval(() => {

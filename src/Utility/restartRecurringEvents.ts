@@ -8,12 +8,11 @@ import { getNextValidRecurrence } from "../Recurrence";
 import { resolveChannelString } from "./resolveChannelString";
 
 export async function restartRecurringEvents() {
-  const configuration = Configuration.current;
+  if (!Configuration.discordClient) return;
 
-  if (!configuration.discordClient) return;
-
-  for (const [guildName, guildAuth] of await configuration.discordClient.guilds.fetch()) {
+  for (const [guildName, guildAuth] of await Configuration.discordClient.guilds.fetch()) {
     const guild = await guildAuth.fetch();
+    const configuration = await Configuration.getCurrent({ guildId: guild.id });
     for (const eventType of configuration.eventTypes) {
       try {
         await restartEventType(eventType, guild);
@@ -25,17 +24,17 @@ export async function restartRecurringEvents() {
 }
 
 async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
-  if (!Configuration.current.discordClient) return;
+  if (!Configuration.discordClient) return;
 
   const channel = await resolveChannelString(eventType.discussionChannel, guild);
   if (!channel) return;
-  
+
   if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildForum) return;
   logger.log(`Restarting event type ${eventType.name}`);
 
   for (const [threadId, thread] of (await channel.threads.fetchActive()).threads) {
     try {
-      if (thread.ownerId === Configuration.current.discordClient.user?.id) {
+      if (thread.ownerId === Configuration.discordClient.user?.id) {
         await restartThreadEvents(thread, guild);
       }
     } catch (error) {
@@ -50,14 +49,16 @@ async function restartThreadEvents(thread: ThreadChannel, guild: Guild) {
   if (threadPins.length === 0) return;
   if (threadPins.find((x) => x[1].embeds.at(0)?.title === "Event is Canceled")) return;
 
-  const eventMonkeyEvent = await deseralizeEventEmbed(thread, Configuration.client);
+  const eventMonkeyEvent = await deseralizeEventEmbed(thread, Configuration.discordClient);
   if (!eventMonkeyEvent) {
     return;
   }
-  
+
   if (
     eventMonkeyEvent.recurrence &&
-    (!eventMonkeyEvent.scheduledEvent || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Completed || eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Canceled)
+    (!eventMonkeyEvent.scheduledEvent ||
+      eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Completed ||
+      eventMonkeyEvent.scheduledEvent.status === GuildScheduledEventStatus.Canceled)
   ) {
     const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(
       eventMonkeyEvent.recurrence,

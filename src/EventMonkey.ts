@@ -1,18 +1,19 @@
-import { Events, GuildScheduledEvent, GuildScheduledEventStatus, Routes } from "discord.js";
+import { Client, Events, Guild, GuildScheduledEvent, GuildScheduledEventStatus, Routes } from "discord.js";
 
-import { EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
+import { ConfigurationProvider, EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import EventsUnderConstruction from "./EventsUnderConstruction";
 
 import ClientEventHandlers from "./ClientEventHandlers";
 import { eventCommand } from "./Commands";
-import Configuration from "./Configuration";
+import Configuration, { isDynamicConfiguration } from "./Configuration";
+import simpleConfigurationProvider from "./simpleConfigurationProvider";
 import Listeners from "./Listeners";
 import logger from "./Logger";
-import { performAnnouncements } from "./Utility/performAnnouncements";
-import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
+import { performAnnouncements } from "./Utility/performAnnouncements";
+import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import updateVoiceAndStageEvents from "./Utility/updateVoiceAndStageEvents";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
@@ -21,82 +22,86 @@ export default {
   defaultConfiguration: Configuration.defaultConfiguration,
   configure,
   registerCommands,
+  registerCommandsInGuild,
   time: Time,
 };
 
 async function registerCommands() {
-  if (!Configuration.current.discordClient?.application?.id) {
+  if (!Configuration.discordClient?.application?.id) {
     throw new Error(`discordClient in the configuration must be set before commands can be registered.`);
   }
 
-  const builtCommand = eventCommand.builder();
-  await Configuration.current.discordClient.rest.put(
-    Routes.applicationCommands(Configuration.current.discordClient.application?.id),
-    {
-      body: [builtCommand.toJSON()],
-    }
-  );
+  for (const [guildId, guild] of Configuration.discordClient.guilds.cache) {
+    registerCommandsInGuild(guild);
+  }
+}
 
-  Configuration.current.discordClient.on(Events.InteractionCreate, (interaction) => {
+async function registerCommandsInGuild(guild: Guild) {
+  const applicationId = Configuration.discordClient.application?.id;
+  if (!applicationId) {
+    throw new Error("Commands cannot be registered before the client application is ready.");
+  }
+
+  const configuration = await Configuration.getCurrent({ guildId: guild.id });
+  const builtCommand = await eventCommand.builder(guild.id);
+  await Configuration.discordClient.rest.put(Routes.applicationCommands(applicationId), {
+    body: [builtCommand.toJSON()],
+  });
+
+  Configuration.discordClient.on(Events.InteractionCreate, (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     if (
-      interaction.applicationId === Configuration.current.discordClient?.application?.id &&
-      interaction.commandName === Configuration.current.commandName
+      interaction.applicationId === Configuration.discordClient?.application?.id &&
+      interaction.commandName === configuration.commandName
     ) {
       eventCommand.execute(interaction);
     }
   });
 }
 
-async function configure(newConfiguration: EventMonkeyConfiguration | (() => EventMonkeyConfiguration)) {
-  let configuration: EventMonkeyConfiguration | undefined;
-  if (typeof newConfiguration === "function") {
-    configuration = (newConfiguration as () => EventMonkeyConfiguration)();
-  }
-
-  if (!configuration) {
-    configuration = newConfiguration as EventMonkeyConfiguration;
-  }
-
+async function configure(newConfiguration: EventMonkeyConfiguration | ConfigurationProvider, client: Client) {
+  Configuration.discordClient = client;
+  let configuration: ConfigurationProvider = !isDynamicConfiguration(newConfiguration)
+    ? simpleConfigurationProvider(newConfiguration)
+    : newConfiguration;
+  Configuration.setCurrent(newConfiguration);
   const serverOffset = Math.round(new Date().getTimezoneOffset() / 60);
-  for (const timeZone of configuration.timeZones) {
-    timeZone.offset += serverOffset;
-  }
+  for (const [guildId, guild] of await Configuration.discordClient.guilds.fetch()) {
+    const guildConfig = await configuration.get(guild.id);
 
-  const cachedClient = Configuration.current.discordClient;
-  Configuration.current = configuration;
-
-  if (Configuration.current.eventTypes.length === 0) {
-    throw new Error("You must define at least one event type in the configuration.");
-  }
-
-  const client = Configuration.current.discordClient;
-  if (client && client !== cachedClient) {
-    await Listeners.listenForButtons();
-    client.on(Events.GuildScheduledEventDelete, async (guildScheduledEvent: GuildScheduledEvent) =>
-      ClientEventHandlers.eventCompleted(null, guildScheduledEvent)
-    );
-
-    client.on(Events.GuildScheduledEventUserAdd, ClientEventHandlers.userShowedInterest);
-
-    client.on(Events.GuildScheduledEventUpdate, (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
-      if (event.status === GuildScheduledEventStatus.Active) {
-        ClientEventHandlers.eventStarted(oldEvent, event);
-      } else if (event.status === GuildScheduledEventStatus.Completed) {
-        ClientEventHandlers.eventCompleted(oldEvent, event);
-      }
-    });
-
-    logger.log("Pre-loading channels and events...");
-    for (const [guildId, partialGuild] of await client.guilds.fetch()) {
-      const guild = await partialGuild.fetch();
-      const channels = await guild.channels.fetch();
-      const threads = await guild.channels.fetchActiveThreads();
+    if (!guildConfig) {
+      continue;
     }
-    await startupMaintenanceTasks();
-    startRecurringTasks();
+
+    for (const timeZone of guildConfig.timeZones) {
+      timeZone.offset += serverOffset;
+    }
   }
+
+  await Listeners.listenForButtons();
+  client.on(Events.GuildScheduledEventDelete, async (guildScheduledEvent: GuildScheduledEvent) =>
+    ClientEventHandlers.eventCompleted(null, guildScheduledEvent)
+  );
+
+  client.on(Events.GuildScheduledEventUserAdd, ClientEventHandlers.userShowedInterest);
+
+  client.on(Events.GuildScheduledEventUpdate, (oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) => {
+    if (event.status === GuildScheduledEventStatus.Active) {
+      ClientEventHandlers.eventStarted(oldEvent, event);
+    } else if (event.status === GuildScheduledEventStatus.Completed) {
+      ClientEventHandlers.eventCompleted(oldEvent, event);
+    }
+  });
+
+  logger.log("Pre-loading channels and events...");
+  for (const [guildId, partialGuild] of await client.guilds.fetch()) {
+    const guild = await partialGuild.fetch();
+    const channels = await guild.channels.fetch();
+    const threads = await guild.channels.fetchActiveThreads();
+  }
+  await startupMaintenanceTasks();
+  startRecurringTasks();
 }
 
 async function startupMaintenanceTasks() {

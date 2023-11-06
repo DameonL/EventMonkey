@@ -18,7 +18,7 @@ export default async function editEventMessage(
   if (!originalInteraction.guild) throw new Error("Interaction must be in a guild.");
 
   const submissionEmbed = new EmbedBuilder().setTitle(
-    `${event.name} - ${Time.getTimeString(event.scheduledStartTime)}`
+    `${event.name} - ${await Time.getTimeString(event.scheduledStartTime, originalInteraction.guild.id)}`
   );
   const prefix = `${originalInteraction.id}_button`;
   const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([
@@ -35,7 +35,7 @@ export default async function editEventMessage(
   ]);
 
   return {
-    embeds: [submissionEmbed, await eventEmbed(event)],
+    embeds: [submissionEmbed, await eventEmbed(event, originalInteraction.guild.id)],
     components: [
       buttonRow,
       new ActionRowBuilder<ButtonBuilder>().addComponents(

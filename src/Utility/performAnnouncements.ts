@@ -11,10 +11,10 @@ import Time from "./Time";
 import { resolveChannelString } from "./resolveChannelString";
 
 export async function performAnnouncements() {
-  if (!Configuration.current.discordClient) return;
+  if (!Configuration.discordClient) return;
 
   try {
-    for (const guild of Configuration.current.discordClient.guilds.cache.values()) {
+    for (const guild of Configuration.discordClient.guilds.cache.values()) {
       for (const event of (await guild.scheduledEvents.fetch()).values()) {
         performEventAnnouncements(event);
       }
@@ -30,7 +30,8 @@ export async function performEventAnnouncements(event: GuildScheduledEvent) {
   const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
 
-  const eventType = Configuration.current.eventTypes.find(
+  const configuration = await Configuration.getCurrent({ guildId: event.guildId });
+  const eventType = configuration.eventTypes.find(
     (x) => x.discussionChannel === thread.parent?.id || x.discussionChannel === thread.parent?.name
   );
   if (!eventType || !eventType.announcements) return;
@@ -81,7 +82,7 @@ export async function performEventAnnouncements(event: GuildScheduledEvent) {
       }
     }
 
-    const announcementEmbed = eventAnnouncement(monkeyEvent, announcement);
+    const announcementEmbed = await eventAnnouncement(monkeyEvent, announcement);
     performEventAnnouncement({ announcement, event: monkeyEvent, announcementEmbed });
   }
 }
@@ -96,7 +97,7 @@ export async function performEventThreadAnnouncement(options: {
     return;
   }
 
-  const eventTitle = getTitle(options.event, options.announcement);
+  const eventTitle = await getTitle(options.event, options.announcement);
 
   let threadAnnouncement = (await thread.messages.fetch()).find((x) =>
     x.embeds.find((x) => x.footer?.text === getFooter(options.event) && x.title === eventTitle)

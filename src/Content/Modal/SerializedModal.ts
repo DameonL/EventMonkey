@@ -1,4 +1,11 @@
-import { ActionRowBuilder, ModalActionRowComponentBuilder, TextInputBuilder, TextInputComponent, TextInputStyle } from "discord.js";
+import {
+  ActionRowBuilder,
+  ModalActionRowComponentBuilder,
+  TextInputBuilder,
+  TextInputComponent,
+  TextInputStyle,
+} from "discord.js";
+import { EventMonkeyEvent } from "../../EventMonkeyEvent";
 
 export interface ModalSerializationConfig {
   labels?: {
@@ -8,46 +15,39 @@ export interface ModalSerializationConfig {
     [fieldName: string]: TextInputStyle;
   };
   formatters?: {
-    [fieldName: string]: (fieldValue: any) => string;
+    [fieldName: string]: (fieldValue: any, guildId: string) => string | Promise<string>;
   };
 }
-
-
 
 export interface ModalDeserializationConfig {
   validators?: {
-    [fieldName: string]:
-      | ((fieldValue: string) => string | undefined)
-      | undefined;
+    [fieldName: string]: ((fieldValue: string) => string | undefined) | undefined;
   };
   customDeserializers?: {
-    [fieldName: string]: ((fieldValue: string) => any) | undefined;
+    [fieldName: string]: ((fieldValue: string, guildId: string) => any | Promise<any>) | undefined;
   };
 }
 
-export function serializeToModal(
+export async function serializeToModal(
   prefix: string,
-  target: any,
+  target: EventMonkeyEvent,
+  guildId: string,
   config?: ModalSerializationConfig
-): ActionRowBuilder<TextInputBuilder>[] {
+): Promise<ActionRowBuilder<TextInputBuilder>[]> {
   const output: ActionRowBuilder<TextInputBuilder>[] = [];
 
   for (const fieldName in target) {
     let label = config?.labels?.[fieldName] ?? fieldName;
     let style = config?.styles?.[fieldName] ?? TextInputStyle.Short;
-    let value = target[fieldName];
+    let value = (target as any)[fieldName];
     if (config?.formatters?.[fieldName])
-      value = config.formatters[fieldName](target[fieldName]);
+      value = await config.formatters[fieldName]((target as any)[fieldName], guildId);
 
     value = value.toString();
 
     output.push(
       new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        new TextInputBuilder()
-          .setLabel(label)
-          .setCustomId(`${prefix}${fieldName}`)
-          .setStyle(style)
-          .setValue(value)
+        new TextInputBuilder().setLabel(label).setCustomId(`${prefix}${fieldName}`).setStyle(style).setValue(value)
       )
     );
   }
@@ -55,8 +55,9 @@ export function serializeToModal(
   return output;
 }
 
-export function deserializeModal<T>(
+export async function deserializeModal<T>(
   fields: IterableIterator<[string, TextInputComponent]>,
+  guildId: string,
   deserializeTarget?: any,
   config?: ModalDeserializationConfig
 ) {
@@ -78,18 +79,14 @@ export function deserializeModal<T>(
         }
       } else {
         if (config?.validators?.[fullFieldName]) {
-          const validationResponse = config.validators[fieldName]?.(
-            fieldComponent.value
-          );
+          const validationResponse = config.validators[fieldName]?.(fieldComponent.value);
           if (validationResponse) {
             throw new Error(validationResponse);
           }
         }
 
         if (config?.customDeserializers?.[fullFieldName]) {
-          currentObject[fieldName] = config.customDeserializers?.[
-            fullFieldName
-          ]?.(fieldComponent.value);
+          currentObject[fieldName] = await config.customDeserializers?.[fullFieldName]?.(fieldComponent.value, guildId);
         } else {
           currentObject[fieldName] = fieldComponent.value.trim();
         }
@@ -99,4 +96,3 @@ export function deserializeModal<T>(
 
   return output as T;
 }
-

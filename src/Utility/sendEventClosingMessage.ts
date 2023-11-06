@@ -1,32 +1,22 @@
-import {
-  EmbedBuilder,
-  GuildScheduledEventStatus,
-  ThreadChannel,
-} from "discord.js";
+import { EmbedBuilder, GuildScheduledEventStatus, ThreadChannel } from "discord.js";
 import Configuration from "../Configuration";
 import Time from "./Time";
 
 export async function sendEventClosingMessage(
   thread: ThreadChannel,
-  status:
-    | GuildScheduledEventStatus.Canceled
-    | GuildScheduledEventStatus.Completed
+  status: GuildScheduledEventStatus.Canceled | GuildScheduledEventStatus.Completed
 ) {
   const completed = status === GuildScheduledEventStatus.Completed;
-  let nextTime =
-    (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) /
-    Time.toMilliseconds.days(1);
+  const configuration = await Configuration.getCurrent({ guildId: thread.guildId });
+  let nextTime = (configuration.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.days(1);
   let timeUnit = "day";
   if (nextTime <= 1) {
-    nextTime =
-      (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) /
-      Time.toMilliseconds.hours(1);
+    nextTime = (configuration.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.hours(1);
     timeUnit = "hour";
   }
   if (nextTime <= 1) {
     nextTime =
-      (Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1)) /
-      Time.toMilliseconds.minutes(1);
+      (configuration.closeThreadsAfter ?? Time.toMilliseconds.days(1)) / Time.toMilliseconds.minutes(1);
     timeUnit = "minute";
   }
 

@@ -5,6 +5,7 @@ import {
   ComponentType,
   Guild,
   GuildMemberRoleManager,
+  GuildScheduledEvent,
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   GuildScheduledEventStatus,
@@ -38,12 +39,13 @@ export const eventCommand = {
 
 const commands = {
   create: async (interaction: ChatInputCommandInteraction, guild: Guild) => {
+    const configuration = await Configuration.getCurrent({ guildId: guild.id });
     const defaultStartTime = new Date();
     defaultStartTime.setHours(defaultStartTime.getHours());
     defaultStartTime.setDate(defaultStartTime.getDate() + 1);
     const defaultEndTime = new Date(defaultStartTime);
     defaultEndTime.setHours(defaultEndTime.getHours() + 1);
-    const selectMenuOptions: APISelectMenuOption[] = Configuration.current.eventTypes
+    const selectMenuOptions: APISelectMenuOption[] = configuration.eventTypes
       .filter(async (x) =>
         interaction.guild ? await resolveChannelString(x.discussionChannel, interaction.guild) : false
       )
@@ -72,9 +74,7 @@ const commands = {
     );
     if (!eventTypeResponse) return;
 
-    eventType = Configuration.current.eventTypes.find(
-      (x) => x.name === eventTypeResponse.values[0]
-    ) as EventMonkeyEventType;
+    eventType = configuration.eventTypes.find((x) => x.name === eventTypeResponse.values[0]) as EventMonkeyEventType;
 
     if (!eventType) throw new Error();
 
@@ -148,11 +148,9 @@ const commands = {
 
       return;
     }
-    const selectMenuOptions: APISelectMenuOption[] = userEvents.map((x) => {
-      return { label: x.name, value: x.id, description: Time.getTimeString(x.scheduledStartTime) };
-    });
 
     let monkeyEvent: EventMonkeyEvent | undefined;
+    const selectMenuOptions = await getSelectEventOptions(userEvents, guild.id);
     const eventTypeMessage = await interaction.editReply({
       content: "Which event do you want to edit?",
       components: [
@@ -194,12 +192,14 @@ const commands = {
     await editEvent(monkeyEvent, interaction);
   },
   end: async (interaction: ChatInputCommandInteraction, guild: Guild) => {
-    const userEvents = guild.scheduledEvents.cache.filter(
-      (x) =>
-        x.status === GuildScheduledEventStatus.Active &&
-        x.description?.endsWith(`Hosted by: ${interaction.user.toString()}`)
+    const userEvents = await getUserEvents(
+      guild,
+      interaction.user,
+      GuildScheduledEventStatus.Active,
+      (x) => x.description?.endsWith(`Hosted by: ${interaction.user.toString()}`) ?? false
     );
-    if (userEvents.size === 0) {
+
+    if (userEvents.length === 0) {
       await interaction.editReply({
         content: "Sorry, it looks like you don't have any active events.",
         components: [],
@@ -208,9 +208,7 @@ const commands = {
 
       return;
     }
-    const selectMenuOptions: APISelectMenuOption[] = userEvents.map((x) => {
-      return { label: x.name, value: x.id, description: Time.getTimeString(x.scheduledStartAt ?? new Date()) };
-    });
+    const selectMenuOptions = await getSelectEventOptions(userEvents, guild.id);
 
     const optionMessage = await interaction.editReply({
       content: "Which event do you want to end?",
@@ -228,20 +226,22 @@ const commands = {
     if (!selectResponse) return;
 
     const event = userEvents.find((x) => x.id === selectResponse.values[0]);
-    if (event) {
-      await event.setStatus(GuildScheduledEventStatus.Completed);
+    if (event && event.scheduledEvent) {
+      await event.scheduledEvent.setStatus(GuildScheduledEventStatus.Completed);
       await interaction.editReply({ content: "Event has been ended.", embeds: [], components: [] });
     } else {
       await interaction.editReply({ content: "Sorry, something went wrong.", embeds: [], components: [] });
     }
   },
   cancel: async (interaction: ChatInputCommandInteraction, guild: Guild) => {
-    const userEvents = (await guild.scheduledEvents.cache).filter(
-      (x) =>
-        x.status === GuildScheduledEventStatus.Scheduled &&
-        x.description?.endsWith(`Hosted by: ${interaction.user.toString()}`)
+    const userEvents = await getUserEvents(
+      guild,
+      interaction.user,
+      GuildScheduledEventStatus.Scheduled,
+      (x) => x.description?.endsWith(`Hosted by: ${interaction.user.toString()}`) ?? false
     );
-    if (userEvents.size === 0) {
+
+    if (userEvents.length === 0) {
       await interaction.editReply({
         content: "Sorry, it looks like you don't have any active events.",
         components: [],
@@ -250,9 +250,7 @@ const commands = {
 
       return;
     }
-    const selectMenuOptions: APISelectMenuOption[] = userEvents.map((x) => {
-      return { label: x.name, value: x.id, description: Time.getTimeString(x.scheduledStartAt ?? new Date()) };
-    });
+    const selectMenuOptions = await getSelectEventOptions(userEvents, guild.id);
 
     const optionMessage = await interaction.editReply({
       content: "Which event do you want to cancel?",
@@ -270,9 +268,9 @@ const commands = {
     if (!selectResponse) return;
 
     const event = userEvents.find((x) => x.id === selectResponse.values[0]);
-    if (event) {
-      await event.setStatus(GuildScheduledEventStatus.Canceled);
-      await event.delete();
+    if (event?.scheduledEvent) {
+      await event.scheduledEvent.setStatus(GuildScheduledEventStatus.Canceled);
+      await event.scheduledEvent.delete();
       await interaction.editReply({ content: "Event has been canceled.", embeds: [], components: [] });
     } else {
       await interaction.editReply({ content: "Sorry, something went wrong.", embeds: [], components: [] });
@@ -295,9 +293,10 @@ for (const subCommand of subCommands) {
   subCommandHandlers[subCommand.name] = subCommand.handler;
 }
 
-function getEventCommandBuilder() {
+async function getEventCommandBuilder(guildId: string) {
+  const configuration = await Configuration.getCurrent({ guildId });
   const builder = new SlashCommandBuilder()
-    .setName(Configuration.current.commandName)
+    .setName(configuration.commandName)
     .setDescription("Create and manage events");
 
   for (const subCommand of subCommands) {
@@ -327,10 +326,10 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
   return;
 }
 
-function checkRolePermissions(interaction: ChatInputCommandInteraction): boolean {
-  if (!interaction.member) return false;
+async function checkRolePermissions(interaction: ChatInputCommandInteraction): Promise<boolean> {
+  if (!interaction.member || !interaction.guildId) return false;
 
-  const configuration = Configuration.current;
+  const configuration = await Configuration.getCurrent({ guildId: interaction.guildId });
   let allowed = configuration.roles?.allowed == null;
   const memberPermissions = interaction.memberPermissions;
   if (memberPermissions && memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
@@ -406,9 +405,14 @@ async function editEvent(event: EventMonkeyEvent, interaction: ChatInputCommandI
   }
 }
 
-async function getUserEvents(guild: Guild, user: User, status: GuildScheduledEventStatus) {
-  const guildEvents = guild.scheduledEvents.cache.filter(
-    (x) => x.status === status && x.description?.includes(user.id)
+async function getUserEvents(
+  guild: Guild,
+  user: User,
+  status: GuildScheduledEventStatus,
+  filter?: (event: GuildScheduledEvent<GuildScheduledEventStatus>) => boolean
+) {
+  const guildEvents = guild.scheduledEvents.cache.filter((x) =>
+    x.status === status && x.description?.includes(user.id) && filter ? filter(x) : true
   );
   const output: EventMonkeyEvent[] = [];
   for (const [id, event] of guildEvents) {
@@ -424,4 +428,17 @@ async function getUserEvents(guild: Guild, user: User, status: GuildScheduledEve
   }
 
   return output;
+}
+
+async function getSelectEventOptions(userEvents: EventMonkeyEvent[], guildId: string) {
+  const times: string[] = [];
+  for (let i = 0; i < userEvents.length; i++) {
+    times.push(await Time.getTimeString(userEvents[i].scheduledStartTime, guildId));
+  }
+
+  const selectMenuOptions: APISelectMenuOption[] = userEvents.map((x, i) => {
+    return { label: x.name, value: x.id, description: times[i] };
+  });
+
+  return selectMenuOptions;
 }

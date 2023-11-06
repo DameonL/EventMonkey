@@ -1,9 +1,10 @@
 import {
   ButtonInteraction,
-  ChannelType, ForumChannel,
+  ChannelType,
+  ForumChannel,
   InteractionCollector,
   TextChannel,
-  ThreadChannel
+  ThreadChannel,
 } from "discord.js";
 import buttonHandlers from "./ButtonHandlers/EventButtonHandlers";
 import Configuration from "./Configuration";
@@ -18,21 +19,13 @@ export default {
 };
 
 async function listenForButtons() {
-  const configuration = Configuration.current;
+  if (!Configuration.discordClient) return;
 
-  if (!configuration.discordClient) return;
-
-  for (const guild of configuration.discordClient.guilds.cache) {
+  for (const [guildId, guild] of Configuration.discordClient.guilds.cache) {
+    const configuration = await Configuration.getCurrent({ guildId: guild.id });
     for (const eventType of configuration.eventTypes) {
-      const channel = await resolveChannelString(
-        eventType.discussionChannel,
-        guild[1]
-      );
-      if (
-        channel &&
-        (channel.type === ChannelType.GuildForum ||
-          channel.type === ChannelType.GuildText)
-      ) {
+      const channel = await resolveChannelString(eventType.discussionChannel, guild);
+      if (channel && (channel.type === ChannelType.GuildForum || channel.type === ChannelType.GuildText)) {
         listenForButtonsInChannel(channel);
       }
     }
@@ -50,22 +43,21 @@ async function listenForButtonsInThread(thread: ThreadChannel) {
   if (!eventMessage) return;
 
   const collector = thread.createMessageComponentCollector({
-    filter: (submissionInteraction) =>
-      submissionInteraction.customId.startsWith(eventMessage.id),
+    filter: (submissionInteraction) => submissionInteraction.customId.startsWith(eventMessage.id),
   }) as InteractionCollector<ButtonInteraction>;
 
   collector.on("collect", async (interaction: ButtonInteraction) => {
     try {
       const buttonId = interaction.customId.match(/(?<=_button_).*$/i)?.[0];
       if (!buttonId) throw new Error("Unable to get button ID from customId");
-  
+
       const handler = buttonHandlers[buttonId];
       if (!handler) throw new Error(`No handler for button ID ${buttonId}`);
-  
+
       await interaction.deferReply({ ephemeral: true });
       await handler(interaction);
     } catch (error) {
       logger.error(`Error handling thread button ${interaction.customId}`, error);
     }
-});
+  });
 }

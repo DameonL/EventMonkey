@@ -5,7 +5,7 @@ import Threads from "./Threads";
 
 export default async function updateVoiceAndStageEvents() {
   const now = new Date().valueOf();
-  for (const [guildId, guild] of Configuration.client.guilds.cache.entries()) {
+  for (const [guildId, guild] of Configuration.discordClient.guilds.cache.entries()) {
     for (const [eventId, scheduledEvent] of await guild.scheduledEvents.fetch()) {
       if (
         scheduledEvent.status !== GuildScheduledEventStatus.Scheduled &&

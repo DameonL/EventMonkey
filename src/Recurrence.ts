@@ -71,7 +71,7 @@ export function getRecurrenceUnit(recurrence: EventRecurrence) {
     : undefined;
 }
 
-export function serializeRecurrence(recurrence: EventRecurrence) {
+export async function serializeRecurrence(recurrence: EventRecurrence, guildId: string): Promise<string> {
   const recurrenceAmount = recurrence.hours ?? recurrence.days ?? recurrence.weeks ?? recurrence.months;
   const recurrenceDescription = recurrence.hours
     ? "hour"
@@ -89,15 +89,15 @@ export function serializeRecurrence(recurrence: EventRecurrence) {
 
   return `Occurs every ${recurrenceAmount} ${recurrenceDescription}${
     recurrenceAmount > 1 ? "s" : ""
-  }\nFirst held ${Time.getTimeString(recurrence.firstStartTime)}, and held ${recurrence.timesHeld} time${
+  }\nFirst held ${await Time.getTimeString(recurrence.firstStartTime, guildId)}, and held ${recurrence.timesHeld} time${
     recurrence.timesHeld === 1 ? "" : "s"
   } since then!`;
 }
 
-export function deserializeRecurrence(recurrenceText: string): EventRecurrence {
+export async function deserializeRecurrence(recurrenceText: string, guildId: string): Promise<EventRecurrence> {
   const failureMessage = "Unable to deserialize EventRecurrence";
   const deserialized: any = {};
-  deserialized.firstStartTime = Time.getTimeFromString(recurrenceText);
+  deserialized.firstStartTime = await Time.getTimeFromString(recurrenceText, guildId);
 
   const frequencyMatch = recurrenceText.match(/^Occurs every (?<frequency>\d+) (?<unit>(hour|day|week|month)s?)$/im);
   if (!frequencyMatch || !frequencyMatch.groups) throw new Error(failureMessage);

@@ -8,9 +8,9 @@ import {
 } from "discord.js";
 import Configuration from "../Configuration";
 import { deseralizeEventEmbed, getEventDetailsMessage } from "../Content/Embed/eventEmbed";
-import { resolveChannelString } from "./resolveChannelString";
-import Time from "./Time";
 import logger from "../Logger";
+import Time from "./Time";
+import { resolveChannelString } from "./resolveChannelString";
 
 interface ChannelWithThreads {
   threads: GuildForumThreadManager | GuildTextThreadManager<ChannelType.PublicThread>;
@@ -24,10 +24,12 @@ export default {
 };
 
 async function closeAllOutdatedThreads() {
-  if (!Configuration.current.discordClient) return;
+  if (!Configuration.discordClient) return;
 
-  for (const [guildId, guild] of Configuration.current.discordClient.guilds.cache) {
-    for (const { name, discussionChannel } of Configuration.current.eventTypes) {
+  for (const [guildId, guild] of Configuration.discordClient.guilds.cache) {
+    const guildConfig = await Configuration.getCurrent({ guildId });
+
+    for (const { name, discussionChannel } of guildConfig.eventTypes) {
       try {
         const resolvedChannel = await resolveChannelString(discussionChannel, guild);
         if (!resolvedChannel) continue;
@@ -79,7 +81,8 @@ async function closeEventThread(thread: ThreadChannel, event?: GuildScheduledEve
     threadAge = thread.lastPinAt && lastMessage.createdAt < thread.lastPinAt ? thread.lastPinAt : lastMessage.createdAt;
   }
 
-  const closeThreadsAfter = Configuration.current.closeThreadsAfter ?? Time.toMilliseconds.days(1);
+  const guildConfig = await Configuration.getCurrent({ guildId: thread.guildId });
+  const closeThreadsAfter = guildConfig.closeThreadsAfter ?? Time.toMilliseconds.days(1);
   if (threadAge && new Date().valueOf() - threadAge.valueOf() < closeThreadsAfter) return;
 
   await (
@@ -98,16 +101,16 @@ async function closeEventThread(thread: ThreadChannel, event?: GuildScheduledEve
 }
 
 async function getThreadFromEventDescription(eventDescription: string): Promise<ThreadChannel | undefined> {
-  if (!Configuration.current.discordClient) throw new Error("Discord client not set in configuration.");
+  if (!Configuration.discordClient) throw new Error("Discord client not set in configuration.");
 
   const guildAndThread = eventDescription.match(/(?<=https:\/\/discord.com\/channels\/\d+\/)(?<threadId>\d+)/im);
   if (guildAndThread && guildAndThread.groups) {
     const threadId = guildAndThread.groups.threadId;
-    const thread = await Configuration.current.discordClient?.channels.fetch(threadId);
+    const thread = await Configuration.discordClient?.channels.fetch(threadId);
     if (
       thread &&
       thread.type === ChannelType.PublicThread &&
-      thread.ownerId === Configuration.current.discordClient?.user?.id
+      thread.ownerId === Configuration.discordClient?.user?.id
     ) {
       return thread;
     }

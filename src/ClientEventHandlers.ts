@@ -3,13 +3,13 @@ import Configuration from "./Configuration";
 import eventAnnouncement from "./Content/Embed/eventAnnouncement";
 import { deseralizeEventEmbed } from "./Content/Embed/eventEmbed";
 import EventCreators from "./EventCreators";
+import { EventAnnouncementType } from "./EventMonkeyConfiguration";
 import logger from "./Logger";
 import { getNextValidRecurrence } from "./Recurrence";
-import { performEventAnnouncement } from "./Utility/performAnnouncements";
-import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 import Threads from "./Utility/Threads";
 import Time from "./Utility/Time";
-import { EventAnnouncementType } from "./EventMonkeyConfiguration";
+import { performEventAnnouncement } from "./Utility/performAnnouncements";
+import { sendEventClosingMessage } from "./Utility/sendEventClosingMessage";
 
 export default {
   eventStarted,
@@ -19,11 +19,11 @@ export default {
 
 async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildScheduledEvent) {
   if (!event.description || !event.scheduledStartAt) return;
-  if (!Configuration.current.discordClient) return;
+  if (!Configuration.discordClient) return;
 
   const thread = await Threads.getThreadFromEventDescription(event.description);
   if (!thread) return;
-  const monkeyEvent = await deseralizeEventEmbed(thread, Configuration.current.discordClient);
+  const monkeyEvent = await deseralizeEventEmbed(thread, Configuration.discordClient);
   if (!monkeyEvent) {
     return;
   }
@@ -33,12 +33,12 @@ async function eventStarted(oldEvent: GuildScheduledEvent | null, event: GuildSc
   if (!startAnnouncements || startAnnouncements.length === 0) return;
 
   for (const announcement of startAnnouncements) {
-    const announcementEmbed = eventAnnouncement(monkeyEvent, announcement);
+    const announcementEmbed = await eventAnnouncement(monkeyEvent, announcement);
 
     performEventAnnouncement({
       announcement,
       event: monkeyEvent,
-      announcementEmbed
+      announcementEmbed,
     });
   }
 }
@@ -57,17 +57,16 @@ async function eventCompleted(oldEvent: GuildScheduledEvent | null, event: Guild
       const eventType = eventMonkeyEvent.eventType;
       const announcements = eventType.announcements?.filter((x) => x.type === EventAnnouncementType.ended);
       if (!announcements || announcements.length === 0) return;
-    
+
       for (const announcement of announcements) {
-        const announcementEmbed = eventAnnouncement(eventMonkeyEvent, announcement);
-    
+        const announcementEmbed = await eventAnnouncement(eventMonkeyEvent, announcement);
+
         performEventAnnouncement({
           announcement,
           event: eventMonkeyEvent,
-          announcementEmbed
+          announcementEmbed,
         });
       }
-    
 
       if (eventMonkeyEvent.recurrence) {
         const { scheduledStartTime, scheduledEndTime } = getNextValidRecurrence(
@@ -88,7 +87,9 @@ async function eventCompleted(oldEvent: GuildScheduledEvent | null, event: Guild
           embeds: [
             new EmbedBuilder()
               .setTitle("Event is over")
-              .setDescription(`We'll see you next time at ${Time.getTimeString(scheduledStartTime)}!`),
+              .setDescription(
+                `We'll see you next time at ${await Time.getTimeString(scheduledStartTime, event.guildId)}!`
+              ),
           ],
         });
       } else {

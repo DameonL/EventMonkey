@@ -1,17 +1,10 @@
-import {
-  ActionRowBuilder,
-  AttachmentBuilder,
-  ButtonBuilder,
-  Guild,
-  GuildScheduledEventEntityType,
-  Message,
-  ThreadChannel,
-} from "discord.js";
+import { AttachmentBuilder, Guild, GuildScheduledEventEntityType, Message, ThreadChannel } from "discord.js";
 import { attendanceButtons } from "./Content/Component/attendanceButtons";
 import { attendeesToEmbed } from "./Content/Embed/attendees";
 import { eventEmbed, getEventDetailsMessage } from "./Content/Embed/eventEmbed";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
 import Listeners from "./Listeners";
+import logger from "./Logger";
 import Time from "./Utility/Time";
 import { resolveChannelString } from "./Utility/resolveChannelString";
 
@@ -26,7 +19,7 @@ async function createGuildScheduledEvent(event: EventMonkeyEvent, guild: Guild, 
   eventToSubmit.name = `${event.name} hosted by ${event.author.username}`;
   eventToSubmit.entityType = event.eventType.entityType;
   eventToSubmit.scheduledStartTime = new Date(event.scheduledStartTime);
-  
+
   if (!event.scheduledEndTime) {
     const endTime = new Date(eventToSubmit.scheduledStartTime);
     endTime.setHours(endTime.getHours() + event.duration);
@@ -62,12 +55,12 @@ async function createThreadChannelEvent(event: EventMonkeyEvent, guild: Guild) {
       `Channel with ID ${event.discussionChannelId} is of type "${targetChannel.type}". The discussion channel needs to be able to have threads.`
     );
 
-  const threadName = `${Time.getTimeString(event.scheduledStartTime)} - ${event.name} hosted by ${
+  const threadName = `${await Time.getTimeString(event.scheduledStartTime, guild.id)} - ${event.name} hosted by ${
     event.author.username
   }`;
 
   const threadMessage: any = {
-    embeds: [await eventEmbed(event), attendeesToEmbed(event.attendees)],
+    embeds: [await eventEmbed(event, guild.id), attendeesToEmbed(event.attendees)],
     files: event.image ? [new AttachmentBuilder(event.image)] : undefined,
   };
 
