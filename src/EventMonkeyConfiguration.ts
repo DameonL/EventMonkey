@@ -1,9 +1,13 @@
-import { Client, GuildScheduledEventEntityType } from "discord.js";
+import { GuildScheduledEventEntityType } from "discord.js";
 import { EventMonkeyEvent } from "./EventMonkeyEvent";
+
+export type ConfigurationProvider = {
+  set: (guildId: string, configuration: EventMonkeyConfiguration | ConfigurationProvider) => Promise<void>;
+  get: (guild: string) => Promise<EventMonkeyConfiguration | undefined>;
+};
 
 export interface EventMonkeyConfiguration {
   commandName: string;
-  discordClient?: Client;
   editingTimeout: number;
   eventTypes: EventMonkeyEventType[];
   timeZones: EventMonkeyTimeZone[];
