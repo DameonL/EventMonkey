@@ -1,5 +1,6 @@
 import { Client, GuildScheduledEventEntityType } from "discord.js";
 import { EventAnnouncementType, EventMonkeyConfiguration } from "./EventMonkeyConfiguration";
+import Time from "./Utility/Time";
 
 let configuration: EventMonkeyConfiguration = defaultConfiguration();
 function defaultConfiguration(): EventMonkeyConfiguration {
@@ -23,7 +24,7 @@ function defaultConfiguration(): EventMonkeyConfiguration {
         offset: -8,
       },
     ],
-    editingTimeout: 108000, // Default of 30 minutes
+    editingTimeout: Time.toMilliseconds.minutes(30),
   };
 }
 
