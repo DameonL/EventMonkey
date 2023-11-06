@@ -53,11 +53,12 @@ function getNthWeekday(year: number, month: number, weekday: number, nth: number
   return date;
 }
 
-function getEffectiveTimeZone(): EventMonkeyTimeZone {
+async function getEffectiveTimeZone(guildId: string): Promise<EventMonkeyTimeZone> {
   let today = new Date();
   today = new Date(today.getFullYear(), today.getMonth(), today.getDay());
 
-  for (const timeZone of Configuration.current.timeZones) {
+  const guildConfig = await Configuration.getCurrent({ guildId });
+  for (const timeZone of guildConfig.timeZones) {
     if (
       (!timeZone.start || today.valueOf() >= timeZone.start.valueOf()) &&
       (!timeZone.end || today.valueOf() < timeZone.end.valueOf())
@@ -69,22 +70,22 @@ function getEffectiveTimeZone(): EventMonkeyTimeZone {
   throw new Error(`Unable to get timezone for date ${today.toLocaleDateString()}`);
 }
 
-function getTimeFromString(text: string, useTimezone: boolean = true): Date {
+async function getTimeFromString(text: string, guildId: string, useTimezone: boolean = true): Promise<Date> {
   const matches = text.match(/(?<time>\d\d?\/\d\d?\/\d\d(\d\d)?,?\s+\d\d?:\d\d\s+(AM|PM))/i);
   if (!matches || !matches.groups) throw new Error("Unable to parse date from string.");
 
   const output = new Date(matches.groups.time);
   if (useTimezone) {
-    output.setHours(output.getHours() - getEffectiveTimeZone().offset);
+    output.setHours(output.getHours() - (await getEffectiveTimeZone(guildId)).offset);
   }
 
   return output;
 }
 
-function getTimeString(date: Date, useTimezone: boolean = true): string {
+async function getTimeString(date: Date, guildId: string, useTimezone: boolean = true): Promise<string> {
   const offsetDate = new Date(date);
   if (useTimezone) {
-    offsetDate.setHours(offsetDate.getHours() + getEffectiveTimeZone().offset);
+    offsetDate.setHours(offsetDate.getHours() + (await getEffectiveTimeZone(guildId)).offset);
   }
 
   return `${offsetDate
@@ -96,7 +97,7 @@ function getTimeString(date: Date, useTimezone: boolean = true): string {
       minute: "2-digit",
     })
     .replace(",", "")
-    .replace(" ", " ")} ${getEffectiveTimeZone().name}`;
+    .replace(" ", " ")} ${(await getEffectiveTimeZone(guildId)).name}`;
 }
 
 function getDurationDescription(milliseconds: number) {
@@ -121,6 +122,6 @@ function getDurationDescription(milliseconds: number) {
   if (timeString === "") {
     logger.error("Failed to get a valid time string from duration", totalDuration);
   }
-  
+
   return timeString;
 }
