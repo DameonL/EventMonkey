@@ -135,9 +135,13 @@ const commands = {
     if (!checkRolePermissions(interaction)) {
       return;
     }
-
-    const userEvents = (await getUserEvents(guild, interaction.user, GuildScheduledEventStatus.Scheduled)).filter(
-      (x) => x.scheduledStartTime.valueOf() > Date.now()
+    interaction.memberPermissions;
+    const userEvents = await getUserEvents(
+      guild,
+      interaction.user,
+      GuildScheduledEventStatus.Scheduled,
+      interaction.memberPermissions,
+      (x) => (x.scheduledStartAt?.valueOf() ?? Date.now()) > Date.now()
     );
     if (userEvents.length === 0) {
       await interaction.editReply({
@@ -196,7 +200,7 @@ const commands = {
       guild,
       interaction.user,
       GuildScheduledEventStatus.Active,
-      (x) => x.description?.endsWith(`Hosted by: ${interaction.user.toString()}`) ?? false
+      interaction.memberPermissions
     );
 
     if (userEvents.length === 0) {
@@ -238,7 +242,7 @@ const commands = {
       guild,
       interaction.user,
       GuildScheduledEventStatus.Scheduled,
-      (x) => x.description?.endsWith(`Hosted by: ${interaction.user.toString()}`) ?? false
+      interaction.memberPermissions
     );
 
     if (userEvents.length === 0) {
@@ -409,11 +413,17 @@ async function getUserEvents(
   guild: Guild,
   user: User,
   status: GuildScheduledEventStatus,
+  permissions: Readonly<PermissionsBitField> | null,
   filter?: (event: GuildScheduledEvent<GuildScheduledEventStatus>) => boolean
 ) {
   const guildEvents = guild.scheduledEvents.cache.filter((x) =>
-    x.status === status && x.description?.includes(user.id) && filter ? filter(x) : true
+    x.status === status &&
+    (permissions?.has(PermissionsBitField.Flags.Administrator) || x.description?.includes(user.id)) &&
+    filter
+      ? filter(x)
+      : true
   );
+
   const output: EventMonkeyEvent[] = [];
   for (const [id, event] of guildEvents) {
     if (!event.description) continue;
@@ -431,14 +441,21 @@ async function getUserEvents(
 }
 
 async function getSelectEventOptions(userEvents: EventMonkeyEvent[], guildId: string) {
-  const times: string[] = [];
-  for (let i = 0; i < userEvents.length; i++) {
-    times.push(await Time.getTimeString(userEvents[i].scheduledStartTime, guildId));
-  }
+  const selectMenuOptions: APISelectMenuOption[] = [];
 
-  const selectMenuOptions: APISelectMenuOption[] = userEvents.map((x, i) => {
-    return { label: x.name, value: x.id, description: times[i] };
-  });
+  for (let i = 0; i < userEvents.length; i++) {
+    const event = userEvents[i];
+
+    if (selectMenuOptions.find((x) => x.value == event.id)) {
+      continue;
+    }
+
+    selectMenuOptions.push({
+      label: event.name,
+      value: event.id,
+      description: await Time.getTimeString(userEvents[i].scheduledStartTime, guildId),
+    });
+  }
 
   return selectMenuOptions;
 }
