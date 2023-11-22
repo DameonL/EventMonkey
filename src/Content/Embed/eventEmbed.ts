@@ -12,10 +12,10 @@ import {
 import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
 import { ExternalEvent, PartialEventMonkeyEvent, StageEvent, VoiceEvent } from "../../EventMonkeyEvent";
+import logger from "../../Logger";
 import { EventRecurrence, deserializeRecurrence, serializeRecurrence } from "../../Recurrence";
 import Time from "../../Utility/Time";
 import { getAttendeesFromMessage } from "./attendees";
-import logger from "../../Logger";
 
 const deserializationCacheDuration = Time.toMilliseconds.hours(1);
 
@@ -113,7 +113,6 @@ export async function deseralizeEventEmbed(
     return undefined;
   }
 
-  const deserializeStart = performance.now();
   const embed = await getEventDetailsEmbed(detailsMessage);
 
   const id = embed.fields.find((x) => x.name === "Event ID")?.value;
@@ -129,7 +128,10 @@ export async function deseralizeEventEmbed(
   const attendees = getAttendeesFromMessage(detailsMessage);
 
   const userMatches = embed.author?.name.match(/(?<username>\w*) \((?<userId>.*)\)$/i);
-  if (!userMatches || !userMatches.groups) throw new Error("Unable to parse embed.");
+  if (!userMatches || !userMatches.groups) {
+    throw new Error("Unable to parse embed.");
+  }
+
   const userId = userMatches.groups.userId;
   const frequency = embed.fields.find((x) => x.name === "Frequency")?.value;
   const hashCode = hashString(`${id}${thread.name}${frequency}${attendees.join(",")}${thread.guildId}`);
@@ -138,12 +140,16 @@ export async function deseralizeEventEmbed(
   }
 
   const author = client.users.cache.get(userId);
-  if (!author) throw new Error("Unable to resolve user ID from embed.");
+  if (!author) {
+    throw new Error("Unable to resolve user ID from embed.");
+  }
 
   const configuration = await Configuration.getCurrent({ guildId: thread.guildId });
 
   const eventType = configuration.eventTypes.find((x) => x.name === eventTypeName);
-  if (!eventType) throw new Error();
+  if (!eventType) {
+    throw new Error("Couldn't resolve event type");
+  }
 
   const scheduledStartTime = await Time.getTimeFromString(thread.name, thread.guildId);
   const name = getEventNameFromString(thread.name);
@@ -226,9 +232,20 @@ export async function getEventDetailsEmbed(message: Message) {
   return embed;
 }
 
+const messageCache: { [threadId: string]: { cachedTime: Date; messageId: string } } = {};
 export async function getEventDetailsMessage(thread: ThreadChannel) {
+  if (thread.id in messageCache) {
+    const message = thread.messages.cache.get(messageCache[thread.id].messageId);
+    return message;
+  }
+
   const pinnedMessages = await thread.messages.fetchPinned();
-  return pinnedMessages.find((value, key) => value.embeds.find((embed) => embed.title === "Event Details"));
+  const message = pinnedMessages.find((value, key) => value.embeds.find((embed) => embed.title === "Event Details"));
+  if (message) {
+    messageCache[thread.id] = { cachedTime: new Date(), messageId: message.id };
+  }
+
+  return message;
 }
 
 export function getEventNameFromString(text: string): string {

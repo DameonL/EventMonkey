@@ -14,7 +14,7 @@
     "start": "pm2 start ecosystem.config.js",
     "stop": "pm2 delete all",
     "restart": "npm run stop && npm run start",
-    "dev": "nodemon --ext ts,js --watch src --watch ../dist --exec \"SET NODE_ENV=development && npm run build && node dist/eventMonkeyBot.js\" --delay 1",
+    "dev": "nodemon --ext ts,js --watch src --watch ../dist --exec \"SET NODE_ENV=development && npm run build && node dist/eventMonkeyBot.js --trace-warnings\" --delay 1",
     "postdev": "npm run stop"
   },
   "dependencies": {
