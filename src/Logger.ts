@@ -10,6 +10,7 @@ const logger = {
   log: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Info, message, objectToLog),
   warn: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Warning, message, objectToLog),
   error: (message: any, objectToLog?: any) => logMessage(LoggingSeverity.Error, message, objectToLog),
+  verbose: process.env.NODE_ENV === "development",
 };
 
 function prefix() {
