@@ -82,13 +82,21 @@ async function getTimeFromString(text: string, guildId: string, useTimezone: boo
   return output;
 }
 
+const timeStringCache: { [hash: string]: { timeString: string; cachedTime: Date } } = {};
+
 async function getTimeString(date: Date, guildId: string, useTimezone: boolean = true): Promise<string> {
-  const offsetDate = new Date(date);
-  if (useTimezone) {
-    offsetDate.setHours(offsetDate.getHours() + (await getEffectiveTimeZone(guildId)).offset);
+  const hash = `${date.valueOf()}${guildId}`;
+  if (hash in timeStringCache) {
+    return timeStringCache[hash].timeString;
   }
 
-  return `${offsetDate
+  const offsetDate = new Date(date);
+  const timeZone = await getEffectiveTimeZone(guildId);
+  if (useTimezone) {
+    offsetDate.setHours(offsetDate.getHours() + timeZone.offset);
+  }
+
+  const timeString = `${offsetDate
     .toLocaleString("en-us", {
       day: "2-digit",
       month: "2-digit",
@@ -97,7 +105,11 @@ async function getTimeString(date: Date, guildId: string, useTimezone: boolean =
       minute: "2-digit",
     })
     .replace(",", "")
-    .replace(" ", " ")} ${(await getEffectiveTimeZone(guildId)).name}`;
+    .replace(" ", " ")} ${timeZone.name}`;
+
+  timeStringCache[hash] = { timeString, cachedTime: new Date() };
+
+  return timeString;
 }
 
 function getDurationDescription(milliseconds: number) {
