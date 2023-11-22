@@ -30,7 +30,7 @@ async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
   if (!channel) return;
 
   if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildForum) return;
-  logger.log(`Restarting event type ${eventType.name}`);
+  logger.verbose && logger.log(`Restarting event type ${eventType.name}`);
 
   for (const [threadId, thread] of (await channel.threads.fetchActive()).threads) {
     try {
@@ -44,7 +44,7 @@ async function restartEventType(eventType: EventMonkeyEventType, guild: Guild) {
 }
 
 async function restartThreadEvents(thread: ThreadChannel, guild: Guild) {
-  logger.log(`Restarting event in ${thread.name}`);
+  logger.verbose && logger.log(`Restarting event in ${thread.name}`);
   const threadPins = [...(await thread.messages.fetchPinned())];
   if (threadPins.length === 0) return;
   if (threadPins.find((x) => x[1].embeds.at(0)?.title === "Event is Canceled")) return;
