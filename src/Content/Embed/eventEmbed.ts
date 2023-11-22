@@ -70,6 +70,18 @@ export async function eventEmbed(event: EventMonkeyEvent, guildId: string): Prom
   return previewEmbed;
 }
 
+const deserializationCache: { [hashCode: string]: EventMonkeyEvent<StageEvent | VoiceEvent | ExternalEvent> } = {};
+
+function hashString(string: string): string {
+  let hash = 0;
+  for (let i = 0, len = string.length; i < len; i++) {
+    let chr = string.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash.toString();
+}
+
 export async function deseralizeEventEmbed(
   thread: ThreadChannel,
   client: Client
@@ -77,27 +89,36 @@ export async function deseralizeEventEmbed(
   if (thread.ownerId !== client.user?.id) {
     return undefined;
   }
-
   const detailsMessage = await getEventDetailsMessage(thread);
   if (!detailsMessage) {
     return undefined;
   }
 
+  const deserializeStart = performance.now();
   const embed = await getEventDetailsEmbed(detailsMessage);
 
   const id = embed.fields.find((x) => x.name === "Event ID")?.value;
   if (!id) throw new Error("Unable to get ID from embed.");
-
-  const userMatches = embed.author?.name.match(/(?<username>\w*) \((?<userId>.*)\)$/i);
-
-  if (!userMatches || !userMatches.groups) throw new Error("Unable to parse embed.");
-
-  const userId = userMatches.groups.userId;
-  const author = client.users.cache.get(userId);
-  if (!author) throw new Error("Unable to resolve user ID from embed.");
-
   const eventTypeName = embed.fields.find((x) => x.name === "Type")?.value;
   if (!eventTypeName) throw new Error();
+
+  const location = embed.fields.find((x) => x.name === "Location")?.value;
+  if (!location) throw new Error();
+
+  const maxAttendees = embed.fields.find((x) => x.name === "Max Attendees");
+
+  const attendees = getAttendeesFromMessage(detailsMessage);
+
+  const userMatches = embed.author?.name.match(/(?<username>\w*) \((?<userId>.*)\)$/i);
+  if (!userMatches || !userMatches.groups) throw new Error("Unable to parse embed.");
+  const userId = userMatches.groups.userId;
+  const hashCode = hashString(`${id}${thread.name}${attendees.join(",")}${thread.guildId}`);
+  if (hashCode in deserializationCache) {
+    return deserializationCache[hashCode];
+  }
+
+  const author = client.users.cache.get(userId);
+  if (!author) throw new Error("Unable to resolve user ID from embed.");
 
   const configuration = await Configuration.getCurrent({ guildId: thread.guildId });
 
@@ -107,6 +128,10 @@ export async function deseralizeEventEmbed(
   const scheduledStartTime = await Time.getTimeFromString(thread.name, thread.guildId);
   const name = getEventNameFromString(thread.name);
   const image = detailsMessage.attachments.first()?.url;
+  const frequency = embed.fields.find((x) => x.name === "Frequency")?.value;
+
+  let recurrence: EventRecurrence | undefined = undefined;
+  recurrence = frequency ? await deserializeRecurrence(frequency, thread.guildId) : undefined;
 
   const duration = Number(
     embed.fields
@@ -114,10 +139,6 @@ export async function deseralizeEventEmbed(
       ?.value.replace(" hours", "")
       .replace(" hour", "") ?? 1
   );
-  const location = embed.fields.find((x) => x.name === "Location")?.value;
-  if (!location) throw new Error();
-
-  const maxAttendees = embed.fields.find((x) => x.name === "Max Attendees");
 
   const eventId = embed.url?.match(/(?<=https:\/\/discord.com\/events\/.*\/).*/i)?.[0];
 
@@ -131,12 +152,6 @@ export async function deseralizeEventEmbed(
       }
     }
   }
-
-  let recurrence: EventRecurrence | undefined = undefined;
-  const frequencyField = embed.fields.find((x) => x.name === "Frequency");
-  recurrence = frequencyField ? await deserializeRecurrence(frequencyField.value, thread.guildId) : undefined;
-
-  const attendees = getAttendeesFromMessage(detailsMessage);
 
   const baseEvent: PartialEventMonkeyEvent = {
     name,
@@ -156,8 +171,9 @@ export async function deseralizeEventEmbed(
     maxAttendees: maxAttendees?.value && !isNaN(Number(maxAttendees.value)) ? Number(maxAttendees.value) : undefined,
   };
 
+  let deserializedEvent: EventMonkeyEvent<ExternalEvent | VoiceEvent | StageEvent> | undefined;
   if (eventType.entityType === GuildScheduledEventEntityType.External) {
-    return {
+    deserializedEvent = {
       ...baseEvent,
       eventType,
       entityMetadata: { location },
@@ -168,14 +184,18 @@ export async function deseralizeEventEmbed(
     const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
     if (channel && channel.type !== ChannelType.GuildVoice) throw new Error();
 
-    return { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.Voice };
+    deserializedEvent = { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.Voice };
   } else {
     const locationChannel = location?.match(/(?<=<#)\d+(?=>)/)?.[0];
     const channel = locationChannel ? client.channels.cache.get(locationChannel) : undefined;
     if (channel && channel.type !== ChannelType.GuildStageVoice) throw new Error();
 
-    return { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.StageInstance };
+    deserializedEvent = { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.StageInstance };
   }
+
+  deserializationCache[hashCode] = deserializedEvent;
+
+  return deserializedEvent;
 }
 
 export async function getEventDetailsEmbed(message: Message) {
