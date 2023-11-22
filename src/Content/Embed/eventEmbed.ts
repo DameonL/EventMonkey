@@ -15,6 +15,9 @@ import { ExternalEvent, PartialEventMonkeyEvent, StageEvent, VoiceEvent } from "
 import { EventRecurrence, deserializeRecurrence, serializeRecurrence } from "../../Recurrence";
 import Time from "../../Utility/Time";
 import { getAttendeesFromMessage } from "./attendees";
+import logger from "../../Logger";
+
+const deserializationCacheDuration = Time.toMilliseconds.hours(1);
 
 export async function eventEmbed(event: EventMonkeyEvent, guildId: string): Promise<EmbedBuilder> {
   const previewEmbed = new EmbedBuilder();
@@ -70,14 +73,30 @@ export async function eventEmbed(event: EventMonkeyEvent, guildId: string): Prom
   return previewEmbed;
 }
 
-const deserializationCache: { [hashCode: string]: EventMonkeyEvent<StageEvent | VoiceEvent | ExternalEvent> } = {};
+const deserializationCache: {
+  [hashCode: string]: { cachedTime: Date; event: EventMonkeyEvent<StageEvent | VoiceEvent | ExternalEvent> };
+} = {};
+
+export function maintainDeserializationCache() {
+  logger.verbose && logger.log("Maintaining event deserialization cache...");
+  const now = Date.now();
+  for (const hash in deserializationCache) {
+    const cached = deserializationCache[hash];
+
+    const age = now - cached.cachedTime.valueOf();
+    if (age > deserializationCacheDuration) {
+      delete deserializationCache[hash];
+    }
+  }
+  logger.verbose && logger.log("Maintenance complete.");
+}
 
 function hashString(string: string): string {
   let hash = 0;
   for (let i = 0, len = string.length; i < len; i++) {
     let chr = string.charCodeAt(i);
     hash = (hash << 5) - hash + chr;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   return hash.toString();
 }
@@ -112,9 +131,10 @@ export async function deseralizeEventEmbed(
   const userMatches = embed.author?.name.match(/(?<username>\w*) \((?<userId>.*)\)$/i);
   if (!userMatches || !userMatches.groups) throw new Error("Unable to parse embed.");
   const userId = userMatches.groups.userId;
-  const hashCode = hashString(`${id}${thread.name}${attendees.join(",")}${thread.guildId}`);
+  const frequency = embed.fields.find((x) => x.name === "Frequency")?.value;
+  const hashCode = hashString(`${id}${thread.name}${frequency}${attendees.join(",")}${thread.guildId}`);
   if (hashCode in deserializationCache) {
-    return deserializationCache[hashCode];
+    return deserializationCache[hashCode].event;
   }
 
   const author = client.users.cache.get(userId);
@@ -128,7 +148,6 @@ export async function deseralizeEventEmbed(
   const scheduledStartTime = await Time.getTimeFromString(thread.name, thread.guildId);
   const name = getEventNameFromString(thread.name);
   const image = detailsMessage.attachments.first()?.url;
-  const frequency = embed.fields.find((x) => x.name === "Frequency")?.value;
 
   let recurrence: EventRecurrence | undefined = undefined;
   recurrence = frequency ? await deserializeRecurrence(frequency, thread.guildId) : undefined;
@@ -193,7 +212,7 @@ export async function deseralizeEventEmbed(
     deserializedEvent = { ...baseEvent, eventType, channel, entityType: GuildScheduledEventEntityType.StageInstance };
   }
 
-  deserializationCache[hashCode] = deserializedEvent;
+  deserializationCache[hashCode] = { cachedTime: new Date(), event: deserializedEvent };
 
   return deserializedEvent;
 }

@@ -7,7 +7,7 @@ import EventsUnderConstruction from "./EventsUnderConstruction";
 import ClientEventHandlers from "./ClientEventHandlers";
 import { eventCommand } from "./Commands";
 import Configuration, { isDynamicConfiguration } from "./Configuration";
-import simpleConfigurationProvider from "./simpleConfigurationProvider";
+import { maintainDeserializationCache } from "./Content/Embed/eventEmbed";
 import Listeners from "./Listeners";
 import logger from "./Logger";
 import Threads from "./Utility/Threads";
@@ -15,6 +15,7 @@ import Time from "./Utility/Time";
 import { performAnnouncements } from "./Utility/performAnnouncements";
 import { restartRecurringEvents } from "./Utility/restartRecurringEvents";
 import updateVoiceAndStageEvents from "./Utility/updateVoiceAndStageEvents";
+import simpleConfigurationProvider from "./simpleConfigurationProvider";
 export { EventMonkeyConfiguration, EventMonkeyEvent };
 
 export default {
@@ -94,7 +95,7 @@ async function configure(newConfiguration: EventMonkeyConfiguration | Configurat
     }
   });
 
-  logger.log("Pre-loading channels and events...");
+  logger.verbose && logger.log("Pre-loading channels and events...");
   for (const [guildId, partialGuild] of await client.guilds.fetch()) {
     const guild = await partialGuild.fetch();
     const channels = await guild.channels.fetch();
@@ -106,11 +107,11 @@ async function configure(newConfiguration: EventMonkeyConfiguration | Configurat
 
 async function startupMaintenanceTasks() {
   try {
-    logger.log("Performing startup maintenance...");
+    logger.verbose && logger.log("Performing startup maintenance...");
     await Threads.closeAllOutdatedThreads();
     await restartRecurringEvents();
     await performAnnouncements();
-    logger.log("Startup maintenance complete.");
+    logger.verbose && logger.log("Startup maintenance complete.");
   } catch (error) {
     logger.error("Error in startup maintenance task:", error);
   }
@@ -121,4 +122,5 @@ function startRecurringTasks() {
   setInterval(Threads.closeAllOutdatedThreads, Time.toMilliseconds.minutes(30));
   setInterval(performAnnouncements, Time.toMilliseconds.minutes(1));
   setInterval(updateVoiceAndStageEvents, Time.toMilliseconds.minutes(1));
+  setInterval(maintainDeserializationCache, Time.toMilliseconds.hours(1));
 }
