@@ -143,6 +143,7 @@ const commands = {
       interaction.memberPermissions,
       (x) => (x.scheduledStartAt?.valueOf() ?? Date.now()) > Date.now()
     );
+
     if (userEvents.length === 0) {
       await interaction.editReply({
         content: "Sorry, it looks like you don't have any existing events to edit.",
@@ -163,14 +164,17 @@ const commands = {
         ]),
       ],
     });
+
     const selectResponse = await awaitMessageComponentWithTimeout<ComponentType.StringSelect>(
       interaction,
       eventTypeMessage
     );
-    if (!selectResponse) return;
+
+    if (!selectResponse) {
+      return;
+    }
 
     monkeyEvent = userEvents.find((x) => x.id === selectResponse.values[0]);
-
     if (!monkeyEvent) throw new Error();
 
     if (monkeyEvent.threadChannel && monkeyEvent.scheduledStartTime.valueOf() < Date.now()) {
@@ -326,7 +330,14 @@ async function executeEventCommand(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  await subCommandHandlers[interaction.options.getSubcommand()](interaction, interaction.guild);
+  const commandName = interaction.options.getSubcommand();
+  try {
+    await subCommandHandlers[commandName](interaction, interaction.guild);
+  } catch (error) {
+    interaction.editReply({ content: "Sorry, something went wrong. Please let a developer know!" });
+    logger.error(`Error running command "${commandName}"`, error);
+  }
+
   return;
 }
 
@@ -442,13 +453,18 @@ async function getUserEvents(
 
 async function getSelectEventOptions(userEvents: EventMonkeyEvent[], guildId: string) {
   const selectMenuOptions: APISelectMenuOption[] = [];
+  const usedIds: { [id: string]: boolean } = {};
 
   for (let i = 0; i < userEvents.length; i++) {
     const event = userEvents[i];
 
-    if (selectMenuOptions.find((x) => x.value == event.id)) {
+    if (usedIds[event.id]) {
+      logger.warn("ID for event appears in list more than once:", event);
+      logger.warn("Select menu:", selectMenuOptions);
       continue;
     }
+
+    usedIds[event.id] = true;
 
     selectMenuOptions.push({
       label: event.name,
