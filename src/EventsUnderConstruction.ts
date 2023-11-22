@@ -30,6 +30,7 @@ function deleteEvent(userId: string) {
 }
 
 function maintainEvents() {
+  logger.verbose && logger.log("Maintaining event construction cache...");
   try {
     const clearList: string[] = [];
     const now = new Date().valueOf();
@@ -47,4 +48,6 @@ function maintainEvents() {
   } catch (error) {
     logger.error("Error while maintaining events:", error);
   }
+  logger.verbose && logger.log("Maintenance complete");
+
 }
