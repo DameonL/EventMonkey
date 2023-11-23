@@ -8,7 +8,9 @@ import {
 } from "discord.js";
 import Configuration from "../../Configuration";
 import { EventMonkeyEvent } from "../../EventMonkey";
+import { ExternalEvent, StageEvent, VoiceEvent } from "../../EventMonkeyEvent";
 import EventsUnderConstruction from "../../EventsUnderConstruction";
+import logger from "../../Logger";
 import Time from "../../Utility/Time";
 import editEventMessage from "../Embed/editEventMessage";
 import {
@@ -52,15 +54,16 @@ export async function eventModal(
 
   const startTime = event.scheduledStartTime;
   try {
-    deserializeModal<EventMonkeyEvent>(
+    await deserializeModal<EventMonkeyEvent>(
       modalSubmission.fields.fields.entries(),
       interaction.guildId,
       event,
       pages[page].deserializeConfig
     );
   } catch (error: any) {
+    logger.log(error.toString());
     await modalSubmission.editReply({
-      content: JSON.stringify(error),
+      content: error.toString(),
     });
 
     EventsUnderConstruction.saveEvent(event);
@@ -112,13 +115,16 @@ interface EditModalPage {
 
 const pages: EditModalPage[] = [
   {
-    converter: (event: EventMonkeyEvent) => {
-      return {
+    converter: (event: EventMonkeyEvent<VoiceEvent | StageEvent | ExternalEvent>) => {
+      const converted: any = {
         name: event.name,
         description: event.description,
         scheduledStartTime: event.scheduledStartTime,
         duration: event.duration,
+        "entityMetadata.location": "entityMetadata" in event ? event.entityMetadata.location : undefined,
       };
+
+      return converted;
     },
     serializeConfig: {
       labels: {
@@ -137,6 +143,8 @@ const pages: EditModalPage[] = [
         scheduledStartTime: (fieldValue: string) =>
           /\d\d?\/\d\d?\/\d{2,4}\s+\d\d?:\d\d\s+(am|pm)/i.test(fieldValue) ? undefined : "Invalid date format.",
         duration: (fieldValue: string) => (isNaN(Number(fieldValue)) ? "Invalid duration" : undefined),
+        description: (fieldValue) =>
+          fieldValue.length >= 1000 ? "Event description must be less than 1000 characters." : undefined,
       },
       customDeserializers: {
         scheduledStartTime: async (fieldValue, guildId) => {
