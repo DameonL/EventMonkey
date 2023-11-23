@@ -40,16 +40,19 @@ export async function serializeToModal(
     let label = config?.labels?.[fieldName] ?? fieldName;
     let style = config?.styles?.[fieldName] ?? TextInputStyle.Short;
     let value = (target as any)[fieldName];
-    if (config?.formatters?.[fieldName])
-      value = await config.formatters[fieldName]((target as any)[fieldName], guildId);
 
-    value = value.toString();
+    if (value) {
+      if (config?.formatters?.[fieldName])
+        value = await config.formatters[fieldName]((target as any)[fieldName], guildId);
 
-    output.push(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        new TextInputBuilder().setLabel(label).setCustomId(`${prefix}${fieldName}`).setStyle(style).setValue(value)
-      )
-    );
+      value = value.toString();
+
+      output.push(
+        new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+          new TextInputBuilder().setLabel(label).setCustomId(`${prefix}${fieldName}`).setStyle(style).setValue(value)
+        )
+      );
+    }
   }
 
   return output;
