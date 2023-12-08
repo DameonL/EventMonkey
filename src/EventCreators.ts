@@ -20,13 +20,9 @@ async function createGuildScheduledEvent(event: EventMonkeyEvent, guild: Guild, 
   eventToSubmit.entityType = event.eventType.entityType;
   eventToSubmit.scheduledStartTime = new Date(event.scheduledStartTime);
 
-  if (!event.scheduledEndTime) {
-    const endTime = new Date(eventToSubmit.scheduledStartTime);
-    endTime.setHours(endTime.getHours() + event.duration);
-    eventToSubmit.scheduledEndTime = endTime;
-  } else {
-    eventToSubmit.scheduledEndTime = event.scheduledEndTime;
-  }
+  const endTime = new Date(eventToSubmit.scheduledStartTime);
+  endTime.setHours(endTime.getHours() + event.duration);
+  eventToSubmit.scheduledEndTime = endTime;
 
   if (event.entityType === GuildScheduledEventEntityType.External) {
     eventToSubmit.entityMetadata = event.entityMetadata;
